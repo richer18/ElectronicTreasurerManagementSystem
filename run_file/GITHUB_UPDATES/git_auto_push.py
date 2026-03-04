@@ -4,8 +4,8 @@ from datetime import datetime
 
 # Define the folders
 folders = [
-    r"C:\xampp\htdocs\ETSA",
-    r"C:\xampp\htdocs\ETSA\frontend"
+    r"C:\xampp\htdocs\ElectronicTreasurerManagementSystem",
+    r"C:\xampp\htdocs\ElectronicTreasurerManagementSystem\frontend"
 ]
 
 

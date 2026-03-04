@@ -4,7 +4,7 @@ from datetime import datetime
 
 # List of local GitHub repositories to check
 folders = [
-    r"C:\xampp\htdocs\ETSA",
+    r"C:\xampp\htdocs\ElectronicTreasurerManagementSystem",
     r"C:\xampp\htdocs\frontend"
 ]
 

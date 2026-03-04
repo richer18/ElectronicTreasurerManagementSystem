@@ -29,17 +29,16 @@ import Grid from "@mui/material/Grid";
 import Link from "@mui/material/Link";
 import Paper from "@mui/material/Paper";
 import Button from "@mui/material/Button";
-import Card from "@mui/material/Card";
-import CardContent from "@mui/material/CardContent";
+
 import Select from "@mui/material/Select";
 import MenuItem from "@mui/material/MenuItem";
 import FormControl from "@mui/material/FormControl";
 import InputLabel from "@mui/material/InputLabel";
-import CircularProgress from "@mui/material/CircularProgress";
+
 import LinearProgress from "@mui/material/LinearProgress";
 import Chip from "@mui/material/Chip";
 import Typography from "@mui/material/Typography";
-import { createTheme, styled } from "@mui/material/styles";
+import { createTheme } from "@mui/material/styles";
 import { AppProvider } from "@toolpad/core/AppProvider";
 import { DashboardLayout } from "@toolpad/core/DashboardLayout";
 import { DemoProvider } from "@toolpad/core/internal";
@@ -76,7 +75,6 @@ const NAVIGATION = [
     icon: <CalendarMonthIcon sx={{ color: "primary.main" }} />,
   },
   {
-    // segment: "abstract",
     title: "Abstract",
     icon: <ArticleIcon sx={{ color: "secondary.main" }} />,
     children: [
@@ -103,7 +101,6 @@ const NAVIGATION = [
     ],
   },
   {
-    segment: "business",
     title: "Business",
     icon: <BusinessIcon sx={{ color: "warning.main" }} />,
     children: [
@@ -125,7 +122,6 @@ const NAVIGATION = [
     ],
   },
   {
-    segment: "tickets",
     title: "Tickets",
     icon: <BookOnlineIcon sx={{ color: "info.main" }} />,
     children: [
@@ -142,7 +138,6 @@ const NAVIGATION = [
     ],
   },
   {
-    segment: "doc-stamp",
     title: "Doc Stamp",
     icon: <AssignmentIcon sx={{ color: "primary.main" }} />,
   },
@@ -159,7 +154,6 @@ const NAVIGATION = [
     title: "Administration",
   },
   {
-    segment: "import",
     title: "Import Data",
     icon: <ImportExportIcon sx={{ color: "info.main" }} />,
     children: [
@@ -186,7 +180,6 @@ const NAVIGATION = [
     ],
   },
   {
-    segment: "template",
     title: "Templates",
     icon: <DescriptionIcon sx={{ color: "info.main" }} />,
     children: [
@@ -228,7 +221,6 @@ const NAVIGATION = [
     ],
   },
   {
-    segment: "email",
     title: "Email",
     icon: <EmailIcon sx={{ color: "error.main" }} />,
     children: [
@@ -245,7 +237,6 @@ const NAVIGATION = [
     ],
   },
   {
-    segment: "income-target",
     title: "Income Target",
     icon: <TrendingUpIcon sx={{ color: "success.dark" }} />,
   },
@@ -262,7 +253,6 @@ const NAVIGATION = [
     title: "Analytics",
   },
   {
-    segment: "reports",
     title: "Reports",
     icon: <BarChartIcon sx={{ color: "primary.main" }} />,
     children: [
@@ -476,287 +466,6 @@ DashboardLayoutBranding.propTypes = {
   window: PropTypes.func,
 };
 
-const Item = styled(Paper)(({ theme }) => ({
-  backgroundColor: "#fff",
-  ...theme.typography.body2,
-  padding: theme.spacing(1),
-  textAlign: "center",
-  color: (theme.vars ?? theme).palette.text.secondary,
-  ...theme.applyStyles("dark", {
-    backgroundColor: "#1A2027",
-  }),
-}));
-
-function DashboardCard({ title, subtitle, value, loading, children }) {
-  return (
-    <Card
-      sx={{
-        borderRadius: 3,
-        border: "1px solid",
-        borderColor: "divider",
-        boxShadow: "0 10px 24px rgba(12, 35, 64, 0.08)",
-        height: "100%",
-      }}
-    >
-      <CardContent sx={{ p: 2.5 }}>
-        <Box sx={{ display: "flex", justifyContent: "space-between", mb: 1 }}>
-          <div>
-            <Typography variant="subtitle2" color="text.secondary">
-              {title}
-            </Typography>
-            {subtitle && (
-              <Typography variant="caption" color="text.secondary">
-                {subtitle}
-              </Typography>
-            )}
-          </div>
-          <div>
-            {loading ? (
-              <CircularProgress size={20} />
-            ) : (
-              <Typography variant="h6">{value}</Typography>
-            )}
-          </div>
-        </Box>
-        {children}
-      </CardContent>
-    </Card>
-  );
-}
-
-function DashboardHomeLegacy() {
-  const [showFilter, setShowFilter] = React.useState(false);
-  const [month, setMonth] = React.useState(new Date().getMonth() + 1);
-  const [year, setYear] = React.useState(new Date().getFullYear());
-  const [data, setData] = React.useState([]);
-  const [loading, setLoading] = React.useState(false);
-  const [stats, setStats] = React.useState({ totalThisMonth: 0, totalThisYear: 0, businessCount: 0 });
-
-  const months = [
-    "January",
-    "February",
-    "March",
-    "April",
-    "May",
-    "June",
-    "July",
-    "August",
-    "September",
-    "October",
-    "November",
-    "December",
-  ];
-
-  const computeStats = (rows, selMonth, selYear) => {
-    const monthIndex = Number(selMonth) - 1;
-    let totalThisMonth = 0;
-    let totalThisYear = 0;
-    const businesses = new Set();
-
-    rows.forEach((r) => {
-      const d = r.date ? new Date(r.date) : null;
-      const amount = Number(r.totalCollection || r.total || r.amount || 0) || 0;
-      if (d) {
-        if (d.getMonth() === monthIndex && d.getFullYear() === Number(selYear)) {
-          totalThisMonth += amount;
-        }
-        if (d.getFullYear() === Number(selYear)) {
-          totalThisYear += amount;
-        }
-      }
-      // attempt to capture payer/business name fields if available
-      if (r.name) businesses.add(r.name);
-      if (r.business_name) businesses.add(r.business_name);
-      if (r.business) businesses.add(r.business);
-    });
-
-    return { totalThisMonth, totalThisYear, businessCount: businesses.size };
-  };
-
-  const fetchData = React.useCallback(async () => {
-    setLoading(true);
-    try {
-      const resp = await axiosInstance.get("fetch-report");
-      const rows = Array.isArray(resp.data) ? resp.data : [];
-      setData(rows);
-      const s = computeStats(rows, month, year);
-      setStats(s);
-    } catch (error) {
-      console.error("Dashboard fetch failed", error);
-      setData([]);
-      setStats({ totalThisMonth: 0, totalThisYear: 0, businessCount: 0 });
-    } finally {
-      setLoading(false);
-    }
-  }, [month, year]);
-
-  React.useEffect(() => {
-    fetchData();
-  }, [fetchData]);
-
-  const handleApplyFilter = () => {
-    fetchData();
-    setShowFilter(false);
-  };
-
-  const exportCsv = () => {
-    // fallback: export current data filtered by month/year
-    const monthIndex = Number(month) - 1;
-    const rows = data.filter((r) => {
-      const d = r.date ? new Date(r.date) : null;
-      if (!d) return false;
-      return d.getMonth() === monthIndex && d.getFullYear() === Number(year);
-    });
-    const headers = Object.keys(rows[0] || {}).filter(Boolean);
-    const escape = (val) => `"${String(val ?? "").replace(/"/g, '""')}"`;
-    const csv = [headers.join(",")]
-      .concat(rows.map((r) => headers.map((h) => escape(r[h])).join(",")))
-      .join("\n");
-    const blob = new Blob([csv], { type: "text/csv;charset=utf-8;" });
-    const url = URL.createObjectURL(blob);
-    const a = document.createElement("a");
-    a.href = url;
-    a.download = `dashboard_export_${year}_${month}.csv`;
-    a.click();
-    URL.revokeObjectURL(url);
-  };
-  return (
-    <div>
-      <header className="dashboard-header">
-        <div className="header-content">
-          <h1>Treasurer's Dashboard</h1>
-          <p>Municipal Treasurer Office • As of 2025</p>
-        </div>
-        <div className="header-actions">
-          <button
-            type="button"
-            className="filter-btn"
-            onClick={() => setShowFilter((s) => !s)}
-            aria-expanded={showFilter}
-          >
-            <svg
-              xmlns="http://www.w3.org/2000/svg"
-              width="16"
-              height="16"
-              fill="currentColor"
-              viewBox="0 0 16 16"
-            >
-              <path d="M6 10.5a.5.5 0 0 1 .5-.5h3a.5.5 0 0 1 0 1h-3a.5.5 0 0 1-.5-.5zm-2-3a.5.5 0 0 1 .5-.5h7a.5.5 0 0 1 0 1h-7a.5.5 0 0 1-.5-.5zm-2-3a.5.5 0 0 1 .5-.5h11a.5.5 0 0 1 0 1h-11a.5.5 0 0 1-.5-.5z" />
-            </svg>
-            Filter Period
-          </button>
-          <button type="button" className="export-btn" onClick={exportCsv}>
-            <svg
-              xmlns="http://www.w3.org/2000/svg"
-              width="16"
-              height="16"
-              fill="currentColor"
-              viewBox="0 0 16 16"
-            >
-              <path d="M.5 9.9a.5.5 0 0 1 .5.5v2.5a1 1 0 0 0 1 1h12a1 1 0 0 0 1-1v-2.5a.5.5 0 0 1 1 0v2.5a2 2 0 0 1-2 2H2a2 2 0 0 1-2-2v-2.5a.5.5 0 0 1 .5-.5z" />
-              <path d="M7.646 11.854a.5.5 0 0 0 .708 0l3-3a.5.5 0 0 0-.708-.708L8.5 10.293V1.5a.5.5 0 0 0-1 0v8.793L5.354 8.146a.5.5 0 1 0-.708.708l3 3z" />
-            </svg>
-            Export Reports
-          </button>
-        </div>
-      </header>
-
-      {showFilter && (
-        <Box sx={{ display: "flex", gap: 2, alignItems: "center", mb: 2 }}>
-          <FormControl size="small">
-            <InputLabel id="month-label">Month</InputLabel>
-            <Select
-              labelId="month-label"
-              value={month}
-              label="Month"
-              onChange={(e) => setMonth(e.target.value)}
-              sx={{ minWidth: 140 }}
-            >
-              {months.map((m, i) => (
-                <MenuItem key={m} value={i + 1}>
-                  {m}
-                </MenuItem>
-              ))}
-            </Select>
-          </FormControl>
-
-          <FormControl size="small">
-            <InputLabel id="year-label">Year</InputLabel>
-            <Select
-              labelId="year-label"
-              value={year}
-              label="Year"
-              onChange={(e) => setYear(e.target.value)}
-              sx={{ minWidth: 100 }}
-            >
-              {Array.from({ length: 6 }).map((_, idx) => {
-                const y = new Date().getFullYear() - idx;
-                return (
-                  <MenuItem key={y} value={y}>
-                    {y}
-                  </MenuItem>
-                );
-              })}
-            </Select>
-          </FormControl>
-
-          <Button variant="contained" size="small" onClick={handleApplyFilter}>
-            Apply
-          </Button>
-          <Button variant="outlined" size="small" onClick={() => { setShowFilter(false); }}>
-            Close
-          </Button>
-        </Box>
-      )}
-
-      <Box sx={{ width: "100%" }}>
-        <Grid container spacing={2}>
-          <Grid item xs={12} md={6} lg={4}>
-            <TaxCollected />
-          </Grid>
-
-          <Grid item xs={12} md={6} lg={4}>
-            <CedulaCollected />
-          </Grid>
-
-          <Grid item xs={12} md={6} lg={2}>
-            {/* <GeneralFundCollected/> */}
-          </Grid>
-
-          <Grid item xs={12} md={6} lg={2}>
-            {/* <TrustFundCollected/> */}
-          </Grid>
-          
-          <Grid item xs={12} md={6} lg={2}>
-            {/* <RealPropertyTaxCollected/> */}
-          </Grid>
-
-          <Grid item xs={12} md={6} lg={2}>
-            {/* <Status/> */}
-          </Grid>
-
-          <Grid item xs={12} md={6} lg={2}>
-            <DashboardCard
-              title="Business Count"
-              subtitle="Active registrations"
-              value={stats.businessCount}
-              loading={loading}
-            />
-          </Grid>
-
-          <Grid item xs={12} md={12} lg={6}>
-            <Item>
-              <Typography variant="subtitle1">Status</Typography>
-              <Typography variant="body2" color="text.secondary">
-                Collection status and recent alerts will appear here. Click a card to drill down.
-              </Typography>
-            </Item>
-          </Grid>
-        </Grid>
-      </Box>
-    </div>
-  );
-}
 
 function DashboardHome() {
   const [showFilter, setShowFilter] = React.useState(false);

@@ -1,0 +1,73 @@
+----------MAIN TABLE SHOW--GF-TF------------------------------------
+
+=============GF================================================
+SELECT DISTINCT
+    p.LOCAL_TIN,
+    p.PAIDBY,
+    p.PAYMENTDATE,
+    p.AMOUNT,
+    p.RECEIPTNO,
+    p.USERID,
+    p.PAYGROUP_CT,
+    p.AFTYPE,
+    p.COLLECTOR,
+    pd.FUNDTYPE_CT
+FROM PAYMENT p
+JOIN PAYMENTDETAIL pd
+    ON p.PAYMENT_ID = pd.PAYMENT_ID
+WHERE pd.FUNDTYPE_CT = 'GF'
+  AND p.AFTYPE NOT IN ('CTC','AF56')
+ORDER BY p.PAYMENTDATE DESC;
+
+
+=============TF==========================================
+SELECT
+    p.LOCAL_TIN,
+    p.PAIDBY,
+    p.PAYMENTDATE,
+    p.AMOUNT,
+    p.RECEIPTNO,
+    p.USERID,
+    p.PAYGROUP_CT,
+    p.AFTYPE,
+    p.COLLECTOR
+FROM PAYMENT p
+WHERE p.PAYMENT_ID IN (
+    SELECT pd.PAYMENT_ID
+    FROM PAYMENTDETAIL pd
+    WHERE pd.FUNDTYPE_CT = 'TF'
+)
+AND p.AFTYPE NOT IN ('CTC','AF56')
+ORDER BY p.PAYMENTDATE DESC;
+
+
+----------WHEN CLICK VIEW THIS IS THE QUERY---------------------
+SELECT
+    p.PAYMENTDATE AS `DATE`,
+    p.PAIDBY AS `NAME`,
+    opr.DESCRIPTION AS `DESCRIPTION`,
+    pd.AMOUNTPAID AS `AMOUNT`
+FROM PAYMENT p
+LEFT JOIN PAYMENTDETAIL pd
+    ON p.PAYMENT_ID = pd.PAYMENT_ID
+LEFT JOIN T_OTHERPAYMENTRATE opr
+    ON pd.SOURCEID = opr.OPRATE_ID
+-------------------------------------------------------------------
+
+
+----------MAIN TABLE SHOW--RPT------------------------------------
+SELECT
+    p.LOCAL_TIN,
+    p.PAIDBY,
+    p.PAYMENTDATE,
+    p.AMOUNT,
+    p.RECEIPTNO,
+    p.USERID,
+    p.AFTYPE,
+    p.COLLECTOR
+FROM PAYMENT p
+WHERE p.AFTYPE= 'AF56'
+ORDER BY p.PAYMENTDATE DESC;
+
+
+------------------------------------------------------------------

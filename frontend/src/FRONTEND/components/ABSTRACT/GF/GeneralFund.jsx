@@ -48,7 +48,8 @@ import StorefrontIcon from "@mui/icons-material/Storefront";
 // ---- Adjust these imports to your actual file paths ----
 import axiosInstance from "../../../../api/axiosInstance";
 import { useMaterialUIController } from "../../../../context";
-import AbstractGF from "../../../../components/MD-Components/FillupForm/AbstractGF";
+// import AbstractGF from "../../../../components/MD-Components/FillupForm/AbstractGF";
+import GeneralFundPaymentEditForm from "../../../../components/MD-Components/FillupForm/GeneralFundPaymentEditForm";
 import GeneralFundDialogPopupDAILY from "../../../../components/MD-Components/Popup/components/GeneralFundPopup/GeneralFundDialogPopupDailyTable";
 import GeneralFundDialogPopupRFEE from "../../../../components/MD-Components/Popup/components/GeneralFundPopup/GeneralFundDialogPopupRFEE";
 import GeneralFundDialogPopupSUC from "../../../../components/MD-Components/Popup/components/GeneralFundPopup/GeneralFundDialogPopupSUC";
@@ -82,6 +83,17 @@ const formatDate = (dateString) => {
   const date = new Date(dateString);
   const options = { month: "short", day: "numeric", year: "numeric" };
   return date.toLocaleDateString("en-US", options);
+};
+
+const getMonthYearFromDate = (dateValue) => {
+  if (!dateValue) return null;
+  const raw = String(dateValue).split("T")[0];
+  const parts = raw.split("-");
+  if (parts.length !== 3) return null;
+  const year = Number(parts[0]);
+  const month = Number(parts[1]);
+  if (!Number.isFinite(year) || !Number.isFinite(month)) return null;
+  return { month, year };
 };
 const FloraMyImg = "/assets/images/Flora_My.jpg";
 const RicardoImg = "/assets/images/Ricardo_Enopia.jpg";
@@ -251,28 +263,31 @@ function GeneralFund() {
     }
 
     let newFiltered = data;
+    const normalize = (value) => String(value ?? "").toLowerCase();
 
     // (a) Filter by searchQuery
-    if (searchQuery) {
-      const q = searchQuery.toLowerCase();
+    if (searchQuery?.trim()) {
+      const q = searchQuery.trim().toLowerCase();
       newFiltered = newFiltered.filter((row) => {
-        const rowName = (row?.name ?? "").toLowerCase();
-        const rowCtcNo = (row?.receipt_no ?? "").toString().toLowerCase();
-        // .includes() = partial substring match
-        return rowName.includes(q) || rowCtcNo.includes(q);
+        return (
+          normalize(row?.name).includes(q) ||
+          normalize(row?.receipt_no).includes(q) ||
+          normalize(row?.cashier).includes(q) ||
+          normalize(row?.type_receipt).includes(q) ||
+          normalize(row?.local_tin).includes(q) ||
+          normalize(row?.paygroup).includes(q)
+        );
       });
     }
 
     // (b) Filter by month/year
     if (month || year) {
       newFiltered = newFiltered.filter((row) => {
-        if (!row.date) return false;
-        const rowDate = new Date(row.date);
-        const rowMonth = rowDate.getMonth() + 1;
-        const rowYear = rowDate.getFullYear();
+        const rowParts = getMonthYearFromDate(row.date);
+        if (!rowParts) return false;
 
-        const monthMatches = month ? rowMonth === parseInt(month) : true;
-        const yearMatches = year ? rowYear === parseInt(year) : true;
+        const monthMatches = month ? rowParts.month === Number(month) : true;
+        const yearMatches = year ? rowParts.year === Number(year) : true;
         return monthMatches && yearMatches;
       });
     }
@@ -305,11 +320,11 @@ function GeneralFund() {
     if (!month || !year) return filteredData;
 
     return filteredData.filter((row) => {
-      if (!row.date) return false;
-      const rowDate = new Date(row.date);
+      const rowParts = getMonthYearFromDate(row.date);
+      if (!rowParts) return false;
       return (
-        rowDate.getMonth() + 1 === Number(month) &&
-        rowDate.getFullYear() === Number(year)
+        rowParts.month === Number(month) &&
+        rowParts.year === Number(year)
       );
     });
   };
@@ -382,12 +397,12 @@ function GeneralFund() {
   };
 
   // Generic “Add” button
-  const handleClickOpen = (content) => {
-    setDialogContent(content);
-    setShowMainTable(true);
-    setIsDialogOpen(true);
-    setShowDailyTable(false);
-  };
+  // const handleClickOpen = (content) => {
+  //   setDialogContent(content);
+  //   setShowMainTable(true);
+  //   setIsDialogOpen(true);
+  //   setShowDailyTable(false);
+  // };
 
   // Close the popup
   const handleClose = () => {
@@ -488,7 +503,7 @@ function GeneralFund() {
     const formattedData = filteredExportData.map((item) => {
       return {
         ...item,
-        DATE: new Date(item.DATE).toLocaleString("en-US", {
+        DATE: new Date(item.date ?? item.DATE).toLocaleString("en-US", {
           timeZone: "Asia/Manila", // Set timezone to PHT
           year: "numeric",
           month: "2-digit",
@@ -510,15 +525,13 @@ function GeneralFund() {
   const handleEditClick = () => {
     if (!selectedRow) return;
 
-    setDialogContent(<AbstractGF data={selectedRow} mode="edit" />);
+    setDialogContent(<GeneralFundPaymentEditForm data={selectedRow} />);
 
     setIsDialogOpen(true);
     handleMenuClose();
   };
 
   const handleSearchClick = () => {
-    // Move whatever is typed in pendingSearchQuery into searchQuery
-    // This triggers the filter in the useEffect
     setSearchQuery(pendingSearchQuery);
   };
 
@@ -561,9 +574,18 @@ function GeneralFund() {
                 fullWidth
                 variant="outlined"
                 label="Search Records"
-                placeholder="Name or Receipt Number"
+                placeholder="Name, Receipt No, Cashier, TIN, Type"
                 value={pendingSearchQuery}
-                onChange={(e) => setPendingSearchQuery(e.target.value)}
+                onChange={(e) => {
+                  const value = e.target.value;
+                  setPendingSearchQuery(value);
+                  setSearchQuery(value);
+                }}
+                onKeyDown={(e) => {
+                  if (e.key === "Enter") {
+                    handleSearchClick();
+                  }
+                }}
                 sx={{
                   minWidth: { xs: "100%", md: 280 },
                   "& .MuiInputBase-input": {
@@ -603,6 +625,7 @@ function GeneralFund() {
                   disablePortal
                   options={months}
                   sx={{ width: 180 }}
+                  value={months.find((m) => m.value === month) || null}
                   renderInput={(params) => (
                     <TextField
                       {...params}
@@ -617,6 +640,7 @@ function GeneralFund() {
                   disablePortal
                   options={years}
                   sx={{ width: 150 }}
+                  value={years.find((y) => y.value === year) || null}
                   renderInput={(params) => (
                     <TextField
                       {...params}
@@ -663,6 +687,8 @@ function GeneralFund() {
                   px: 3.5,
                   backgroundColor: uiColors.navy,
                   color: "white",
+                  pointerEvents: "none",
+                  cursor: "not-allowed",
                   "&:hover": {
                     backgroundColor: uiColors.navyHover,
                     transform: "translateY(-1px)",
@@ -677,9 +703,7 @@ function GeneralFund() {
                   transition: "all 0.2s ease",
                   boxShadow: "0 2px 6px rgba(15, 39, 71, 0.2)",
                 }}
-                onClick={() =>
-                  handleClickOpen(<AbstractGF onClose={handleClose} />)
-                }
+                onClick={undefined}
               >
                 New Entry
               </Button>
