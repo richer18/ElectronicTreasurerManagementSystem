@@ -11,9 +11,29 @@ class GeneralFundDataDeleteGFController extends Controller
     public function destroy($id)
     {
         try {
-            $deleted = DB::table('general_fund_data')->where('id', $id)->delete();
+            $deletedPayment = 0;
 
-            if ($deleted === 0) {
+            DB::transaction(function () use ($id, &$deletedPayment) {
+                $detailsDeleted = DB::table('paymentdetail')
+                    ->where('PAYMENT_ID', $id)
+                    ->delete();
+
+                $paymentDeleted = DB::table('payment')
+                    ->where('PAYMENT_ID', $id)
+                    ->delete();
+
+                $deletedPayment = ($detailsDeleted > 0 || $paymentDeleted > 0) ? 1 : 0;
+            });
+
+            if ($deletedPayment) {
+                return response()->json(['message' => 'Record deleted successfully'], 200);
+            }
+
+            $deletedLegacy = DB::table('general_fund_data')
+                ->where('id', $id)
+                ->delete();
+
+            if ($deletedLegacy === 0) {
                 return response()->json(['message' => 'Record not found'], 404);
             }
 

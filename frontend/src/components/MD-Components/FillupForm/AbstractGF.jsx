@@ -1,7 +1,7 @@
 import "bootstrap/dist/css/bootstrap.min.css";
 import dayjs from "dayjs";
 import PropTypes from "prop-types";
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import {
   Alert,
   Button,
@@ -25,45 +25,6 @@ import {
 } from "react-icons/fa";
 import axiosInstance from "../../../api/axiosInstance";
 
-const fieldOptions = [
-  "Manufacturing",
-  "Distributor",
-  "Retailing",
-  "Financial",
-  "Other_Business_Tax",
-  "Sand_Gravel",
-  "Fines_Penalties",
-  "Mayors_Permit",
-  "Weighs_Measure",
-  "Tricycle_Operators",
-  "Occupation_Tax",
-  "Cert_of_Ownership",
-  "Cert_of_Transfer",
-  "Cockpit_Prov_Share",
-  "Cockpit_Local_Share",
-  "Sultadas",
-  "Miscellaneous_Fee",
-  "Reg_of_Birth",
-  "Marriage_Fees",
-  "Burial_Fees",
-  "Correction_of_Entry",
-  "Fishing_Permit_Fee",
-  "Sale_of_Agri_Prod",
-  "Sale_of_Acct_Form",
-  "Water_Fees",
-  "Stall_Fees",
-  "Cash_Tickets",
-  "Slaughter_House_Fee",
-  "Rental_of_Equipment",
-  "Doc_Stamp",
-  "Police_Report_Clearance",
-  "Secretaries_Fee",
-  "Med_Dent_Lab_Fees",
-  "Garbage_Fees",
-  "Docking_Mooring_Fee",
-  "Cutting_Tree",
-];
-
 const cashier = [
   "Please select",
   "FLORA MY",
@@ -75,9 +36,12 @@ const cashier = [
 
 const filterOptions = (options, inputValue) => {
   if (!inputValue) return options;
-  return options.filter(option =>
-    option.toLowerCase().includes(inputValue.toLowerCase())
-)};
+  return options.filter((option) =>
+    String(option?.description || "")
+      .toLowerCase()
+      .includes(String(inputValue).toLowerCase())
+  );
+};
 
 const uiColors = {
   navy: "#0f2747",
@@ -113,6 +77,16 @@ function AbstractGF({ data, mode }) {
   const [alertVariant, setAlertVariant] = useState("info");
   const [loading, setLoading] = useState(false);
   const [progress, setProgress] = useState(0);
+  const [rateOptions, setRateOptions] = useState([]);
+  const [rateLoading, setRateLoading] = useState(false);
+
+  const rateById = useMemo(() => {
+    const map = new Map();
+    (Array.isArray(rateOptions) ? rateOptions : []).forEach((rate) => {
+      map.set(String(rate.oprate_id), rate);
+    });
+    return map;
+  }, [rateOptions]);
 
   // Auto-generate receipt number
   const autoGenerateReceipt = async () => {
@@ -131,7 +105,7 @@ function AbstractGF({ data, mode }) {
   // Prefill data in edit mode
   useEffect(() => {
     if (mode === "edit" && data) {
-      setSelectedDate(data.date || null);
+      setSelectedDate(data.date || "");
       setTaxpayerName(data.name || "");
       setReceiptNumber(data.receipt_no || "");
       setTypeReceipt(data.type_receipt || "");
@@ -140,7 +114,7 @@ function AbstractGF({ data, mode }) {
       const newFields = [];
       const newFieldValues = {};
 
-      fieldOptions.forEach((fieldKey) => {
+      ([]).forEach((fieldKey) => {
         const rawValue = data[fieldKey];
 
         // 🔑 Cast to number and filter out exact 0, including "0", "0.00", etc.
@@ -152,11 +126,11 @@ function AbstractGF({ data, mode }) {
         }
       });
 
-      setFields(newFields);
-      setFieldValues(newFieldValues);
-      setShowSelect(false);
+      setFields([]);
+      setFieldValues({});
+      setShowSelect(true);
     } else if (mode === "add") {
-      setSelectedDate(null);
+      setSelectedDate("");
       setTaxpayerName("");
       setReceiptNumber("");
       setTypeReceipt("");
@@ -167,6 +141,24 @@ function AbstractGF({ data, mode }) {
     }
   }, [data, mode]);
 
+  // Load payment rate options from T_OTHERPAYMENTRATE (General Fund)
+  useEffect(() => {
+    const fetchRates = async () => {
+      try {
+        setRateLoading(true);
+        const response = await axiosInstance.get("generalFundPaymentRates");
+        setRateOptions(Array.isArray(response.data) ? response.data : []);
+      } catch (error) {
+        console.error("Error fetching payment rate options:", error);
+        setRateOptions([]);
+      } finally {
+        setRateLoading(false);
+      }
+    };
+
+    fetchRates();
+  }, []);
+
   // Calculate total
   useEffect(() => {
     const totalSum = Object.values(fieldValues).reduce(
@@ -175,6 +167,11 @@ function AbstractGF({ data, mode }) {
     );
     setTotal(totalSum);
   }, [fieldValues]);
+
+  const getFieldLabel = useCallback((fieldId) => {
+    const key = String(fieldId);
+    return rateById.get(key)?.description || key;
+  }, [rateById]);
 
   // Field handlers
   const handleFieldChange = (field, value) => {
@@ -193,7 +190,7 @@ function AbstractGF({ data, mode }) {
   };
 
   const handleFieldSelect = (event) => {
-    const newSelectedField = event.target.value;
+    const newSelectedField = String(event.target.value || "").trim();
 
     if (newSelectedField && !fields.includes(newSelectedField)) {
       setFields([...fields, newSelectedField]);
@@ -201,7 +198,7 @@ function AbstractGF({ data, mode }) {
       setSelectedField("");
       setShowSelect(false);
 
-      if (newSelectedField === "Cash_Tickets") {
+      if (getFieldLabel(newSelectedField).toLowerCase() === "cash tickets") {
         autoGenerateReceipt();
       }
     }
@@ -238,7 +235,7 @@ function AbstractGF({ data, mode }) {
 
       for (const [field, value] of Object.entries(fieldValues)) {
         if (!value) {
-          setAlertMessage(`Please fill out the field: ${field}.`);
+          setAlertMessage(`Please fill out the field: ${getFieldLabel(field)}.`);
           setAlertVariant("danger");
           return;
         }
@@ -246,27 +243,41 @@ function AbstractGF({ data, mode }) {
 
       const formattedDate = dayjs(selectedDate).format("YYYY-MM-DD");
 
+      if (mode === "edit") {
+        setAlertMessage("Use the Edit action to update an existing payment.");
+        setAlertVariant("warning");
+        return;
+      }
+
+      if (!fields.length) {
+        setAlertMessage("Please add at least one payment item.");
+        setAlertVariant("danger");
+        return;
+      }
+
       const payload = {
         date: formattedDate,
         name: taxpayerName,
         receipt_no: receiptNumber,
-        ...fieldValues,
-        total: total,
-        cashier: selectedCashier,
         type_receipt: typeReceipt,
+        cashier: selectedCashier,
+        details: fields.map((sourceId) => ({
+          source_id: String(sourceId),
+          amount: Number(fieldValues[sourceId] || 0),
+        })),
       };
 
       try {
         setLoading(true);
 
-        if (mode === "edit" && data?.id) {
+        if (false) {
           // ✅ UPDATE
           await axiosInstance.put(`updateGeneralFundData/${data.id}`, payload);
           setAlertMessage("Data updated successfully.");
         } else {
           // ✅ ADD
-          await axiosInstance.post("saveGeneralFundData", payload);
-          setAlertMessage("Data saved successfully.");
+          await axiosInstance.post("generalFundPayment", payload);
+          setAlertMessage("Payment saved successfully.");
         }
 
         setAlertVariant("success");
@@ -280,7 +291,7 @@ function AbstractGF({ data, mode }) {
         console.error("❌ Operation failed:", error);
         const message =
           error.response?.data?.message ||
-          `Failed to ${mode === "edit" ? "update" : "save"} data.`;
+          "Failed to save payment.";
         setAlertMessage(message);
         setAlertVariant("danger");
         setLoading(false);
@@ -288,14 +299,14 @@ function AbstractGF({ data, mode }) {
     },
     [
       mode,
-      data,
       selectedDate,
       taxpayerName,
       receiptNumber,
       typeReceipt,
       selectedCashier,
+      fields,
       fieldValues,
-      total,
+      getFieldLabel,
       handleClearFields,
     ]
   );
@@ -314,7 +325,10 @@ function AbstractGF({ data, mode }) {
     return () => clearInterval(timer);
   }, [loading]);
 
-  const filteredOptions = filterOptions(fieldOptions);
+  const filteredOptions = filterOptions(rateOptions);
+  const availableOptions = filteredOptions.filter(
+    (option) => !fields.includes(String(option?.oprate_id))
+  );
 
   return (
     <div
@@ -425,7 +439,7 @@ function AbstractGF({ data, mode }) {
               <Form.Group controlId={`form-${field}`}>
                 <Form.Label style={labelStyle}>
                   <FaListAlt style={{ marginRight: 8 }} />
-                  {field}
+                  {getFieldLabel(field)}
                 </Form.Label>
                 <InputGroup>
                   <Form.Control
@@ -458,11 +472,14 @@ function AbstractGF({ data, mode }) {
                   onChange={handleFieldSelect}
                   required
                   style={inputStyle}
+                  disabled={rateLoading}
                 >
-                  <option value="">Select a field</option>
-                  {filteredOptions.map((option) => (
-                    <option key={option} value={option}>
-                      {option}
+                  <option value="">
+                    {rateLoading ? "Loading..." : "Select a field"}
+                  </option>
+                  {availableOptions.map((option) => (
+                    <option key={option.oprate_id} value={option.oprate_id}>
+                      {option.description}
                     </option>
                   ))}
                 </Form.Select>
@@ -473,7 +490,11 @@ function AbstractGF({ data, mode }) {
           <Col md={12}>
             <Button
               variant="primary"
-              onClick={() => setShowSelect(true)}
+              type="button"
+              onClick={() => {
+                setSelectedField("");
+                setShowSelect(true);
+              }}
               className="mt-2"
               style={{
                 backgroundColor: uiColors.navy,

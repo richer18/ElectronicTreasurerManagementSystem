@@ -60,6 +60,8 @@ use App\Http\Controllers\GeneralFundDataRegulatoryFeesController;
 use App\Http\Controllers\GeneralFundDataReceiptsFromEconomicEnterpriseController;
 use App\Http\Controllers\GeneralFundPaymentViewController;
 use App\Http\Controllers\GeneralFundPaymentEditController;
+use App\Http\Controllers\GeneralFundPaymentCreateController;
+use App\Http\Controllers\GeneralFundPaymentRateOptionsController;
 
 use App\Http\Controllers\TrustFundDataAllDataController;
 use App\Http\Controllers\TrustFundDataTotalAllDataController;
@@ -206,6 +208,8 @@ Route::post('/updateComment', [RealPropertyTaxDataViewDialogUpdateCommentControl
 Route::post('/insertComment', [RealPropertyTaxDataViewDialogInsertCommentController::class, 'insert']);
 
 Route::get('/generalFundDataAll', [GeneralFundDataAllController::class, 'index']);
+Route::get('/generalFundPaymentRates', [GeneralFundPaymentRateOptionsController::class, 'index']);
+Route::post('/generalFundPayment', [GeneralFundPaymentCreateController::class, 'store']);
 Route::get('/generalFundPaymentView/{paymentId}', [GeneralFundPaymentViewController::class, 'show']);
 Route::get('/generalFundPaymentEdit/{paymentId}', [GeneralFundPaymentEditController::class, 'show']);
 Route::put('/generalFundPaymentEdit/{paymentId}', [GeneralFundPaymentEditController::class, 'update']);
@@ -347,5 +351,3 @@ Route::get('/issued-forms', [IssuedFormController::class, 'index']);
 Route::get('/rcd-entries', [RcdEntryController::class, 'index']);
 Route::post('/rcd-entries', [RcdEntryController::class, 'store']);
 Route::put('/rcd-entries/{id}', [RcdEntryController::class, 'update']);
-
-

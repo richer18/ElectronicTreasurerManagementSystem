@@ -48,7 +48,7 @@ import StorefrontIcon from "@mui/icons-material/Storefront";
 // ---- Adjust these imports to your actual file paths ----
 import axiosInstance from "../../../../api/axiosInstance";
 import { useMaterialUIController } from "../../../../context";
-// import AbstractGF from "../../../../components/MD-Components/FillupForm/AbstractGF";
+import AbstractGF from "../../../../components/MD-Components/FillupForm/AbstractGF";
 import GeneralFundPaymentEditForm from "../../../../components/MD-Components/FillupForm/GeneralFundPaymentEditForm";
 import GeneralFundDialogPopupDAILY from "../../../../components/MD-Components/Popup/components/GeneralFundPopup/GeneralFundDialogPopupDailyTable";
 import GeneralFundDialogPopupRFEE from "../../../../components/MD-Components/Popup/components/GeneralFundPopup/GeneralFundDialogPopupRFEE";
@@ -396,6 +396,11 @@ function GeneralFund() {
     setIsDialogOpen(false);
   };
 
+  const handleAddClick = () => {
+    setDialogContent(<AbstractGF mode="add" />);
+    setIsDialogOpen(true);
+  };
+
   // Generic “Add” button
   // const handleClickOpen = (content) => {
   //   setDialogContent(content);
@@ -687,8 +692,6 @@ function GeneralFund() {
                   px: 3.5,
                   backgroundColor: uiColors.navy,
                   color: "white",
-                  pointerEvents: "none",
-                  cursor: "not-allowed",
                   "&:hover": {
                     backgroundColor: uiColors.navyHover,
                     transform: "translateY(-1px)",
@@ -703,7 +706,7 @@ function GeneralFund() {
                   transition: "all 0.2s ease",
                   boxShadow: "0 2px 6px rgba(15, 39, 71, 0.2)",
                 }}
-                onClick={undefined}
+                onClick={handleAddClick}
               >
                 New Entry
               </Button>
