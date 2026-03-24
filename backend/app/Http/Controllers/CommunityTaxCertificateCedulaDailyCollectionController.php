@@ -9,36 +9,40 @@ use App\Helpers\QueryHelpers;
 class CommunityTaxCertificateCedulaDailyCollectionController extends Controller
 {
     public function index(Request $request)
-{
-    $subquery = DB::table('cedula')
-        ->selectRaw("
-            DATE(DATEISSUED) AS issued_date,
-            DATE_FORMAT(DATEISSUED, '%b %d, %Y') AS formatted_date,
-            BASICTAXDUE,
-            SALTAXDUE,
-            INTEREST,
-            TOTALAMOUNTPAID,
-            COMMENT
-        ");
+    {
+        $query = DB::table('communitytaxcertificate')
+            ->selectRaw("
+                DATE(DATEISSUED) AS issued_date,
+                DATE_FORMAT(DATEISSUED, '%b %d, %Y') AS DATE,
+                SUM(COALESCE(BASICTAXDUE, 0)) AS BASIC,
+                SUM(
+                    COALESCE(BUSTAXDUE, 0) +
+                    COALESCE(SALTAXDUE, 0) +
+                    COALESCE(RPTAXDUE, 0)
+                ) AS TAX_DUE,
+                SUM(COALESCE(INTEREST, 0)) AS INTEREST,
+                SUM(COALESCE(TOTALAMOUNTPAID, 0)) AS TOTAL
+            ");
 
-    // Apply filters using helper
-    \App\Helpers\QueryHelpers::addDateFilters($subquery, $request, 'DATEISSUED');
+        QueryHelpers::addDateFilters($query, $request, 'DATEISSUED');
 
-    // Wrap in outer query for aggregation
-    $results = DB::table(DB::raw("({$subquery->toSql()}) as cedula"))
-        ->mergeBindings($subquery) // Important to keep bindings
-        ->selectRaw("
-            formatted_date AS DATE,
-            SUM(BASICTAXDUE) AS BASIC,
-            SUM(SALTAXDUE) AS TAX_DUE,
-            SUM(INTEREST) AS INTEREST,
-            SUM(TOTALAMOUNTPAID) AS TOTAL,
-            GROUP_CONCAT(DISTINCT COMMENT SEPARATOR '; ') AS COMMENT
-        ")
-        ->groupBy('issued_date', 'formatted_date')
-        ->orderBy('issued_date')
-        ->get();
+        $results = $query
+            ->groupBy('issued_date')
+            ->groupBy('DATE')
+            ->orderBy('issued_date')
+            ->get()
+            ->map(function ($row) {
+                return [
+                    'DATE' => $row->DATE,
+                    'BASIC' => (float) ($row->BASIC ?? 0),
+                    'TAX_DUE' => (float) ($row->TAX_DUE ?? 0),
+                    'INTEREST' => (float) ($row->INTEREST ?? 0),
+                    'TOTAL' => (float) ($row->TOTAL ?? 0),
+                    'COMMENT' => '',
+                ];
+            })
+            ->values();
 
-    return response()->json($results);
-}
+        return response()->json($results);
+    }
 }

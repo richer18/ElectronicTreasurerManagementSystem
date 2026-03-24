@@ -13,7 +13,7 @@ class CommunityTaxCertificateSummaryCollectionDataReportController extends Contr
         $year = 2025;
 
         $result = collect($months)->map(function ($month) use ($year) {
-            $cedula = DB::table('cedula')
+            $cedula = DB::table('communitytaxcertificate')
                 ->whereYear('DATEISSUED', $year)
                 ->whereMonth('DATEISSUED', $month)
                 ->sum('TOTALAMOUNTPAID');

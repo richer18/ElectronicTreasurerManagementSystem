@@ -19,6 +19,18 @@ WHERE pd.FUNDTYPE_CT = 'GF'
   AND p.AFTYPE NOT IN ('CTC','AF56')
 ORDER BY p.PAYMENTDATE DESC;
 
+----------WHEN CLICK VIEW THIS IS THE QUERY GF---------------------
+SELECT
+    p.PAYMENTDATE AS `DATE`,
+    p.PAIDBY AS `NAME`,
+    opr.DESCRIPTION AS `DESCRIPTION`,
+    pd.AMOUNTPAID AS `AMOUNT`
+FROM PAYMENT p
+LEFT JOIN PAYMENTDETAIL pd
+    ON p.PAYMENT_ID = pd.PAYMENT_ID
+LEFT JOIN T_OTHERPAYMENTRATE opr
+    ON pd.SOURCEID = opr.OPRATE_ID
+
 
 =============TF==========================================
 SELECT
@@ -41,7 +53,7 @@ AND p.AFTYPE NOT IN ('CTC','AF56')
 ORDER BY p.PAYMENTDATE DESC;
 
 
-----------WHEN CLICK VIEW THIS IS THE QUERY---------------------
+----------WHEN CLICK VIEW THIS IS THE QUERY TF---------------------
 SELECT
     p.PAYMENTDATE AS `DATE`,
     p.PAIDBY AS `NAME`,
@@ -52,6 +64,7 @@ LEFT JOIN PAYMENTDETAIL pd
     ON p.PAYMENT_ID = pd.PAYMENT_ID
 LEFT JOIN T_OTHERPAYMENTRATE opr
     ON pd.SOURCEID = opr.OPRATE_ID
+	WHERE pd.FUNDTYPE_CT = 'TF'
 -------------------------------------------------------------------
 
 
@@ -71,3 +84,22 @@ ORDER BY p.PAYMENTDATE DESC;
 
 
 ------------------------------------------------------------------
+
+
+--------------------------COMMUNITYTAX CERTIFICATE----------------------------------------
+SELECT 
+    c.DATEISSUED AS `DATE`,
+    c.CTCNO AS `CTC NO`,
+    c.LOCAL_TIN AS `LOCAL TIN`,
+    t.OWNERNAME AS `NAME`,
+    c.BASICTAXDUE AS `BASIC`,
+    (c.BUSTAXDUE + c.SALTAXDUE + c.RPTAXDUE) AS `TAX DUE`,
+    c.INTEREST AS `INTEREST`,
+    c.TOTALAMOUNTPAID AS `TOTAL`,
+    c.USERID AS `CASHIER`
+FROM communitytaxcertificate c
+LEFT JOIN taxpayer t 
+    ON c.LOCAL_TIN = t.LOCAL_TIN;
+
+----------WHEN CLICK VIEW THIS IS THE QUERY FOR COMMUNITYTAX CERTIFICATE---------------------	
+	

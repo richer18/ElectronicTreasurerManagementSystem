@@ -94,6 +94,12 @@ const formatDate = (dateInput) => {
   return format(date, "MMMM d, yyyy");
 };
 
+const formatAmount = (value) =>
+  new Intl.NumberFormat("en-PH", {
+    minimumFractionDigits: 2,
+    maximumFractionDigits: 2,
+  }).format(Number(value || 0));
+
 function DailyTable({ onBack, setShowFilters }) {
   const [controller] = useMaterialUIController();
   const { darkMode } = controller;
@@ -382,7 +388,7 @@ function DailyTable({ onBack, setShowFilters }) {
                   <CenteredTableCell>{row.BASIC}</CenteredTableCell>
                   <CenteredTableCell>{row.TAX_DUE}</CenteredTableCell>
                   <CenteredTableCell>{row.INTEREST}</CenteredTableCell>
-                  <CenteredTableCell>{row.TOTAL}</CenteredTableCell>
+                  <CenteredTableCell>{formatAmount(row.TOTAL)}</CenteredTableCell>
                   <CenteredTableCell>
                     <Badge
                       badgeContent={

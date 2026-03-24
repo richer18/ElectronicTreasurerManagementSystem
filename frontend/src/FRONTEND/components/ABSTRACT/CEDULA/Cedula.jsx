@@ -114,6 +114,11 @@ const toNumber = (value) => {
 };
 
 const formatFixed2 = (value) => toNumber(value).toFixed(2);
+const formatPeso = (value) =>
+  `₱ ${toNumber(String(value ?? "").replace(/[^\d.-]/g, "")).toLocaleString("en-PH", {
+    minimumFractionDigits: 2,
+    maximumFractionDigits: 2,
+  })}`;
 
 // ------------------------
 //   Main Component
@@ -275,14 +280,18 @@ function Cedula({ ...props }) {
     }
 
     let newFiltered = data;
+    const normalize = (value) => String(value ?? "").toLowerCase();
 
     // (a) Filter by searchQuery
-    if (searchQuery) {
-      const q = searchQuery.toLowerCase();
+    if (searchQuery?.trim()) {
+      const q = searchQuery.trim().toLowerCase();
       newFiltered = newFiltered.filter((row) => {
-        const rowName = (row?.NAME ?? "").toLowerCase();
-        const rowCtcNo = (row?.["CTC NO"] ?? "").toString().toLowerCase();
-        return rowName.includes(q) || rowCtcNo.includes(q);
+        return (
+          normalize(row?.NAME).includes(q) ||
+          normalize(row?.CTCNO ?? row?.["CTC NO"]).includes(q) ||
+          normalize(row?.LOCAL_TIN ?? row?.["LOCAL TIN"]).includes(q) ||
+          normalize(row?.CASHIER).includes(q)
+        );
       });
     }
 
@@ -335,7 +344,7 @@ function Cedula({ ...props }) {
       <Cedulas
         data={{
           ...selectedRow,
-          ctcno: selectedRow.CTCNO, // Use `CTCNO` instead of `CTC_ID`
+          ctcno: selectedRow.CTCNO ?? selectedRow["CTC NO"],
         }}
         mode="edit"
         onSaved={fetchCedulaData}
@@ -535,9 +544,18 @@ function Cedula({ ...props }) {
                   fullWidth
                   variant="outlined"
                   label="Search Records"
-                  placeholder="Name or CTC Number"
+                  placeholder="Name, CTC number, local TIN, or cashier"
                   value={pendingSearchQuery}
-                  onChange={(e) => setPendingSearchQuery(e.target.value)}
+                  onChange={(e) => {
+                    const value = e.target.value;
+                    setPendingSearchQuery(value);
+                    setSearchQuery(value);
+                  }}
+                  onKeyDown={(e) => {
+                    if (e.key === "Enter") {
+                      handleSearchClick();
+                    }
+                  }}
                   sx={{
                     minWidth: { xs: "100%", md: 280 },
                     "& .MuiInputBase-input": {
@@ -873,25 +891,25 @@ function Cedula({ ...props }) {
         >
           {[
             {
-              value: totalAmount,
+              value: formatPeso(totalAmount),
               text: "Total Revenue",
               icon: <AccountBalanceIcon />,
               gradient: uiColors.cardGradients[0],
             },
             {
-              value: totalBasic,
+              value: formatPeso(totalBasic),
               text: "Basic Income",
               icon: <MonetizationOnIcon />,
               gradient: uiColors.cardGradients[1],
             },
             {
-              value: totalTaxDue,
+              value: formatPeso(totalTaxDue),
               text: "Tax Liability",
               icon: <ReceiptLongIcon />,
               gradient: uiColors.cardGradients[2],
             },
             {
-              value: totalInterest,
+              value: formatPeso(totalInterest),
               text: "Accrued Interest",
               icon: <PercentIcon />,
               gradient: uiColors.cardGradients[3],
@@ -1059,8 +1077,8 @@ function Cedula({ ...props }) {
                   .map((row, idx) => (
                     <TableRow key={row?.CTC_ID || row?.["CTC NO"] || row?.id || idx}>
                       <TableCell align="center">{formatDate(row?.DATE)}</TableCell>
-                      <TableCell align="center">{row?.["CTC NO"] || "-"}</TableCell>
-                      <TableCell align="center">{row?.LOCAL || "-"}</TableCell>
+                      <TableCell align="center">{row?.CTCNO || row?.["CTC NO"] || "-"}</TableCell>
+                      <TableCell align="center">{row?.LOCAL_TIN || row?.["LOCAL TIN"] || "-"}</TableCell>
                       <TableCell align="center">{row?.NAME || "-"}</TableCell>
                       <TableCell align="center">{formatFixed2(row?.BASIC)}</TableCell>
                       <TableCell align="center">{formatFixed2(row?.TAX_DUE)}</TableCell>
@@ -1071,7 +1089,7 @@ function Cedula({ ...props }) {
                             style: "currency",
                             currency: "PHP",
                             minimumFractionDigits: 2,
-                          }).format(toNumber(row?.TOTALAMOUNTPAID))}
+                          }).format(toNumber(row?.TOTAL ?? row?.TOTALAMOUNTPAID))}
                         </Typography>
                       </TableCell>
                       <TableCell align="center">{row?.CASHIER || "-"}</TableCell>

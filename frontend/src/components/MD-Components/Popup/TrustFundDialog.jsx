@@ -1,46 +1,74 @@
-import CloseIcon from '@mui/icons-material/Close';
-import { Button } from '@mui/material'; // Use standard Material-UI Button
-import Dialog from '@mui/material/Dialog';
-import DialogContent from '@mui/material/DialogContent';
-import DialogTitle from '@mui/material/DialogTitle';
-import Tooltip from '@mui/material/Tooltip';
+import { Alert, Box, CircularProgress, Typography } from '@mui/material';
 import PropTypes from 'prop-types';
+import { useEffect, useState } from 'react';
+import axiosInstance from '../../../api/axiosInstance';
 import TrustFundAllTable from "../../../FRONTEND/components/ABSTRACT/TF/TableData/TrustFunAllTable";
-function TrustFundDialog({ open, onClose, data }) {
-    return (
-        <Dialog
-            open={open}
-            onClose={onClose}
-            maxWidth="xl" // Set maximum width to "extra-large"
-            fullWidth // Ensure the dialog takes full width of its maxWidth
-            sx={{
-                '& .MuiDialog-paper': {
-                    width: '90%', // Adjust this percentage to control the width
-                    maxWidth: '1200px', // Set a maximum width in pixels
-                },
-            }}
-        >
-            <DialogTitle>
-                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                    Trust Fund View
-                    <Button onClick={onClose} color="secondary">
-                        <Tooltip title="Close">
-                            <CloseIcon fontSize="large" />
-                        </Tooltip>
-                    </Button>
-                </div>
-            </DialogTitle>
-            <DialogContent>
-                <TrustFundAllTable data={[data]} />
-            </DialogContent>
-        </Dialog>
-    );
+
+function TrustFundDialog({ paymentId }) {
+    const [rows, setRows] = useState([]);
+    const [loading, setLoading] = useState(true);
+    const [error, setError] = useState('');
+
+    useEffect(() => {
+        let isMounted = true;
+
+        const fetchRows = async () => {
+            if (!paymentId) {
+                if (isMounted) {
+                    setRows([]);
+                    setLoading(false);
+                    setError('Payment ID is missing.');
+                }
+                return;
+            }
+
+            try {
+                setLoading(true);
+                setError('');
+                const response = await axiosInstance.get(`trustFundPaymentView/${paymentId}`);
+
+                if (isMounted) {
+                    setRows(Array.isArray(response.data) ? response.data : []);
+                }
+            } catch (fetchError) {
+                if (isMounted) {
+                    setError(fetchError.response?.data?.error || 'Failed to load trust fund details.');
+                    setRows([]);
+                }
+            } finally {
+                if (isMounted) {
+                    setLoading(false);
+                }
+            }
+        };
+
+        fetchRows();
+
+        return () => {
+            isMounted = false;
+        };
+    }, [paymentId]);
+
+    if (loading) {
+        return (
+            <Box sx={{ py: 6, display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 2 }}>
+                <CircularProgress />
+                <Typography variant="body2" color="text.secondary">
+                    Loading trust fund details...
+                </Typography>
+            </Box>
+        );
+    }
+
+    if (error) {
+        return <Alert severity="error">{error}</Alert>;
+    }
+
+    return <TrustFundAllTable data={rows} />;
 }
 
 TrustFundDialog.propTypes = {
-    open: PropTypes.bool.isRequired,
-    onClose: PropTypes.func.isRequired,
-    data: PropTypes.object.isRequired, // Define the type based on your data structure
+    paymentId: PropTypes.oneOfType([PropTypes.string, PropTypes.number]).isRequired,
 };
 
 export default TrustFundDialog;

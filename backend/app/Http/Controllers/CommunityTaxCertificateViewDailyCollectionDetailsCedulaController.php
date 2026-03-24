@@ -16,28 +16,45 @@ class CommunityTaxCertificateViewDailyCollectionDetailsCedulaController extends 
         }
 
         try {
-            $results = DB::select("
-                SELECT
-                    DATE_FORMAT(DATEISSUED, '%Y-%m-%d') AS DATE,
-                    CTCNO AS `CTC NO`,
-                    NULLIF(LOCAL_TIN, '') AS LOCAL,
-                    NULLIF(OWNERNAME, '') AS NAME,
-                    COALESCE(BASICTAXDUE, 0) AS BASIC,
-                    COALESCE(BUSTAXDUE, 0) +
-                    COALESCE(SALTAXDUE, 0) +
-                    COALESCE(RPTAXDUE, 0) AS TAX_DUE,
-                    COALESCE(INTEREST, 0) AS INTEREST,
-                    COALESCE(BASICTAXDUE, 0) +
-                    (COALESCE(BUSTAXDUE, 0) +
-                     COALESCE(SALTAXDUE, 0) +
-                     COALESCE(RPTAXDUE, 0)) +
-                    COALESCE(INTEREST, 0) AS TOTAL,
-                    NULLIF(USERID, '') AS CASHIER,
-                    NULLIF(COMMENT, '') AS COMMENT
-                FROM cedula
-                WHERE DATE(DATEISSUED) = ?
-                ORDER BY CTCNO ASC
-            ", [$date]);
+            $rows = DB::table('communitytaxcertificate')
+                ->select([
+                    'DATEISSUED',
+                    'CTCNO',
+                    'LOCAL_TIN',
+                    'BASICTAXDUE',
+                    'BUSTAXDUE',
+                    'SALTAXDUE',
+                    'RPTAXDUE',
+                    'INTEREST',
+                    'TOTALAMOUNTPAID',
+                    'USERID',
+                ])
+                ->whereDate('DATEISSUED', $date)
+                ->orderBy('CTCNO')
+                ->get();
+
+            $tinMap = DB::table('taxpayer')
+                ->whereIn('LOCAL_TIN', $rows->pluck('LOCAL_TIN')->filter()->unique()->values())
+                ->pluck('OWNERNAME', 'LOCAL_TIN');
+
+            $results = $rows->map(function ($row) use ($tinMap) {
+                $taxDue = (float) ($row->BUSTAXDUE ?? 0)
+                    + (float) ($row->SALTAXDUE ?? 0)
+                    + (float) ($row->RPTAXDUE ?? 0);
+
+                return [
+                    'DATE' => $row->DATEISSUED,
+                    'CTC NO' => $row->CTCNO,
+                    'LOCAL' => $row->LOCAL_TIN,
+                    'NAME' => $tinMap[$row->LOCAL_TIN] ?? null,
+                    'BASIC' => (float) ($row->BASICTAXDUE ?? 0),
+                    'TAX_DUE' => $taxDue,
+                    'INTEREST' => (float) ($row->INTEREST ?? 0),
+                    'TOTAL' => (float) ($row->TOTALAMOUNTPAID ?? 0),
+                    'CASHIER' => $row->USERID,
+                    'COMMENT' => '',
+                  ];
+            })->values();
 
             return response()->json($results);
         } catch (\Exception $e) {

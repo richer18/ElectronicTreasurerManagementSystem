@@ -85,6 +85,11 @@ use App\Http\Controllers\TrustFundDataDivingFeesController;
 use App\Http\Controllers\TrustFundDataSaveDataController;
 use App\Http\Controllers\TrustFundDataUpdateDataController;
 use App\Http\Controllers\TrustFundDataReportDataController;
+use App\Http\Controllers\TrustFundPaymentViewController;
+use App\Http\Controllers\TrustFundPaymentRateOptionsController;
+use App\Http\Controllers\TrustFundPaymentCreateController;
+use App\Http\Controllers\TrustFundPaymentEditController;
+use App\Http\Controllers\TrustFundPaymentDeleteController;
 
 use App\Http\Controllers\CommunityTaxCertificateCedulaDataController;
 use App\Http\Controllers\CommunityTaxCertificateCedulaDailyCollectionController;
@@ -235,6 +240,12 @@ Route::get('/general-fund-regulatory-fees-report', [GeneralFundDataRegulatoryFee
 Route::get('/general-fund-receipts-from-economic-enterprise-report', [GeneralFundDataReceiptsFromEconomicEnterpriseController::class, 'index']);
 
 Route::get('/table-trust-fund-all', [TrustFundDataAllDataController::class, 'index']);
+Route::get('/trustFundPaymentRates', [TrustFundPaymentRateOptionsController::class, 'index']);
+Route::post('/trustFundPayment', [TrustFundPaymentCreateController::class, 'store']);
+Route::get('/trustFundPaymentView/{paymentId}', [TrustFundPaymentViewController::class, 'show']);
+Route::get('/trustFundPaymentEdit/{paymentId}', [TrustFundPaymentEditController::class, 'show']);
+Route::put('/trustFundPaymentEdit/{paymentId}', [TrustFundPaymentEditController::class, 'update']);
+Route::delete('/deleteTF/{id}', [TrustFundPaymentDeleteController::class, 'destroy']);
 Route::get('/trust-fund-total', [TrustFundDataTotalAllDataController::class, 'index']);
 Route::get('/BuildingPermitFeeTotal', [TrustFundDataBuildingPermitFeeTotalController::class, 'index']);
 Route::get('/ElectricalFeeTotal', [TrustFundDataElectricalFeeTotalController::class, 'index']);

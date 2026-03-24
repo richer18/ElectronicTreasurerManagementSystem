@@ -26,7 +26,7 @@ class CommunityTaxCertificateSaveCedulaDataController extends Controller
         $CTCYEAR = $request->input('CTCYEAR');
 
         // Check if CTCNO already exists
-        $exists = DB::selectOne("SELECT 1 FROM CEDULA WHERE CTCNO = ? LIMIT 1", [$CTCNO]);
+        $exists = DB::selectOne("SELECT 1 FROM communitytaxcertificate WHERE CTCNO = ? LIMIT 1", [$CTCNO]);
 
         if ($exists) {
             return response()->json([
@@ -37,7 +37,7 @@ class CommunityTaxCertificateSaveCedulaDataController extends Controller
         try {
             // Insert new record
             $sql = "
-                INSERT INTO CEDULA (
+                INSERT INTO communitytaxcertificate (
                     DATEISSUED,
                     TRANSDATE,
                     CTCNO,

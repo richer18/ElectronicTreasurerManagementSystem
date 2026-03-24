@@ -410,7 +410,7 @@ function DashboardLayoutBranding(props) {
   );
   const brandingTitle = (
     <Box sx={{ display: "flex", alignItems: "center" }}>
-      <Box sx={{ fontWeight: 700, whiteSpace: "nowrap" }}>ETMS</Box>
+      <Box sx={{ fontWeight: 700, whiteSpace: "nowrap" }}>Electronic Treasurer Management System</Box>
       <Box
         sx={{
           position: "fixed",

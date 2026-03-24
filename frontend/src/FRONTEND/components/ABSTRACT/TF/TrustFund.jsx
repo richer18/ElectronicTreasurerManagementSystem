@@ -5,9 +5,11 @@ import {
   Box,
   Button,
   Card,
-  Dialog, DialogActions,
+  Dialog,
+  DialogActions,
   DialogContent,
-  DialogContentText, DialogTitle,
+  DialogContentText,
+  DialogTitle,
   InputAdornment,
   Menu,
   MenuItem,
@@ -35,7 +37,8 @@ import * as XLSX from "xlsx";
 import axiosInstance from "../../../../api/axiosInstance";
 import { useMaterialUIController } from "../../../../context";
 
-import TrustFunds from "../../../../components/MD-Components/FillupForm/AbstractTF";
+import TrustFundPaymentForm from "../../../../components/MD-Components/FillupForm/TrustFundPaymentForm";
+import TrustFundPaymentEditForm from "../../../../components/MD-Components/FillupForm/TrustFundPaymentEditForm";
 import PopupDialog from "../../../../components/MD-Components/Popup/PopupDialogTF_FORM";
 import TrustFundDialog from "../../../../components/MD-Components/Popup/TrustFundDialog";
 import ReportTable from "./TableData/components/ReportTable";
@@ -161,11 +164,8 @@ function TrustFund() {
   const [openZF, setOpenZF] = useState(false);
   const [openLDF, setOpenLDF] = useState(false);
   const [openTOTAL, setOpenTOTAL] = useState(false);
-
-   const [rows, setRows] = React.useState([]);
-    const [openDeleteDialog, setOpenDeleteDialog] = useState(false);
-    const [selectedId, setSelectedId] = useState(null);
-  
+  const [openDeleteDialog, setOpenDeleteDialog] = useState(false);
+  const [selectedId, setSelectedId] = useState(null);
 
   const [buildingPermitFee, setBuildingPermitFee] = useState(0);
   const [electricalFee, setElectricalFee] = useState(0);
@@ -270,20 +270,6 @@ function TrustFund() {
         }, 300);
       };
 
-  const handleEditClick = () => {
-    if (!selectedRow) return;
-    setDialogContent(
-      <TrustFunds
-        // Pass the data from the selected row
-        data={selectedRow}
-        // If you want a custom prop to indicate "edit mode", you can do:
-        mode="edit"
-      />
-    );
-    setIsDialogOpen(true);
-    handleMenuClose();
-  };
-
   // ------------------------
   //  1) Fetch data once
   // ------------------------
@@ -336,9 +322,15 @@ function TrustFund() {
       const q = searchQuery.toLowerCase();
       newFiltered = newFiltered.filter((row) => {
         const rowName = (row?.NAME ?? "").toLowerCase();
-        const rowCtcNo = (row?.RECEIPT_NO ?? "").toString().toLowerCase();
-        // .includes() = partial substring match
-        return rowName.includes(q) || rowCtcNo.includes(q);
+        const rowReceiptNo = (row?.RECEIPT_NO ?? "").toString().toLowerCase();
+        const rowTin = (row?.LOCAL_TIN ?? "").toString().toLowerCase();
+        const rowCollector = (row?.CASHIER ?? "").toLowerCase();
+        return (
+          rowName.includes(q) ||
+          rowReceiptNo.includes(q) ||
+          rowTin.includes(q) ||
+          rowCollector.includes(q)
+        );
       });
     }
 
@@ -394,8 +386,8 @@ function TrustFund() {
     setSearchQuery(pendingSearchQuery);
   };
 
-  const handleClickOpen = (content) => {
-    setDialogContent(content);
+  const handleAddClick = () => {
+    setDialogContent(<TrustFundPaymentForm />);
     setIsDialogOpen(true);
   };
 
@@ -416,21 +408,22 @@ function TrustFund() {
     setAnchorEl(null);
   };
 
-  // Close the “View” dialog
-  const handleCloseDialog = () => {
-    setIsDialogOpen(false);
-  };
-
   const handleViewClick = () => {
-    if (!selectedRow) return;
+    if (!selectedRow?.PAYMENT_ID) return;
 
     setDialogContent(
       <TrustFundDialog
-        open={true}
-        onClose={handleCloseDialog}
-        data={selectedRow || {}} // Fallback to an empty object
+        paymentId={selectedRow.PAYMENT_ID}
       />
     );
+    setIsDialogOpen(true);
+    handleMenuClose();
+  };
+
+  const handleEditClick = () => {
+    if (!selectedRow?.PAYMENT_ID) return;
+
+    setDialogContent(<TrustFundPaymentEditForm data={selectedRow} />);
     setIsDialogOpen(true);
     handleMenuClose();
   };
@@ -511,26 +504,27 @@ function TrustFund() {
 
   const handleConfirmDelete = async () => {
     if (!selectedId) return;
-    
+
     try {
-      const response = await fetch(`/api/deleteTF/${selectedId}`, {
-        method: "DELETE",
-      });
+      const response = await axiosInstance.delete(`deleteTF/${selectedId}`);
 
-      const result = await response.json();
-
-      if (response.ok) {
+      if (response.status === 200) {
         alert("Record deleted successfully");
-        setRows(prev => prev.filter(row => row.id !== selectedId));
+        setData((prev) =>
+          Array.isArray(prev)
+            ? prev.filter((row) => row.PAYMENT_ID !== selectedId)
+            : prev
+        );
       } else {
-        alert(result.error || "Failed to delete record");
+        alert(response.data?.error || "Failed to delete record");
       }
     } catch (error) {
       console.error("Error deleting record:", error);
-      alert("Error deleting record");
+      alert(error.response?.data?.error || "Error deleting record");
     } finally {
       setOpenDeleteDialog(false);
       setSelectedId(null);
+      handleMenuClose();
     }
   };
 
@@ -597,7 +591,7 @@ function TrustFund() {
                 fullWidth
                 variant="outlined"
                 label="Search Records"
-                placeholder="Name or Receipt Number"
+                placeholder="Paid by, receipt no., collector, or local TIN"
                 value={pendingSearchQuery}
                 onChange={(e) => setPendingSearchQuery(e.target.value)}
                 sx={{
@@ -731,7 +725,6 @@ function TrustFund() {
         {/* Action Buttons Row */}
         <Box display="flex" alignItems="center" gap={2} sx={{ py: 1 }}>
           <Box display="flex" gap={2} flexGrow={1} flexWrap="wrap">
-            {/* New Entry - Primary CTA */}
             <Tooltip title="Add New Entry" arrow>
               <Button
                 variant="contained"
@@ -754,9 +747,7 @@ function TrustFund() {
                   transition: "all 0.2s ease",
                   boxShadow: "0 2px 6px rgba(15, 39, 71, 0.2)",
                 }}
-                onClick={() =>
-                  handleClickOpen(<TrustFunds onClose={handleClose} />)
-                }
+                onClick={handleAddClick}
               >
                 New Entry
               </Button>
@@ -1060,12 +1051,12 @@ function TrustFund() {
           <Table stickyHeader>
             <TableHead>
               <TableRow>
-                <StyledTableCell>Date</StyledTableCell>
+                <StyledTableCell>Payment Date</StyledTableCell>
+                <StyledTableCell>Paid By</StyledTableCell>
                 <StyledTableCell>Receipt No.</StyledTableCell>
-                <StyledTableCell>Name of Taxpayer</StyledTableCell>
-                <StyledTableCell>Cashier</StyledTableCell>
-                <StyledTableCell>Type of Receipt</StyledTableCell>
-                <StyledTableCell>Total</StyledTableCell>
+                <StyledTableCell>AF Type</StyledTableCell>
+                <StyledTableCell>Collector</StyledTableCell>
+                <StyledTableCell>Amount</StyledTableCell>
                 <StyledTableCell>Action</StyledTableCell>
               </TableRow>
             </TableHead>
@@ -1073,10 +1064,11 @@ function TrustFund() {
               {filteredData
                 .slice(page * rowsPerPage, page * rowsPerPage + rowsPerPage)
                 .map((row) => (
-                  <TableRow key={row.id || row.RECEIPT_NO} hover>
+                  <TableRow key={row.PAYMENT_ID || row.RECEIPT_NO} hover>
                     <TableCell align="center">{formatDate(row.DATE)}</TableCell>
+                    <TableCell align="center">{row.NAME || "-"}</TableCell>
                     <TableCell align="center">{row.RECEIPT_NO}</TableCell>
-                    <TableCell align="center">{row.NAME}</TableCell>
+                    <TableCell align="center">{row.TYPE_OF_RECEIPT || "-"}</TableCell>
                     <TableCell align="center">
                       <Box
                         sx={{
@@ -1086,19 +1078,17 @@ function TrustFund() {
                           gap: 1,
                         }}
                       >
-                        <img
-                          src={
-                            cashierImages[row.CASHIER] || "default_image_path"
-                          }
-                          alt={row.CASHIER}
-                          style={{ width: 40, height: 40, borderRadius: "50%" }}
-                        />
-                        <Box>{row.CASHIER}</Box>
+                        {cashierImages[row.CASHIER] ? (
+                          <img
+                            src={cashierImages[row.CASHIER]}
+                            alt={row.CASHIER}
+                            style={{ width: 40, height: 40, borderRadius: "50%" }}
+                          />
+                        ) : null}
+                        <Box>{row.CASHIER || "-"}</Box>
                       </Box>
                     </TableCell>
-                    <TableCell align="center">{row.TYPE_OF_RECEIPT}</TableCell>
                     <TableCell align="center">
-                      {" "}
                       <Typography
                         variant="body2"
                         fontWeight={600}
@@ -1108,7 +1098,7 @@ function TrustFund() {
                           style: "currency",
                           currency: "PHP",
                           minimumFractionDigits: 2,
-                        }).format(row.TOTAL)}
+                        }).format(Number(row.TOTAL || 0))}
                       </Typography>
                     </TableCell>
                     <TableCell align="center">
@@ -1133,8 +1123,8 @@ function TrustFund() {
                         <MenuItem onClick={handleEditClick}>Edit</MenuItem>
                         <MenuItem
                           onClick={(e) => {
-                            e.stopPropagation(); // Prevent event propagation
-                            setSelectedId(rows.id);
+                            e.stopPropagation();
+                            setSelectedId(selectedRow?.PAYMENT_ID || row.PAYMENT_ID);
                             setOpenDeleteDialog(true);
                           }}
                         >
@@ -1165,7 +1155,12 @@ function TrustFund() {
         </TableContainer>
       )}
 
-      {/* Confirmation Dialog */}
+      {isDialogOpen && (
+        <PopupDialog open={isDialogOpen} onClose={handleClose}>
+          {dialogContent}
+        </PopupDialog>
+      )}
+
       <Dialog
         open={openDeleteDialog}
         onClose={() => setOpenDeleteDialog(false)}
@@ -1192,12 +1187,6 @@ function TrustFund() {
           </Button>
         </DialogActions>
       </Dialog>
-
-      {isDialogOpen && (
-        <PopupDialog open={isDialogOpen} onClose={handleClose}>
-          {dialogContent}
-        </PopupDialog>
-      )}
 
       <Box>
         {/*Snackbar Component (with prop fixes)*/}

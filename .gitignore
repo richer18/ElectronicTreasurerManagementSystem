@@ -2,3 +2,4 @@ my-app/
 treasurer_management_app.sql
 /backend/storage/logs/
 /backend/storage/*.log
+/run_file/
