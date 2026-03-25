@@ -12,14 +12,18 @@ class TrustFundDataBuildingPermitFeeTotalController extends Controller
     public function index(Request $request)
     {
         try {
-            // Build base query
-            $query = DB::table('trust_fund_data')
-                ->selectRaw('SUM(LOCAL_80_PERCENT + TRUST_FUND_15_PERCENT + NATIONAL_5_PERCENT) AS Building_Permit_Fee_Total');
+            $query = DB::table('PAYMENT as p')
+                ->join('PAYMENTDETAIL as pd', 'p.PAYMENT_ID', '=', 'pd.PAYMENT_ID')
+                ->join('T_OTHERPAYMENTRATE as opr', 'pd.SOURCEID', '=', 'opr.OPRATE_ID')
+                ->where('pd.FUNDTYPE_CT', 'TF')
+                ->whereRaw('COALESCE(p.VOID_BV, 0) = 0')
+                ->where('opr.ITAXTYPE_CT', 'PFB');
 
-            // Apply date filters if present
-            $query = QueryHelpers::addDateFilters($query, $request, 'date');
+            $query = QueryHelpers::addDateFilters($query, $request, 'p.PAYMENTDATE');
 
-            $result = $query->first();
+            $result = $query
+                ->selectRaw('ROUND(COALESCE(SUM(pd.AMOUNTPAID), 0), 2) AS Building_Permit_Fee_Total')
+                ->first();
 
             return response()->json([
                 'building_permit_fee_total' => $result->Building_Permit_Fee_Total ?? 0,

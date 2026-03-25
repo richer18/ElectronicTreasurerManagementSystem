@@ -85,6 +85,7 @@ use App\Http\Controllers\TrustFundDataDivingFeesController;
 use App\Http\Controllers\TrustFundDataSaveDataController;
 use App\Http\Controllers\TrustFundDataUpdateDataController;
 use App\Http\Controllers\TrustFundDataReportDataController;
+use App\Http\Controllers\TrustFundDashboardSummaryController;
 use App\Http\Controllers\TrustFundPaymentViewController;
 use App\Http\Controllers\TrustFundPaymentRateOptionsController;
 use App\Http\Controllers\TrustFundPaymentCreateController;
@@ -240,6 +241,7 @@ Route::get('/general-fund-regulatory-fees-report', [GeneralFundDataRegulatoryFee
 Route::get('/general-fund-receipts-from-economic-enterprise-report', [GeneralFundDataReceiptsFromEconomicEnterpriseController::class, 'index']);
 
 Route::get('/table-trust-fund-all', [TrustFundDataAllDataController::class, 'index']);
+Route::get('/trust-fund-dashboard-summary', [TrustFundDashboardSummaryController::class, 'index']);
 Route::get('/trustFundPaymentRates', [TrustFundPaymentRateOptionsController::class, 'index']);
 Route::post('/trustFundPayment', [TrustFundPaymentCreateController::class, 'store']);
 Route::get('/trustFundPaymentView/{paymentId}', [TrustFundPaymentViewController::class, 'show']);

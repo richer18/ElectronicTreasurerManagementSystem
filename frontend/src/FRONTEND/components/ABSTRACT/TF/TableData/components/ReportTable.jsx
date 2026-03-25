@@ -5,7 +5,6 @@ import {
   Autocomplete,
   Box,
   Button,
-  Grid,
   Paper,
   Table,
   TableBody,
@@ -14,7 +13,6 @@ import {
   TableHead,
   TableRow,
   TextField,
-  Typography,
 } from "@mui/material";
 import ExcelJS from "exceljs";
 import PropTypes from "prop-types";
@@ -38,7 +36,7 @@ const months = [
 
 const years = Array.from({ length: 100 }, (_, i) => ({
   label: String(2050 - i),
-  value: 2050 - i,
+  value: String(2050 - i),
 }));
 
 // Helper function to format currency
@@ -49,8 +47,11 @@ const formatCurrency = (value) => {
 };
 
 function ReportTable({ onBack }) {
-  const [month, setMonth] = useState({ label: "January", value: "1" });
-  const [year, setYear] = useState({ label: "2025", value: "2025" });
+  const [month, setMonth] = useState(months[0]);
+  const [year, setYear] = useState(() => {
+    const currentYear = new Date().getFullYear().toString();
+    return years.find((option) => option.value === currentYear) || years[0];
+  });
 
   const [data, setData] = useState({
     building_local_80: 0,
@@ -66,6 +67,10 @@ function ReportTable({ onBack }) {
   });
 
   useEffect(() => {
+    if (!month || !year) {
+      return;
+    }
+
     const fetchData = async () => {
       try {
         const response = await axiosInstance.get("trustFundDataReport", {
@@ -75,9 +80,10 @@ function ReportTable({ onBack }) {
           },
         });
 
-        if (response.data.length > 0) {
-          // Correct accumulator usage 🛠️
-          const filteredData = response.data.reduce(
+        const rows = Array.isArray(response.data) ? response.data : [];
+
+        if (rows.length > 0) {
+          const filteredData = rows.reduce(
             (acc, row) => ({
               building_local_80:
                 acc.building_local_80 + (parseFloat(row.LOCAL_80_PERCENT) || 0),
@@ -147,84 +153,109 @@ function ReportTable({ onBack }) {
   }, [month, year]);
 
   const handleMonthChange = (event, value) => {
-    setMonth(value || { label: "January", value: "1" });
+    setMonth(value || months[0]);
   };
 
   const handleYearChange = (event, value) => {
-    setYear(value || { label: "2024", value: "2025" });
+    const currentYear = new Date().getFullYear().toString();
+    setYear(value || years.find((option) => option.value === currentYear) || years[0]);
   };
 
-  // Inject print-specific styles
-  React.useEffect(() => {
-    const style = document.createElement("style");
-    style.innerHTML = `
-    @media print {
-      @page {
-        size: 8.5in 13in portrait; /* Legal size, adjust to '8.5in 11in' for letter */
-        margin: 10mm; /* Increased margin for better readability */
-      }
-      body * {
-        visibility: hidden; /* Hide everything except the printable area */
-      }
-      #printableArea, #printableArea * {
-        visibility: visible;
-      }
-      #printableArea {
-        position: absolute;
-        left: 0;
-        top: 0;
-        width: 100%; /* Use full width of the page */
-      }
-      table {
-        width: 100%; /* Ensure table spans the full width */
-        border-collapse: collapse;
-        font-family: Arial, sans-serif; /* Use a standard font */
-        font-size: 10px; /* Adjust font size for readability */
-      }
-      th, td {
-        border: 1px solid black;
-        padding: 6px; /* Slightly increase padding for better spacing */
-        text-align: center;
-      }
-      th {
-        background-color: #f2f2f2;
-        font-weight: bold;
-        font-size: 11px; /* Slightly larger for headers */
-      }
-      h6, .subtitle {
-        font-size: 12px;
-        text-align: center;
-        font-weight: bold;
-        margin: 6px 0;
-        font-family: Arial, sans-serif;
-      }
-      tr {
-        page-break-inside: avoid; /* Prevent rows from splitting across pages */
-      }
-      /* Adjust column widths */
-      th:nth-child(1), td:nth-child(1) { width: 18%; }
-      th:nth-child(2), td:nth-child(2) { width: 14%; }
-      th:nth-child(3), td:nth-child(3) { width: 10%; }
-      th:nth-child(4), td:nth-child(4) { width: 9%; }
-      th:nth-child(5), td:nth-child(5) { width: 9%; }
-      th:nth-child(6), td:nth-child(6) { width: 9%; }
-      th:nth-child(7), td:nth-child(7) { width: 9%; }
-      th:nth-child(8), td:nth-child(8) { width: 9%; }
-      th:nth-child(9), td:nth-child(9) { width: 9%; }
-      th:nth-child(10), td:nth-child(10) { width: 9%; }
-      th:nth-child(11), td:nth-child(11) { width: 6%; }
-      th:nth-child(12), td:nth-child(12) { width: 6%; }
-    }
-  `;
-    document.head.appendChild(style);
-    return () => document.head.removeChild(style);
-  }, []);
-
   const handlePrint = () => {
-    const originalTitle = document.title;
-    document.title = `SOC_TrustFundReport_${month.label}_${year.label}`;
-    window.print();
-    document.title = originalTitle; // Restore original title
+    const printableArea = document.getElementById("printableArea");
+    if (!printableArea) return;
+
+    const printContents = printableArea.innerHTML;
+    const printWindow = window.open("", "", "width=900,height=700");
+
+    if (!printWindow) return;
+
+    printWindow.document.write(`
+      <html>
+        <head>
+          <title>SOC_TrustFundReport_${month.label}_${year.label}</title>
+          <style>
+            @page {
+              size: legal landscape;
+              margin: 12mm;
+            }
+            body {
+              font-family: "Arial", sans-serif;
+              font-size: 12px;
+              margin: 0;
+              padding: 0 4mm;
+              color: #000;
+              background: #fff;
+            }
+            .print-wrap {
+              width: 100%;
+            }
+            table {
+              border-collapse: collapse;
+              width: 100%;
+              table-layout: fixed;
+              font-size: 11px;
+            }
+            th, td {
+              border: 1px solid black;
+              padding: 8px 6px;
+              text-align: center;
+              vertical-align: middle;
+              word-wrap: break-word;
+            }
+            thead {
+              display: table-header-group;
+            }
+            tr {
+              page-break-inside: avoid;
+            }
+            h2, h4, p {
+              margin: 0 0 6px 0;
+              text-align: center;
+              width: 100%;
+            }
+            h2 {
+              font-size: 20px;
+              letter-spacing: 0.4px;
+            }
+            h4 {
+              font-size: 14px;
+              font-weight: 700;
+            }
+            .print-subtitle {
+              font-size: 13px;
+              font-weight: 700;
+              margin-bottom: 14px;
+              text-align: center;
+              width: 100%;
+            }
+            .print-box {
+              margin-top: 10px;
+            }
+            .print-box .MuiPaper-root {
+              box-shadow: none !important;
+            }
+            th {
+              background: #f3f3f3;
+              font-weight: 700;
+            }
+            td:first-child,
+            th:first-child {
+              text-align: left;
+              padding-left: 10px;
+            }
+          </style>
+        </head>
+        <body>
+          <div class="print-wrap">${printContents}</div>
+        </body>
+      </html>
+    `);
+
+    printWindow.document.close();
+    printWindow.focus();
+    printWindow.print();
+    printWindow.close();
   };
 
   const handleDownloadExcel = async () => {
@@ -235,7 +266,7 @@ function ReportTable({ onBack }) {
     worksheet.addRow(["SUMMARY OF COLLECTIONS"]);
     worksheet.addRow(["ZAMBOANGUITA, NEGROS ORIENTAL"]);
     worksheet.addRow(["LGU"]);
-    worksheet.addRow(["Month of January 2025"]);
+    worksheet.addRow([`Month of ${month.label} ${year.label}`]);
     worksheet.addRow([]);
 
     // COLUMN HEADERS
@@ -474,6 +505,9 @@ function ReportTable({ onBack }) {
             disablePortal
             id="month-selector"
             options={months}
+            isOptionEqualToValue={(option, value) =>
+              option.value === value?.value
+            }
             sx={{
               width: { xs: "100%", sm: 180 },
               "& .MuiInputBase-root": { borderRadius: "8px" },
@@ -512,6 +546,9 @@ function ReportTable({ onBack }) {
             disablePortal
             id="year-selector"
             options={years}
+            isOptionEqualToValue={(option, value) =>
+              option.value === value?.value
+            }
             sx={{
               width: { xs: "100%", sm: 180 },
               "& .MuiInputBase-root": { borderRadius: "8px" },
@@ -553,40 +590,23 @@ function ReportTable({ onBack }) {
         <Box>
           <Box>
             {/* Title Section */}
-            <Box textAlign="center" mb={4}>
-              <Grid
-                container
-                justifyContent="center"
-                alignItems="center"
-                spacing={0}
-                direction="column"
-                mb={2}
-              >
-                <Grid>
-                  <Typography variant="h6" fontWeight="bold" align="center">
-                    SUMMARY OF COLLECTIONS
-                  </Typography>
-                </Grid>
-                <Grid>
-                  <Typography
-                    variant="subtitle1"
-                    fontWeight="bold"
-                    align="center"
-                  >
-                    ZAMBOANGUITA, NEGROS ORIENTAL
-                  </Typography>
-                </Grid>
-                <Grid>
-                  <Typography variant="body1" fontStyle="bold" align="center">
-                    LGU
-                  </Typography>
-                </Grid>
-                <Grid>
-                  <Typography variant="body2" fontStyle="bold" align="center">
-                    Month of {month.label} {year.label}
-                  </Typography>
-                </Grid>
-              </Grid>
+            <Box
+              mb={4}
+              sx={{
+                width: "100%",
+                textAlign: "center",
+              }}
+            >
+              <h2 style={{ margin: 0, textAlign: "center" }}>
+                SUMMARY OF COLLECTIONS
+              </h2>
+              <h4 style={{ margin: "6px 0 0", textAlign: "center" }}>
+                ZAMBOANGUITA, NEGROS ORIENTAL
+              </h4>
+              <p style={{ margin: "6px 0 0", textAlign: "center" }}>LGU</p>
+              <p style={{ margin: "6px 0 0", textAlign: "center" }}>
+                Month of {month.label} {year.label}
+              </p>
             </Box>
 
             <TableContainer component={Paper}>

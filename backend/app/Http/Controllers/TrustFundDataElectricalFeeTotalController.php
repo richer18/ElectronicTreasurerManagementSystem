@@ -12,15 +12,18 @@ class TrustFundDataElectricalFeeTotalController extends Controller
     public function index(Request $request)
     {
         try {
-            // Start the query
-            $query = DB::table('trust_fund_data')
-                ->selectRaw('SUM(ELECTRICAL_FEE) AS Electrical_Fee_Total');
+            $query = DB::table('PAYMENT as p')
+                ->join('PAYMENTDETAIL as pd', 'p.PAYMENT_ID', '=', 'pd.PAYMENT_ID')
+                ->join('T_OTHERPAYMENTRATE as opr', 'pd.SOURCEID', '=', 'opr.OPRATE_ID')
+                ->where('pd.FUNDTYPE_CT', 'TF')
+                ->whereRaw('COALESCE(p.VOID_BV, 0) = 0')
+                ->where('opr.ITAXTYPE_CT', 'EP');
 
-            // Add optional date filters
-            $query = QueryHelpers::addDateFilters($query, $request, 'date');
+            $query = QueryHelpers::addDateFilters($query, $request, 'p.PAYMENTDATE');
 
-            // Execute query
-            $result = $query->first();
+            $result = $query
+                ->selectRaw('ROUND(COALESCE(SUM(pd.AMOUNTPAID), 0), 2) AS Electrical_Fee_Total')
+                ->first();
 
             return response()->json([
                 'electrical_fee_total' => $result->Electrical_Fee_Total ?? 0,

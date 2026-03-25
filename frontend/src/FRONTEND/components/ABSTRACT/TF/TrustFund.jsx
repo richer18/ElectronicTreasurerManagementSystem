@@ -181,7 +181,6 @@ function TrustFund() {
   const [showFilters, setShowFilters] = useState(true);
 
   const [filteredData, setFilteredData] = useState([]);
-  const [data, setData] = useState([]);
   const [month, setMonth] = useState(null);
   const [year, setYear] = useState(null);
   // 3. Search states:
@@ -198,46 +197,40 @@ function TrustFund() {
   useEffect(() => {
     const fetchTotals = async () => {
       try {
-        const fetchTotal = async (endpoint) => {
-          const response = await axiosInstance.get(`${endpoint}`);
-          return response.data;
-        };
+        const params = {};
+        if (month) params.month = month;
+        if (year) params.year = year;
 
-        const [
-          buildingPermitFeeData,
-          electricalFeeData,
-          zoningFeeData,
-          livestockDevFundData,
-          divingFeeData,
-        ] = await Promise.all([
-          fetchTotal("BuildingPermitFeeTotal"),
-          fetchTotal("ElectricalFeeTotal"),
-          fetchTotal("ZoningFeeTotal"),
-          fetchTotal("LivestockDevFundTotal"),
-          fetchTotal("DivingFeeTotal"),
-        ]);
+        const response = await axiosInstance.get("trust-fund-dashboard-summary", {
+          params,
+        });
 
+        setAllTotal(parseFloat(response.data?.total || 0));
         setBuildingPermitFee(
-          parseFloat(buildingPermitFeeData.building_permit_fee_total || 0)
+          parseFloat(response.data?.building_permit_fee || 0)
         );
-        setElectricalFee(
-          parseFloat(electricalFeeData.electrical_fee_total || 0)
-        );
-        setZoningFee(parseFloat(zoningFeeData.zoning_fee_total || 0));
+        setElectricalFee(parseFloat(response.data?.electrical_fee || 0));
+        setZoningFee(parseFloat(response.data?.zoning_fee || 0));
         setLivestockDevFund(
-          parseFloat(livestockDevFundData.livestock_dev_fund_total || 0)
+          parseFloat(response.data?.livestock_dev_fund || 0)
         );
-        setDivingFee(parseFloat(divingFeeData.diving_fee_total || 0));
+        setDivingFee(parseFloat(response.data?.diving_fee || 0));
       } catch (error) {
         console.error(
-          "Error fetching totals:",
+          "Error fetching trust fund dashboard summary:",
           error.response?.data || error.message
         );
+        setAllTotal(0);
+        setBuildingPermitFee(0);
+        setElectricalFee(0);
+        setZoningFee(0);
+        setLivestockDevFund(0);
+        setDivingFee(0);
       }
     };
 
     fetchTotals();
-  }, []);
+  }, [month, year]);
 
    const [reportDialog, setReportDialog] = useState({
         open: false,
@@ -270,112 +263,32 @@ function TrustFund() {
         }, 300);
       };
 
-  // ------------------------
-  //  1) Fetch data once
-  // ------------------------
   useEffect(() => {
     const fetchData = async () => {
       try {
-        const response = await axiosInstance.get("table-trust-fund-all");
-        setData(response.data);
-        setFilteredData(response.data); // Initialize with the full dataset
+        const params = {};
+        if (month) params.month = month;
+        if (year) params.year = year;
+        if (searchQuery) params.search = searchQuery;
+
+        const response = await axiosInstance.get("table-trust-fund-all", {
+          params,
+        });
+
+        const rows = Array.isArray(response.data) ? response.data : [];
+        setFilteredData(rows);
+        setPage(0);
       } catch (error) {
         console.error(
           "Error fetching table-trust-fund-all data:",
-          error.message
+          error.response?.data || error.message
         );
+        setFilteredData([]);
       }
     };
 
     fetchData();
-  }, []);
-
-  // ------------------------
-  //  2) Filter by Month & Year
-  // ------------------------
-  const getFilteredDataByMonthYear = () => {
-    if (!month || !year) return filteredData;
-
-    return filteredData.filter((row) => {
-      if (!row.DATE) return false;
-      const rowDate = new Date(row.DATE);
-      return (
-        rowDate.getMonth() + 1 === Number(month) &&
-        rowDate.getFullYear() === Number(year)
-      );
-    });
-  };
-
-  // ------------------------
-  //  2) Filter data on searchQuery & month/year
-  // ------------------------
-  useEffect(() => {
-    if (!Array.isArray(data)) {
-      setFilteredData([]);
-      return;
-    }
-
-    let newFiltered = data;
-
-    // (a) Filter by searchQuery
-    if (searchQuery) {
-      const q = searchQuery.toLowerCase();
-      newFiltered = newFiltered.filter((row) => {
-        const rowName = (row?.NAME ?? "").toLowerCase();
-        const rowReceiptNo = (row?.RECEIPT_NO ?? "").toString().toLowerCase();
-        const rowTin = (row?.LOCAL_TIN ?? "").toString().toLowerCase();
-        const rowCollector = (row?.CASHIER ?? "").toLowerCase();
-        return (
-          rowName.includes(q) ||
-          rowReceiptNo.includes(q) ||
-          rowTin.includes(q) ||
-          rowCollector.includes(q)
-        );
-      });
-    }
-
-    // (b) Filter by month/year
-    if (month || year) {
-      newFiltered = newFiltered.filter((row) => {
-        if (!row.DATE) return false;
-        const rowDate = new Date(row.DATE);
-        const rowMonth = rowDate.getMonth() + 1;
-        const rowYear = rowDate.getFullYear();
-
-        const monthMatches = month ? rowMonth === parseInt(month) : true;
-        const yearMatches = year ? rowYear === parseInt(year) : true;
-        return monthMatches && yearMatches;
-      });
-    }
-
-    setFilteredData(newFiltered);
-    setPage(0); // reset pagination when filters change
-  }, [data, searchQuery, month, year]);
-
-  useEffect(() => {
-    const fetchAllData = async () => {
-      try {
-        const response = await axiosInstance.get("trust-fund-total");
-
-        const data = response.data;
-
-        if (Array.isArray(data) && data.length > 0) {
-          setAllTotal(parseFloat(data[0]?.overall_total) || 0);
-        } else {
-          console.warn("No data received for trust-fund-total");
-          setAllTotal(0);
-        }
-      } catch (error) {
-        console.error(
-          "Error fetching trust-fund-total data:",
-          error.response?.data || error.message
-        );
-        setAllTotal(0); // Fallback in case of error
-      }
-    };
-
-    fetchAllData();
-  }, []);
+  }, [searchQuery, month, year]);
 
   // ------------------------
   //  8) Handler for the Search button
@@ -510,7 +423,7 @@ function TrustFund() {
 
       if (response.status === 200) {
         alert("Record deleted successfully");
-        setData((prev) =>
+        setFilteredData((prev) =>
           Array.isArray(prev)
             ? prev.filter((row) => row.PAYMENT_ID !== selectedId)
             : prev
@@ -538,7 +451,7 @@ function TrustFund() {
       return;
     }
 
-    const filteredExportData = getFilteredDataByMonthYear();
+    const filteredExportData = filteredData;
 
     if (filteredExportData.length === 0) {
       setSnackbar({

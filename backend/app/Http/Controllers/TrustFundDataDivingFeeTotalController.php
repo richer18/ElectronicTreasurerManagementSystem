@@ -2,23 +2,28 @@
 
 namespace App\Http\Controllers;
 
+use App\Helpers\QueryHelpers;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Log;
-use App\Helpers\QueryHelpers;
 
 class TrustFundDataDivingFeeTotalController extends Controller
 {
     public function index(Request $request)
     {
         try {
-            // Build query with optional filters
-            $query = DB::table('trust_fund_data')
-                ->selectRaw('SUM(LOCAL_40_PERCENT_DIVE_FEE + FISHERS_30_PERCENT + BRGY_30_PERCENT) AS Diving_Fee_Total');
+            $query = DB::table('PAYMENT as p')
+                ->join('PAYMENTDETAIL as pd', 'p.PAYMENT_ID', '=', 'pd.PAYMENT_ID')
+                ->join('T_OTHERPAYMENTRATE as opr', 'pd.SOURCEID', '=', 'opr.OPRATE_ID')
+                ->where('pd.FUNDTYPE_CT', 'TF')
+                ->whereRaw('COALESCE(p.VOID_BV, 0) = 0')
+                ->where('opr.ITAXTYPE_CT', 'IFD');
 
-            $query = QueryHelpers::addDateFilters($query, $request, 'date');
+            $query = QueryHelpers::addDateFilters($query, $request, 'p.PAYMENTDATE');
 
-            $result = $query->first();
+            $result = $query
+                ->selectRaw('ROUND(COALESCE(SUM(pd.AMOUNTPAID), 0), 2) AS Diving_Fee_Total')
+                ->first();
 
             return response()->json([
                 'diving_fee_total' => $result->Diving_Fee_Total ?? 0,

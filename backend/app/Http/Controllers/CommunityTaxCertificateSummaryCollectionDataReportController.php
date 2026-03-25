@@ -7,23 +7,20 @@ use Illuminate\Support\Facades\DB;
 
 class CommunityTaxCertificateSummaryCollectionDataReportController extends Controller
 {
-    public function index()
+    public function index(Request $request)
     {
-        $months = range(1, 12);
-        $year = 2025;
+        $month = (int) $request->query('month', now()->month);
+        $year = (int) $request->query('year', now()->year);
 
-        $result = collect($months)->map(function ($month) use ($year) {
-            $cedula = DB::table('communitytaxcertificate')
-                ->whereYear('DATEISSUED', $year)
-                ->whereMonth('DATEISSUED', $month)
-                ->sum('TOTALAMOUNTPAID');
+        $totalAmountPaid = DB::table('communitytaxcertificate')
+            ->whereYear('DATEISSUED', $year)
+            ->whereMonth('DATEISSUED', $month)
+            ->sum('TOTALAMOUNTPAID');
 
-            return [
-                'month' => date('M', mktime(0, 0, 0, $month, 1)),
-                'value' => $cedula + $general + $real + $trust,
-            ];
-        });
-
-        return response()->json($result);
+        return response()->json([
+            'month' => $month,
+            'year' => $year,
+            'Totalamountpaid' => (float) $totalAmountPaid,
+        ]);
     }
 }

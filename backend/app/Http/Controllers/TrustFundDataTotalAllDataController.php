@@ -8,12 +8,27 @@ use Illuminate\Support\Facades\Log;
 
 class TrustFundDataTotalAllDataController extends Controller
 {
-    public function index()
+    public function index(Request $request)
     {
         try {
-            $result = DB::table('trust_fund_data')
-                        ->select(DB::raw('SUM(`TOTAL`) AS overall_total'))
-                        ->get();
+            $query = DB::table('PAYMENT as p')
+                ->join('PAYMENTDETAIL as pd', 'p.PAYMENT_ID', '=', 'pd.PAYMENT_ID')
+                ->join('T_OTHERPAYMENTRATE as opr', 'pd.SOURCEID', '=', 'opr.OPRATE_ID')
+                ->where('pd.FUNDTYPE_CT', 'TF')
+                ->whereRaw('COALESCE(p.VOID_BV, 0) = 0')
+                ->whereIn('opr.ITAXTYPE_CT', ['PFB', 'EP', 'ZLC', 'IFL', 'IFD']);
+
+            if ($request->filled('month')) {
+                $query->whereMonth('p.PAYMENTDATE', $request->month);
+            }
+
+            if ($request->filled('year')) {
+                $query->whereYear('p.PAYMENTDATE', $request->year);
+            }
+
+            $result = $query
+                ->selectRaw('ROUND(COALESCE(SUM(pd.AMOUNTPAID), 0), 2) AS overall_total')
+                ->get();
 
             return response()->json($result);
         } catch (\Exception $e) {
