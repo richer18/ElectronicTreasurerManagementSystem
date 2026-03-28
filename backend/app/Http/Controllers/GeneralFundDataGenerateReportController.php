@@ -15,8 +15,8 @@ class GeneralFundDataGenerateReportController extends Controller
         $dateTo     = $request->input('dateTo');
         $reportType = $request->input('reportType');
         $cashier    = $request->input('cashier');
-        $ctcnFrom   = $request->input('ctcnFrom');
-        $ctcnTo     = $request->input('ctcnTo');
+        $ctcnFrom   = $request->input('ctcnFrom') ?? $request->input('orFrom');
+        $ctcnTo     = $request->input('ctcnTo') ?? $request->input('orTo');
         $orFrom     = $request->input('orFrom');
         $orTo       = $request->input('orTo');
 
@@ -75,6 +75,60 @@ class GeneralFundDataGenerateReportController extends Controller
                     array_push($queryParams, $ctcnFrom, $ctcnTo);
                 }
 
+            } elseif ($reportType === 'GF') {
+                if (strtoupper($cashier) === 'AMABELLA') {
+                    $query = "
+                        SELECT
+                            DATE_FORMAT(date, '%Y-%m-%d') AS date,
+                            cashier,
+                            'GF' AS report_type,
+                            receipt_no AS or_number,
+                            CAST(Cash_Tickets AS DECIMAL(10,2)) AS total
+                        FROM general_fund_data
+                        WHERE date BETWEEN ? AND ? AND cashier = ? AND type_receipt = '51' AND Cash_Tickets > 0
+                    ";
+                    $queryParams = [$startDate, $endDate, $cashier];
+
+                    if ($orFrom && $orTo) {
+                        $query .= " AND receipt_no BETWEEN ? AND ?";
+                        array_push($queryParams, $orFrom, $orTo);
+                    }
+
+                } else {
+                    $query = "
+                        SELECT
+                            DATE_FORMAT(date, '%Y-%m-%d') AS date,
+                            cashier,
+                            'GF' AS report_type,
+                            receipt_no AS or_number,
+                            CAST(total AS DECIMAL(10,2)) AS total
+                        FROM general_fund_data
+                        WHERE date BETWEEN ? AND ? AND cashier = ? AND type_receipt = '51'
+                    ";
+                    $queryParams = [$startDate, $endDate, $cashier];
+
+                    if ($orFrom && $orTo) {
+                        $query .= " AND receipt_no BETWEEN ? AND ?";
+                        array_push($queryParams, $orFrom, $orTo);
+                    }
+                }
+            } elseif ($reportType === 'TF') {
+                $query = "
+                    SELECT
+                        DATE_FORMAT(date, '%Y-%m-%d') AS date,
+                        cashier,
+                        'TF' AS report_type,
+                        receipt_no AS or_number,
+                        CAST(total AS DECIMAL(10,2)) AS total
+                    FROM trust_fund_data
+                    WHERE date BETWEEN ? AND ? AND cashier = ? AND TYPE_OF_RECEIPT = '51'
+                ";
+                $queryParams = [$startDate, $endDate, $cashier];
+
+                if ($orFrom && $orTo) {
+                    $query .= " AND receipt_no BETWEEN ? AND ?";
+                    array_push($queryParams, $orFrom, $orTo);
+                }
             } elseif ($reportType === '51') {
                 if (strtoupper($cashier) === 'AMABELLA') {
                     $query = "

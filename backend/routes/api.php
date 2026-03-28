@@ -113,6 +113,7 @@ use App\Http\Controllers\SaveAdjustmentDataController;
 
 use App\Http\Controllers\PsicCodeDataController;
 use App\Http\Controllers\CommunityTaxCertificateDeleteCedulaDataController;
+use App\Http\Controllers\CalendarEventController;
 
 use App\Http\Controllers\WaterWorksRegisterJSONDataController;
 use App\Http\Controllers\WaterWorksAccountsJSONDataController;
@@ -141,6 +142,13 @@ Route::get('/user', function (Request $request) {
 Route::get('/ping', function () {
     return response()->json(['message' => 'ping from Laravel']);
 });
+
+Route::get('/calendar-events', [CalendarEventController::class, 'index']);
+Route::post('/calendar-events', [CalendarEventController::class, 'store']);
+Route::post('/calendar-events/presets/philippines/{year}', [CalendarEventController::class, 'loadPhilippineHolidays']);
+Route::put('/calendar-events/{calendarEvent}', [CalendarEventController::class, 'update']);
+Route::delete('/calendar-events/{calendarEvent}', [CalendarEventController::class, 'destroy']);
+Route::get('/calendar-events/{calendarEvent}/attachment', [CalendarEventController::class, 'attachment']);
 
 Route::get('/cedula', function () {
     return Cedula::all();

@@ -33,19 +33,72 @@ import {
   TextField,
   Typography,
 } from "@mui/material";
-import IconButton from "@mui/material/IconButton";
 import PropTypes from "prop-types";
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import Col from "react-bootstrap/Col";
 import Row from "react-bootstrap/Row";
 import axiosInstance from "../../../../api/axiosInstance";
+import { useMaterialUIController } from "../../../../context";
 
-function GenerateReport({ open, onClose }) {
+const getTodayDate = () => new Date().toISOString().split("T")[0];
+
+function ReceiptCollectionReportDialog({
+  open,
+  onClose,
+  reportType,
+  collectorOptions,
+  filePrefix,
+  dialogTitle = "Collector Collection Report",
+  collectorLabel = "Collector",
+  receiptFilterLabel = "Receipt Filters",
+  receiptFromLabel = "Receipt No. From",
+  receiptToLabel = "Receipt No. To",
+  receiptTypeColumnLabel = "Receipt Type",
+  receiptNumberColumnLabel = "Receipt No.",
+  noDataMessage = "No receipts found for the selected collector and date filter.",
+  errorMessage = "Failed to load the collector collection report. Please try again.",
+  formatReceiptType,
+}) {
+  const [controller] = useMaterialUIController();
+  const { darkMode } = controller;
+  const uiColors = useMemo(
+    () => ({
+      navy: darkMode ? "#4f7bb5" : "#0f2747",
+      navyHover: darkMode ? "#3f6aa3" : "#0b1e38",
+      steel: darkMode ? "#7c8fa6" : "#4b5d73",
+      teal: darkMode ? "#3aa08f" : "#0f6b62",
+      bg: darkMode ? "#0f1117" : "#f5f7fb",
+      headerStart: darkMode ? "#22314a" : "#1f3a5f",
+      headerEnd: darkMode ? "#2f4566" : "#3c5d86",
+    }),
+    [darkMode]
+  );
+
+  const inputSx = {
+    "& .MuiInputBase-input": {
+      color: (theme) => theme.palette.text.primary,
+    },
+    "& .MuiInputLabel-root": {
+      color: (theme) => theme.palette.text.secondary,
+    },
+    "& .MuiInputLabel-root.Mui-focused": {
+      color: (theme) => theme.palette.text.primary,
+    },
+    "& .MuiOutlinedInput-notchedOutline": {
+      borderColor: (theme) => theme.palette.divider,
+    },
+    "& .MuiOutlinedInput-root:hover .MuiOutlinedInput-notchedOutline": {
+      borderColor: (theme) => theme.palette.text.secondary,
+    },
+    "& .MuiOutlinedInput-root.Mui-focused .MuiOutlinedInput-notchedOutline": {
+      borderColor: (theme) => theme.palette.text.primary,
+    },
+  };
+
   const [status, setStatus] = useState("idle");
   const [dateType, setDateType] = useState("dateRange");
-  const [dateFrom, setDateFrom] = useState("");
-  const [dateTo, setDateTo] = useState("");
-  const [reportType, setReportType] = useState("51");
+  const [dateFrom, setDateFrom] = useState(getTodayDate);
+  const [dateTo, setDateTo] = useState(getTodayDate);
   const [cashier, setCashier] = useState("");
   const [data, setData] = useState([]);
   const [page, setPage] = useState(0);
@@ -53,29 +106,23 @@ function GenerateReport({ open, onClose }) {
   const [orFrom, setOrFrom] = useState("");
   const [orTo, setOrTo] = useState("");
 
-  // ✅ Corrected Cashier Mapping
-  const cashierOptionsByReport = {
-    CTCI: ["flora", "angelique", "agnes", "ricardo"],
-    real_property_tax_data: [
-      "RICARDO ENOPIA",
-      "IRIS RAFALES",
-      "FLORA MY FERRER",
-    ],
-    51: ["FLORA MY", "IRIS", "AGNES", "RICARDO", "AMABELLA"],
-  };
-
-  // Reset page when data changes
   useEffect(() => {
     setPage(0);
   }, [data]);
 
-  // Debug function to check data format
   useEffect(() => {
-    if (data.length > 0) {
-      console.log("Sample row:", data[0]);
-      console.log("Date value:", data[0].date);
+    if (open) {
+      const today = getTodayDate();
+      setStatus("idle");
+      setDateType("dateRange");
+      setDateFrom(today);
+      setDateTo(today);
+      setCashier("");
+      setOrFrom("");
+      setOrTo("");
+      setData([]);
     }
-  }, [data]);
+  }, [open]);
 
   const handleChangePage = (event, newPage) => {
     setPage(newPage);
@@ -90,18 +137,11 @@ function GenerateReport({ open, onClose }) {
     if (!dateValue) return "N/A";
 
     try {
-      // Make sure we're working with a string
       const dateString = String(dateValue);
-
-      // Handle ISO string format (YYYY-MM-DD)
       const parts = dateString.split("-");
-      if (parts.length !== 3) {
-        return dateValue; // Return original if not in expected format
-      }
+      if (parts.length !== 3) return dateValue;
 
       const [year, month, day] = parts;
-
-      // Convert month number to month name
       const monthNames = [
         "January",
         "February",
@@ -119,22 +159,18 @@ function GenerateReport({ open, onClose }) {
 
       const monthIndex = parseInt(month, 10) - 1;
       if (isNaN(monthIndex) || monthIndex < 0 || monthIndex >= 12) {
-        return dateValue; // Return original if month is invalid
+        return dateValue;
       }
 
       const monthName = monthNames[monthIndex];
-
-      // Remove leading zero from day if present
       const dayFormatted = day.startsWith("0") ? day.substring(1) : day;
-
       return `${monthName} ${dayFormatted}, ${year}`;
     } catch (error) {
       console.error("Date formatting error:", dateValue, error);
-      return dateValue || "N/A"; // Return original value or N/A
+      return dateValue || "N/A";
     }
   };
 
-  // Format currency values
   const formatCurrency = (value) => {
     if (value === null || value === undefined) return "₱0.00";
     return new Intl.NumberFormat("en-PH", {
@@ -162,29 +198,18 @@ function GenerateReport({ open, onClose }) {
       payloadDateTo = year;
     }
 
-    const payload = {
-      dateType,
-      dateFrom: payloadDateFrom,
-      dateTo: payloadDateTo,
-      reportType,
-      cashier,
-      orFrom: orFrom || null,
-      orTo: orTo || null,
-    };
-
     try {
-      const response = await axiosInstance.post("generate-report", payload);
+      const response = await axiosInstance.post("generate-report", {
+        dateType,
+        dateFrom: payloadDateFrom,
+        dateTo: payloadDateTo,
+        reportType,
+        cashier,
+        orFrom: orFrom || null,
+        orTo: orTo || null,
+      });
 
-      const result = response.data;
-      console.log("API Response:", result);
-
-      if (result.data && result.data.length > 0) {
-        console.log("First row data:", result.data[0]);
-        setData(result.data);
-      } else {
-        setData([]);
-      }
-
+      setData(response.data?.data || []);
       setStatus("success");
     } catch (error) {
       console.error("Error generating report:", error);
@@ -208,20 +233,15 @@ function GenerateReport({ open, onClose }) {
     const csvContent = [header.join(","), ...rows].join("\n");
     const blob = new Blob([csvContent], { type: "text/csv;charset=utf-8;" });
     const url = URL.createObjectURL(blob);
-
     const link = document.createElement("a");
     link.href = url;
-    link.setAttribute("GeneralFundReport", `report-${Date.now()}.csv`);
+    link.setAttribute("download", `${filePrefix}-${Date.now()}.csv`);
     document.body.appendChild(link);
     link.click();
     document.body.removeChild(link);
   };
 
-  // Calculate total amount from data
-  const totalAmount = data.reduce(
-    (sum, row) => sum + (Number(row.total) || 0),
-    0
-  );
+  const totalAmount = data.reduce((sum, row) => sum + (Number(row.total) || 0), 0);
 
   return (
     <Dialog
@@ -236,13 +256,15 @@ function GenerateReport({ open, onClose }) {
             p: 0,
             minHeight: "600px",
             overflow: "hidden",
+            backgroundColor: (theme) => theme.palette.background.paper,
+            border: "1px solid #d6a12b",
           },
         },
       }}
     >
       <DialogTitle
         sx={{
-          bgcolor: "primary.main",
+          background: `linear-gradient(135deg, ${uiColors.headerStart}, ${uiColors.headerEnd})`,
           color: "white",
           py: 2.5,
           px: 3,
@@ -252,23 +274,37 @@ function GenerateReport({ open, onClose }) {
           <Box display="flex" alignItems="center">
             <DescriptionOutlined sx={{ mr: 1.5, fontSize: 28 }} />
             <Typography variant="h5" fontWeight="500">
-              Generate Financial Report
+              {dialogTitle}
             </Typography>
           </Box>
-          <IconButton onClick={handleClose} sx={{ color: "white" }}>
-            <CloseIcon />
-          </IconButton>
+          <Button
+            onClick={handleClose}
+            variant="outlined"
+            startIcon={<CloseIcon />}
+            sx={{
+              color: "#f8e1a6",
+              borderColor: "#d6a12b",
+              textTransform: "none",
+              fontWeight: 700,
+              "&:hover": {
+                borderColor: "#f2cf74",
+                backgroundColor: "rgba(214, 161, 43, 0.12)",
+              },
+            }}
+          >
+            Close
+          </Button>
         </Box>
       </DialogTitle>
 
-      <DialogContent sx={{ py: 3, px: 3 }}>
+      <DialogContent sx={{ py: 3, px: 3, backgroundColor: uiColors.bg }}>
         <form onSubmit={handleSubmit}>
           <Row className="mt-3">
             <Col>
               <Box display="flex" alignItems="center" mb={1}>
-                <CalendarMonthOutlined color="primary" sx={{ mr: 1 }} />
+                <CalendarMonthOutlined sx={{ mr: 1, color: uiColors.navy }} />
                 <Typography variant="subtitle1" fontWeight="bold">
-                  Date Selection
+                  Collection Period
                 </Typography>
               </Box>
               <Divider />
@@ -278,13 +314,14 @@ function GenerateReport({ open, onClose }) {
           <Row className="mt-3">
             <Col>
               <FormControl fullWidth size="small" variant="outlined">
-                <InputLabel>Date Selection Type</InputLabel>
+                <InputLabel>Filter Type</InputLabel>
                 <Select
                   value={dateType}
                   onChange={(e) => setDateType(e.target.value)}
-                  label="Date Selection Type"
+                  label="Filter Type"
+                  sx={inputSx}
                 >
-                  <MenuItem value="dateRange">Date Range</MenuItem>
+                  <MenuItem value="dateRange">Daily or Date Range</MenuItem>
                   <MenuItem value="monthYear">Month & Year</MenuItem>
                 </Select>
               </FormControl>
@@ -297,62 +334,58 @@ function GenerateReport({ open, onClose }) {
                 <Col md={6} className="mb-3">
                   <TextField
                     fullWidth
-                    label="From Date"
+                    label="From Collection Date"
                     type="date"
                     value={dateFrom}
                     onChange={(e) => setDateFrom(e.target.value)}
                     size="small"
                     variant="outlined"
-                    InputLabelProps={{
-                      // Correct prop for MUI TextField
-                      shrink: true,
-                    }}
-                    sx={{ mb: 2 }} // Optional spacing
+                    InputLabelProps={{ shrink: true }}
+                    sx={{ mb: 2, ...inputSx }}
                   />
                 </Col>
                 <Col md={6} className="mb-3">
                   <TextField
                     fullWidth
-                    label="To Date"
+                    label="To Collection Date"
                     type="date"
                     value={dateTo}
                     onChange={(e) => setDateTo(e.target.value)}
                     size="small"
                     variant="outlined"
-                    InputLabelProps={{
-                      shrink: true,
-                    }}
-                    sx={{ mb: 2 }}
+                    InputLabelProps={{ shrink: true }}
+                    sx={{ mb: 2, ...inputSx }}
                   />
                 </Col>
               </>
             )}
           </Row>
 
-          {/* Month Year Inputs */}
           {dateType === "monthYear" && (
             <Row>
               <Col>
                 <TextField
                   fullWidth
-                  label="Month"
+                  label="Collection Month"
                   type="month"
                   value={dateFrom}
                   onChange={(e) => setDateFrom(e.target.value)}
                   InputLabelProps={{ shrink: true }}
                   size="small"
                   variant="outlined"
+                  sx={inputSx}
                 />
               </Col>
               <Col>
                 <TextField
                   fullWidth
-                  label="Year"
+                  label="Collection Year"
                   type="number"
                   value={dateTo}
                   onChange={(e) => setDateTo(e.target.value)}
                   size="small"
                   variant="outlined"
+                  sx={inputSx}
                 />
               </Col>
             </Row>
@@ -361,9 +394,9 @@ function GenerateReport({ open, onClose }) {
           <Row>
             <Col>
               <Box display="flex" alignItems="center" mb={1}>
-                <ReceiptLongOutlined color="primary" sx={{ mr: 1 }} />
+                <ReceiptLongOutlined sx={{ mr: 1, color: uiColors.navy }} />
                 <Typography variant="subtitle1" fontWeight="bold">
-                  Report Details
+                  Collector Details
                 </Typography>
               </Box>
               <Divider />
@@ -371,33 +404,19 @@ function GenerateReport({ open, onClose }) {
           </Row>
 
           <Row className="mt-3">
-            <Col>
+            <Col md={12}>
               <FormControl fullWidth size="small" variant="outlined">
-                <InputLabel>Report Type</InputLabel>
-                <Select
-                  value={reportType}
-                  onChange={(e) => setReportType(e.target.value)}
-                  label="Report Type"
-                >
-                  <MenuItem value="CTCI">Cedula</MenuItem>
-                  <MenuItem value="real_property_tax_data">RPT</MenuItem>
-                  <MenuItem value="51">GF AND TF</MenuItem>
-                </Select>
-              </FormControl>
-            </Col>
-            <Col>
-              <FormControl fullWidth size="small" variant="outlined">
-                <InputLabel>Cashier</InputLabel>
+                <InputLabel>{collectorLabel}</InputLabel>
                 <Select
                   value={cashier}
                   onChange={(e) => setCashier(e.target.value)}
-                  label="Cashier"
+                  label={collectorLabel}
                   startAdornment={<PersonOutlined sx={{ mr: 1, ml: -0.5 }} />}
-                  disabled={!reportType} // Disable until reportType is selected
+                  sx={inputSx}
                 >
-                  {cashierOptionsByReport[reportType]?.map((name) => (
+                  {collectorOptions.map((name) => (
                     <MenuItem key={name} value={name}>
-                      {name}
+                      {String(name).toUpperCase()}
                     </MenuItem>
                   ))}
                 </Select>
@@ -408,9 +427,9 @@ function GenerateReport({ open, onClose }) {
           <Row className="mt-3">
             <Col>
               <Box display="flex" alignItems="center" mb={1} mt={2}>
-                <SearchOutlined color="primary" sx={{ mr: 1 }} />
+                <SearchOutlined sx={{ mr: 1, color: uiColors.navy }} />
                 <Typography variant="subtitle1" fontWeight="bold">
-                  Optional Filters
+                  {receiptFilterLabel}
                 </Typography>
               </Box>
               <Divider />
@@ -421,23 +440,25 @@ function GenerateReport({ open, onClose }) {
             <Col>
               <TextField
                 fullWidth
-                label="OR From"
+                label={receiptFromLabel}
                 type="number"
                 value={orFrom}
                 onChange={(e) => setOrFrom(e.target.value)}
                 size="small"
                 variant="outlined"
+                sx={inputSx}
               />
             </Col>
             <Col>
               <TextField
                 fullWidth
-                label="OR To"
+                label={receiptToLabel}
                 type="number"
                 value={orTo}
                 onChange={(e) => setOrTo(e.target.value)}
                 size="small"
                 variant="outlined"
+                sx={inputSx}
               />
             </Col>
           </Row>
@@ -447,13 +468,17 @@ function GenerateReport({ open, onClose }) {
               <Button
                 type="submit"
                 variant="contained"
-                color="primary"
                 fullWidth
                 disabled={status === "loading"}
                 sx={{
                   mt: 2,
                   py: 1.5,
                   borderRadius: 2,
+                  textTransform: "none",
+                  backgroundColor: uiColors.navy,
+                  "&:hover": {
+                    backgroundColor: uiColors.navyHover,
+                  },
                 }}
                 startIcon={
                   status === "loading" ? (
@@ -464,8 +489,8 @@ function GenerateReport({ open, onClose }) {
                 }
               >
                 {status === "loading"
-                  ? "Generating Report..."
-                  : "Generate Report"}
+                  ? "Checking Collection..."
+                  : "Check Collection"}
               </Button>
             </Col>
           </Row>
@@ -474,7 +499,7 @@ function GenerateReport({ open, onClose }) {
             {status === "error" && (
               <Col>
                 <Alert severity="error" sx={{ mt: 2 }}>
-                  Failed to generate report. Please try again.
+                  {errorMessage}
                 </Alert>
               </Col>
             )}
@@ -484,7 +509,7 @@ function GenerateReport({ open, onClose }) {
             {data.length === 0 && status === "success" && (
               <Col>
                 <Alert severity="info" sx={{ mt: 2 }}>
-                  No records found matching your criteria.
+                  {noDataMessage}
                 </Alert>
               </Col>
             )}
@@ -500,12 +525,13 @@ function GenerateReport({ open, onClose }) {
                     mt: 3,
                     borderRadius: 2,
                     overflow: "hidden",
+                    border: (theme) => `1px solid ${theme.palette.divider}`,
                   }}
                 >
                   <Box
                     sx={{
-                      bgcolor: "primary.light",
-                      color: "primary.contrastText",
+                      background: `linear-gradient(135deg, ${uiColors.headerStart}, ${uiColors.headerEnd})`,
+                      color: "#fff",
                       p: 2,
                       display: "flex",
                       justifyContent: "space-between",
@@ -513,12 +539,12 @@ function GenerateReport({ open, onClose }) {
                     }}
                   >
                     <Typography variant="h6">
-                      Results ({data.length} records)
+                      Receipt Results ({data.length} records)
                     </Typography>
                     <Box sx={{ display: "flex", alignItems: "center" }}>
                       <CurrencyExchangeOutlined sx={{ mr: 1 }} />
                       <Typography variant="subtitle1">
-                        Total: {formatCurrency(totalAmount)}
+                        Total Collection: {formatCurrency(totalAmount)}
                       </Typography>
                     </Box>
                   </Box>
@@ -526,46 +552,24 @@ function GenerateReport({ open, onClose }) {
                     <Table stickyHeader aria-label="results table">
                       <TableHead>
                         <TableRow>
-                          <TableCell
-                            sx={{
-                              fontWeight: "bold",
-                              bgcolor: "grey.100",
-                            }}
-                          >
-                            Date
-                          </TableCell>
-                          <TableCell
-                            sx={{
-                              fontWeight: "bold",
-                              bgcolor: "grey.100",
-                            }}
-                          >
-                            Cashier
-                          </TableCell>
-                          <TableCell
-                            sx={{
-                              fontWeight: "bold",
-                              bgcolor: "grey.100",
-                            }}
-                          >
-                            Type of Report
-                          </TableCell>
-                          <TableCell
-                            sx={{
-                              fontWeight: "bold",
-                              bgcolor: "grey.100",
-                            }}
-                          >
-                            OR#
-                          </TableCell>
-                          <TableCell
-                            sx={{
-                              fontWeight: "bold",
-                              bgcolor: "grey.100",
-                            }}
-                          >
-                            Total
-                          </TableCell>
+                          {[
+                            "Date",
+                            collectorLabel,
+                            receiptTypeColumnLabel,
+                            receiptNumberColumnLabel,
+                            "Total",
+                          ].map((label) => (
+                            <TableCell
+                              key={label}
+                              sx={{
+                                fontWeight: "bold",
+                                background: `linear-gradient(135deg, ${uiColors.headerStart}, ${uiColors.headerEnd})`,
+                                color: "#fff",
+                              }}
+                            >
+                              {label}
+                            </TableCell>
+                          ))}
                         </TableRow>
                       </TableHead>
                       <TableBody>
@@ -576,7 +580,7 @@ function GenerateReport({ open, onClose }) {
                           )
                           .map((row) => (
                             <TableRow
-                              key={row.or_number}
+                              key={`${row.or_number}-${row.date}`}
                               hover
                               sx={{
                                 "&:last-child td, &:last-child th": {
@@ -589,19 +593,17 @@ function GenerateReport({ open, onClose }) {
                                 <Chip
                                   label={row.cashier}
                                   size="small"
-                                  color="primary"
                                   variant="outlined"
+                                  sx={{
+                                    borderColor: uiColors.steel,
+                                    color: uiColors.steel,
+                                  }}
                                 />
                               </TableCell>
                               <TableCell>
-                                {row.cashier === "AMABELLA" &&
-                                row.report_type === "GF"
-                                  ? "Cash Tickets"
-                                  : row.report_type === "GF"
-                                    ? "General Fund"
-                                    : row.report_type === "TF"
-                                      ? "Trust Fund"
-                                      : row.report_type}
+                                {formatReceiptType
+                                  ? formatReceiptType(row)
+                                  : row.report_type}
                               </TableCell>
                               <TableCell>{row.or_number}</TableCell>
                               <TableCell sx={{ fontWeight: "medium" }}>
@@ -615,7 +617,6 @@ function GenerateReport({ open, onClose }) {
 
                   <Button
                     variant="outlined"
-                    color="primary"
                     fullWidth
                     onClick={handleDownload}
                     sx={{
@@ -623,6 +624,12 @@ function GenerateReport({ open, onClose }) {
                       py: 1.25,
                       borderRadius: 2,
                       textTransform: "none",
+                      borderColor: uiColors.navy,
+                      color: uiColors.navy,
+                      "&:hover": {
+                        borderColor: uiColors.navyHover,
+                        backgroundColor: "rgba(15, 39, 71, 0.08)",
+                      },
                     }}
                     startIcon={<DownloadIcon />}
                   >
@@ -636,7 +643,9 @@ function GenerateReport({ open, onClose }) {
                     page={page}
                     onPageChange={handleChangePage}
                     onRowsPerPageChange={handleChangeRowsPerPage}
-                    sx={{ borderTop: "1px solid rgba(224, 224, 224, 1)" }}
+                    sx={{
+                      borderTop: (theme) => `1px solid ${theme.palette.divider}`,
+                    }}
                   />
                 </Paper>
               )}
@@ -648,10 +657,22 @@ function GenerateReport({ open, onClose }) {
   );
 }
 
-// Prop types validation
-GenerateReport.propTypes = {
+ReceiptCollectionReportDialog.propTypes = {
+  collectorLabel: PropTypes.string,
+  collectorOptions: PropTypes.arrayOf(PropTypes.string).isRequired,
+  dialogTitle: PropTypes.string,
+  errorMessage: PropTypes.string,
+  filePrefix: PropTypes.string.isRequired,
+  formatReceiptType: PropTypes.func,
+  noDataMessage: PropTypes.string,
   onClose: PropTypes.func.isRequired,
   open: PropTypes.bool.isRequired,
+  receiptFilterLabel: PropTypes.string,
+  receiptFromLabel: PropTypes.string,
+  receiptNumberColumnLabel: PropTypes.string,
+  receiptToLabel: PropTypes.string,
+  receiptTypeColumnLabel: PropTypes.string,
+  reportType: PropTypes.string.isRequired,
 };
 
-export default GenerateReport;
+export default ReceiptCollectionReportDialog;

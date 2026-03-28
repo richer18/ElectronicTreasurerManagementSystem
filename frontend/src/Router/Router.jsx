@@ -7,6 +7,7 @@ import {
 } from "react-router-dom";
 
 import Dashboard from "../FRONTEND/Dashboard/Home";
+import Landing from "../FRONTEND/Landing/Landing";
 import Login from "../FRONTEND/SignIn/SignIn";
 
 import Cedula from "../FRONTEND/components/ABSTRACT/CEDULA/Cedula";
@@ -35,7 +36,7 @@ import RCD from "../FRONTEND/components/RCD/ReportCollectionDeposit";
 
 function ProtectedRoute() {
   const isAuthenticated = localStorage.getItem("isAuthenticated") === "true";
-  return isAuthenticated ? <Outlet /> : <Navigate to="/" replace />;
+  return isAuthenticated ? <Outlet /> : <Navigate to="/login" replace />;
 }
 
 const routeAliases = [
@@ -71,7 +72,8 @@ function Routers() {
   return (
     <Router>
       <Routes>
-        <Route path="/" element={<Login />} />
+        <Route path="/" element={<Landing />} />
+        <Route path="/login" element={<Login />} />
         {routeAliases.map(({ from, to }) => (
           <Route key={from} path={from} element={<Navigate to={to} replace />} />
         ))}

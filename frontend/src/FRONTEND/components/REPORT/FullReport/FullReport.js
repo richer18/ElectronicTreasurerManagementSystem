@@ -1,10 +1,12 @@
 import { Edit, Save } from "@mui/icons-material";
-import BarChartIcon from "@mui/icons-material/BarChart";
-import DescriptionOutlined from "@mui/icons-material/DescriptionOutlined";
+import AccountBalanceIcon from "@mui/icons-material/AccountBalance";
+import AssessmentIcon from "@mui/icons-material/Assessment";
 import ErrorIcon from "@mui/icons-material/Error";
 import FileDownloadOutlined from "@mui/icons-material/FileDownloadOutlined";
 import InsertDriveFileOutlined from "@mui/icons-material/InsertDriveFileOutlined";
 import MonetizationOnIcon from "@mui/icons-material/MonetizationOn";
+import ReceiptLongIcon from "@mui/icons-material/ReceiptLong";
+import RestartAltIcon from "@mui/icons-material/RestartAlt";
 import TrendingDownIcon from "@mui/icons-material/TrendingDown";
 import {
   Box,
@@ -32,8 +34,8 @@ import {
   Typography,
   CircularProgress,
 } from "@mui/material";
-import { useTheme } from "@mui/material/styles";
-import React, { useCallback, useEffect, useState } from "react";
+import { alpha, useTheme } from "@mui/material/styles";
+import React, { useCallback, useEffect, useMemo, useState } from "react";
 import axiosInstance from "../../../../api/axiosInstance";
 import GenerateReport from "./GenerateReport";
 
@@ -68,17 +70,36 @@ function FullReport() {
   const [editingField] = useState(null);
   const [inputValues, setInputValues] = useState({}); // Temporary input values
 
-  const [reportDialog, setReportDialog] = useState({
-    open: false,
-    status: "idle", // 'idle' | 'loading' | 'success' | 'error'
-    progress: 0,
-  });
+  const [reportDialogOpen, setReportDialogOpen] = useState(false);
+  const [isGeneratingReport, setIsGeneratingReport] = useState(false);
 
   // Track which row (by date) is currently being saved to disable its save button
   const [savingRow, setSavingRow] = useState(null);
 
   // Then inside your component:
   const theme = useTheme();
+  const uiColors = useMemo(
+    () => ({
+      navy: "#0f2747",
+      navyHover: "#0b1e38",
+      steel: "#4b5d73",
+      steelHover: "#3c4c60",
+      teal: "#0f6b62",
+      tealHover: "#0b544d",
+      amber: "#a66700",
+      amberHover: "#8c5600",
+      red: "#b23b3b",
+      redHover: "#8f2f2f",
+      bg: "#f5f7fb",
+      cardGradients: [
+        "linear-gradient(135deg, #0f2747, #2f4f7f)",
+        "linear-gradient(135deg, #0f6b62, #2a8a7f)",
+        "linear-gradient(135deg, #4b5d73, #6a7f99)",
+        "linear-gradient(135deg, #a66700, #c98a2a)",
+      ],
+    }),
+    []
+  );
 
   // Dialog state
   const [dialogOpen, setDialogOpen] = useState(false);
@@ -125,6 +146,33 @@ function FullReport() {
     return () => controller.abort();
   }, [fetchData]);
 
+  const availableYears = React.useMemo(() => {
+    const years = Array.from(
+      new Set(
+        data
+          .map((item) => {
+            const parsedDate = new Date(item.date);
+            return Number.isNaN(parsedDate.getTime())
+              ? null
+              : parsedDate.getFullYear().toString();
+          })
+          .filter(Boolean)
+      )
+    ).sort((a, b) => Number(b) - Number(a));
+
+    if (years.length > 0) return years;
+
+    const currentYear = new Date().getFullYear();
+    return Array.from({ length: 5 }, (_, index) => (currentYear - index).toString());
+  }, [data]);
+
+  const activeFilterLabel = React.useMemo(() => {
+    if (!month && !year) return "Showing all periods";
+    const monthLabel = month ? months[Number(month) - 1] : "All Months";
+    const yearLabel = year || "All Years";
+    return `${monthLabel} ${yearLabel}`.trim();
+  }, [month, year]);
+
   const filteredData = React.useMemo(
     () =>
       data.filter((item) => {
@@ -138,6 +186,11 @@ function FullReport() {
       }),
     [data, month, year]
   );
+
+  const handleResetFilters = useCallback(() => {
+    setMonth("");
+    setYear("");
+  }, []);
 
   const handleEditClick = useCallback(
     (rowIndex) => {
@@ -211,12 +264,7 @@ function FullReport() {
       setShowButtons(false);
       setEditableRow(null);
 
-      // Refresh data in-place so the UI reflects persisted changes without a full reload
-      try {
-        await fetchData();
-      } catch (e) {
-        console.warn('Failed to refresh data after save', e);
-      }
+      window.location.reload();
     } catch (error) {
       if (error.name === "CanceledError") {
         console.warn("⚠️ Request Aborted");
@@ -246,6 +294,14 @@ function FullReport() {
     0
   );
   const totalCollections = totalRcd - totalDueFrom;
+  const formatCurrency = useCallback(
+    (value) =>
+      `₱${Number(value || 0).toLocaleString("en-PH", {
+        minimumFractionDigits: 2,
+        maximumFractionDigits: 2,
+      })}`,
+    []
+  );
 
   // Open dialog for input
   // const openDialog = (rowIndex, field, isIncrement) => {
@@ -401,6 +457,7 @@ function FullReport() {
 
       console.log("✅ Adjustment saved successfully!", response.data);
       alert("Adjustment saved successfully!");
+      window.location.reload();
     } catch (error) {
       if (error.name === "CanceledError") {
         console.warn("⚠️ Request Aborted");
@@ -434,30 +491,24 @@ function FullReport() {
     }
   };
 
-  const handleGenerateReport = () => {
-    // Open dialog in loading state
-    setReportDialog({
-      open: true,
-      status: "loading",
-      progress: 0,
-    });
+  const handleGenerateFullReport = useCallback(async () => {
+    setIsGeneratingReport(true);
+    try {
+      await fetchData();
+    } catch (error) {
+      console.error("Failed to generate full report:", error);
+    } finally {
+      setIsGeneratingReport(false);
+    }
+  }, [fetchData]);
 
-    // Simulate report generation
-    const interval = setInterval(() => {
-      setReportDialog((prev) => {
-        const newProgress = prev.progress + 10;
-        if (newProgress >= 100) {
-          clearInterval(interval);
-          return { ...prev, status: "success", progress: 100 };
-        }
-        return { ...prev, progress: newProgress };
-      });
-    }, 300);
-  };
+  const handleCheckReceipt = useCallback(() => {
+    setReportDialogOpen(true);
+  }, []);
 
-  const handleCloseDialog = () => {
-    setReportDialog({ ...reportDialog, open: false });
-  };
+  const handleCloseDialog = useCallback(() => {
+    setReportDialogOpen(false);
+  }, []);
 
   const handleExportCSV = () => {
     if (!filteredData.length) return;
@@ -489,6 +540,13 @@ function FullReport() {
     const csvContent = [
       headers.map(escapeCsv).join(','),
       ...rows.map((r) => r.map(escapeCsv).join(',')),
+      "",
+      [escapeCsv("RCD TOTAL"), escapeCsv(totalRcd.toFixed(2))].join(","),
+      [escapeCsv("LESS: DUE FROM"), escapeCsv(totalDueFrom.toFixed(2))].join(","),
+      [
+        escapeCsv("TOTAL COLLECTIONS"),
+        escapeCsv(totalCollections.toFixed(2)),
+      ].join(","),
     ].join("\n");
 
     // Trigger download
@@ -503,39 +561,130 @@ function FullReport() {
   };
 
   return (
-    <div style={{ padding: "24px", backgroundColor: "#f5f7fa" }}>
-      <Paper elevation={0} sx={{ p: 3, mb: 3, borderRadius: 2 }}>
+    <Box
+      sx={{
+        p: { xs: 2, md: 3 },
+        background: `linear-gradient(180deg, ${alpha(
+          theme.palette.primary.light,
+          0.08
+        )} 0%, ${uiColors.bg} 28%, #ffffff 100%)`,
+        minHeight: "100vh",
+      }}
+    >
+      <Paper
+        elevation={0}
+        sx={{
+          p: { xs: 2, md: 3 },
+          mb: 3,
+          borderRadius: 4,
+          border: `1px solid ${alpha(theme.palette.primary.main, 0.08)}`,
+          boxShadow: "0 18px 45px rgba(15, 39, 71, 0.08)",
+          overflow: "hidden",
+        }}
+      >
         <Box sx={{ mb: 3 }}>
           <Box
             sx={{
               display: "flex",
               justifyContent: "space-between",
               alignItems: "center",
-              gap: 2,
+              gap: 2.5,
+              flexDirection: { xs: "column", lg: "row" },
             }}
           >
-            <Box>
+            <Box
+              sx={{
+                flex: 1,
+                width: "100%",
+                p: { xs: 2.25, md: 3 },
+                borderRadius: 3,
+                color: "#fff",
+                background: uiColors.cardGradients[0],
+                position: "relative",
+                overflow: "hidden",
+                boxShadow: "0 12px 30px rgba(15, 39, 71, 0.20)",
+                "&::before": {
+                  content: '""',
+                  position: "absolute",
+                  inset: 0,
+                  background:
+                    "linear-gradient(120deg, rgba(255,255,255,0.12), transparent 42%)",
+                },
+              }}
+            >
+              <Typography
+                variant="overline"
+                sx={{
+                  letterSpacing: 1.4,
+                  fontWeight: 700,
+                  opacity: 0.92,
+                }}
+              >
+                Treasury Reporting
+              </Typography>
               <Typography
                 variant="h4"
-                sx={{ fontWeight: 700, color: theme.palette.primary.dark }}
+                sx={{
+                  fontWeight: 800,
+                  lineHeight: 1.15,
+                  mt: 0.4,
+                }}
               >
                 Financial Report Summary
               </Typography>
               <Typography
                 variant="body2"
-                sx={{ color: theme.palette.text.secondary, mt: 0.5 }}
+                sx={{ mt: 1.1, opacity: 0.88, maxWidth: 620 }}
               >
-                Overview of collections, deductions, and net totals. Use the
-                filters to refine the period.
+                Review daily collection totals, manual adjustments, due from,
+                and reconciliation figures in one treasury report.
               </Typography>
             </Box>
 
-            <Box sx={{ display: "flex", alignItems: "center", gap: 1 }}>
+            <Box
+              sx={{
+                display: "flex",
+                alignItems: "stretch",
+                gap: 1.25,
+                width: { xs: "100%", lg: "auto" },
+                flexWrap: "wrap",
+              }}
+            >
               <Chip
-                label={`${month ? months[month - 1] : "All Months"} ${year || ""}`.trim()}
-                color="primary"
-                variant="outlined"
-                sx={{ fontSize: "0.875rem", fontWeight: 500 }}
+                icon={<AssessmentIcon />}
+                label={activeFilterLabel}
+                sx={{
+                  fontSize: "0.875rem",
+                  fontWeight: 700,
+                  px: 1,
+                  height: 40,
+                  borderRadius: 999,
+                  color: uiColors.navy,
+                  backgroundColor: alpha(theme.palette.primary.main, 0.08),
+                  border: `1px solid ${alpha(theme.palette.primary.main, 0.18)}`,
+                  "& .MuiChip-icon": {
+                    color: uiColors.navy,
+                  },
+                }}
+              />
+              <Chip
+                icon={<ReceiptLongIcon />}
+                label={`${filteredData.length} active row${
+                  filteredData.length === 1 ? "" : "s"
+                }`}
+                sx={{
+                  fontSize: "0.875rem",
+                  fontWeight: 700,
+                  px: 1,
+                  height: 40,
+                  borderRadius: 999,
+                  color: uiColors.teal,
+                  backgroundColor: alpha(theme.palette.success.main, 0.1),
+                  border: `1px solid ${alpha(theme.palette.success.main, 0.18)}`,
+                  "& .MuiChip-icon": {
+                    color: uiColors.teal,
+                  },
+                }}
               />
             </Box>
           </Box>
@@ -549,10 +698,11 @@ function FullReport() {
             gap: 2,
             alignItems: { xs: "stretch", sm: "center" },
             mb: 4,
-            backgroundColor: "background.paper",
-            p: 3,
-            borderRadius: 2,
-            boxShadow: "0 1px 3px rgba(0,0,0,0.1)",
+            backgroundColor: "#fff",
+            p: { xs: 2, md: 2.5 },
+            borderRadius: 3,
+            border: `1px solid ${alpha(theme.palette.primary.main, 0.08)}`,
+            boxShadow: "0 10px 24px rgba(15, 39, 71, 0.06)",
           }}
         >
           {/* Filter Controls */}
@@ -577,7 +727,7 @@ function FullReport() {
               sx={{
                 minWidth: 120,
                 "& .MuiOutlinedInput-root": {
-                  borderRadius: "6px",
+                  borderRadius: "12px",
                   backgroundColor: "background.default",
                 },
               }}
@@ -592,28 +742,68 @@ function FullReport() {
 
             {/* Year Input */}
             <TextField
+              select
               fullWidth
               label="Year"
-              type="number"
               value={year}
               onChange={(e) => setYear(e.target.value)}
               variant="outlined"
               size="small"
-              placeholder="e.g., 2025"
               sx={{
                 minWidth: 120,
                 "& .MuiOutlinedInput-root": {
-                  borderRadius: "6px",
+                  borderRadius: "12px",
                   backgroundColor: "background.default",
                 },
               }}
-              InputProps={{
-                inputProps: {
-                  min: 2000,
-                  max: new Date().getFullYear() + 5,
-                },
+            >
+              <MenuItem value="">All Years</MenuItem>
+              {availableYears.map((availableYear) => (
+                <MenuItem key={availableYear} value={availableYear}>
+                  {availableYear}
+                </MenuItem>
+              ))}
+            </TextField>
+
+            <Box
+              sx={{
+                display: "flex",
+                flexDirection: "column",
+                justifyContent: "center",
+                minWidth: { xs: "100%", sm: 180 },
+                px: { xs: 0, sm: 1 },
+                py: 0.75,
+                borderRadius: 2,
+                backgroundColor: alpha(theme.palette.primary.main, 0.04),
               }}
-            />
+            >
+              <Typography
+                variant="caption"
+                sx={{
+                  color: theme.palette.text.secondary,
+                  fontWeight: 600,
+                  textTransform: "uppercase",
+                  letterSpacing: 0.4,
+                }}
+              >
+                Active Period
+              </Typography>
+              <Typography
+                variant="body2"
+                sx={{
+                  fontWeight: 700,
+                  color: theme.palette.text.primary,
+                }}
+              >
+                {activeFilterLabel}
+              </Typography>
+              <Typography
+                variant="caption"
+                sx={{ color: theme.palette.text.secondary }}
+              >
+                {filteredData.length} row{filteredData.length === 1 ? "" : "s"} matched
+              </Typography>
+            </Box>
           </Box>
 
           {/* Action Buttons */}
@@ -632,37 +822,49 @@ function FullReport() {
               type="button"
               variant="contained"
               color="primary"
-              startIcon={<DescriptionOutlined />}
-              onClick={handleGenerateReport}
+              startIcon={
+                isGeneratingReport ? (
+                  <CircularProgress size={18} color="inherit" />
+                ) : (
+                  <AssessmentIcon />
+                )
+              }
+              onClick={handleGenerateFullReport}
+              disabled={isGeneratingReport}
               sx={{
-                borderRadius: "6px",
+                borderRadius: "12px",
                 textTransform: "none",
                 px: 3,
-                boxShadow: "none",
+                backgroundColor: uiColors.navy,
+                boxShadow: "0 10px 22px rgba(15, 39, 71, 0.20)",
                 "&:hover": {
-                  boxShadow: "0 2px 8px rgba(25, 118, 210, 0.3)",
+                  backgroundColor: uiColors.navyHover,
+                  boxShadow: "0 14px 26px rgba(15, 39, 71, 0.26)",
                 },
               }}
             >
-              Generate Full Report
+              {isGeneratingReport ? "Generating Full Report..." : "Generate Full Report"}
             </Button>
             <Button
               type="button"
               variant="contained"
-              color="primary"
-              startIcon={<DescriptionOutlined />}
-              onClick={handleGenerateReport}
+              color="inherit"
+              startIcon={<ReceiptLongIcon />}
+              onClick={handleCheckReceipt}
               sx={{
-                borderRadius: "6px",
+                borderRadius: "12px",
                 textTransform: "none",
                 px: 3,
-                boxShadow: "none",
+                color: "#fff",
+                backgroundColor: uiColors.teal,
+                boxShadow: "0 10px 22px rgba(15, 107, 98, 0.18)",
                 "&:hover": {
-                  boxShadow: "0 2px 8px rgba(25, 118, 210, 0.3)",
+                  backgroundColor: uiColors.tealHover,
+                  boxShadow: "0 14px 26px rgba(15, 107, 98, 0.24)",
                 },
               }}
             >
-              Check Report
+              Check Receipt
             </Button>
 
             <Button
@@ -672,16 +874,39 @@ function FullReport() {
               startIcon={<FileDownloadOutlined />}
               onClick={handleExportCSV}
               sx={{
-                borderRadius: "6px",
+                borderRadius: "12px",
                 textTransform: "none",
                 px: 3,
-                borderWidth: "2px",
+                color: uiColors.amber,
+                borderColor: alpha(theme.palette.warning.main, 0.35),
+                backgroundColor: alpha(theme.palette.warning.main, 0.08),
+                borderWidth: "1px",
                 "&:hover": {
-                  borderWidth: "2px",
+                  borderColor: alpha(theme.palette.warning.main, 0.45),
+                  backgroundColor: alpha(theme.palette.warning.main, 0.14),
                 },
               }}
             >
               Export CSV
+            </Button>
+            <Button
+              type="button"
+              variant="text"
+              color="inherit"
+              startIcon={<RestartAltIcon />}
+              onClick={handleResetFilters}
+              sx={{
+                borderRadius: "12px",
+                textTransform: "none",
+                px: 2,
+                color: uiColors.steel,
+                backgroundColor: alpha(theme.palette.text.primary, 0.04),
+                "&:hover": {
+                  backgroundColor: alpha(theme.palette.text.primary, 0.08),
+                },
+              }}
+            >
+              Reset
             </Button>
           </Box>
         </Box>
@@ -689,10 +914,10 @@ function FullReport() {
         <TableContainer
           component={Paper}
           sx={{
-            borderRadius: 3,
-            boxShadow: "0 4px 20px rgba(0,0,0,0.08)",
+            borderRadius: 4,
+            boxShadow: "0 14px 32px rgba(15, 39, 71, 0.08)",
             overflow: "hidden",
-            border: "1px solid #e0e0e0",
+            border: `1px solid ${alpha(theme.palette.primary.main, 0.08)}`,
             "& .MuiTableCell-root": {
               py: 1.5,
               fontSize: "0.875rem",
@@ -718,7 +943,7 @@ function FullReport() {
                     sx={{
                       fontWeight: 700,
                       fontSize: "0.9rem",
-                      backgroundColor: theme.palette.primary.main,
+                      background: uiColors.cardGradients[0],
                       color: theme.palette.common.white,
                       borderRight: "1px solid rgba(255, 255, 255, 0.2)",
                       "&:last-child": { borderRight: "none" },
@@ -794,41 +1019,107 @@ function FullReport() {
                             <Box
                               sx={{
                                 display: "flex",
+                                flexDirection: "column",
                                 alignItems: "center",
                                 justifyContent: "center",
+                                gap: 0.75,
                               }}
                             >
-                              <span style={{ fontWeight: 600 }}>
-                                ₱{Number(row[field] || 0).toLocaleString()}
-                              </span>
+                              <Box
+                                sx={{
+                                  display: "flex",
+                                  alignItems: "center",
+                                  justifyContent: "center",
+                                  gap: 0.5,
+                                  flexWrap: "wrap",
+                                }}
+                              >
+                                <span style={{ fontWeight: 600 }}>
+                                  {"\u20B1"}
+                                  {Number(row[field] || 0).toLocaleString("en-PH", {
+                                    minimumFractionDigits: 2,
+                                    maximumFractionDigits: 2,
+                                  })}
+                                </span>
 
-                              {(row.adjustments?.[field]?.under > 0 ||
-                                row.adjustments?.[field]?.over > 0) && (
-                                <Tooltip
-                                  title={
-                                    <Box>
-                                      {Number(row.adjustments?.[field]?.under || 0) > 0 && (
-                                        <Box sx={{ color: theme.palette.error.main }}>
-                                          Under: ₱{Number(row.adjustments?.[field]?.under || 0).toLocaleString()}
-                                        </Box>
-                                      )}
-                                      {Number(row.adjustments?.[field]?.over || 0) > 0 && (
-                                        <Box sx={{ color: theme.palette.success.main }}>
-                                          Over: ₱{Number(row.adjustments?.[field]?.over || 0).toLocaleString()}
-                                        </Box>
-                                      )}
-                                    </Box>
-                                  }
+                                {(Number(row.adjustments?.[field]?.under || 0) > 0 ||
+                                  Number(row.adjustments?.[field]?.over || 0) > 0) && (
+                                  <Tooltip title="This amount has manual under/over adjustments">
+                                    <ErrorIcon
+                                      sx={{
+                                        fontSize: 16,
+                                        color: theme.palette.warning.main,
+                                      }}
+                                    />
+                                  </Tooltip>
+                                )}
+                              </Box>
+
+                              {(Number(row.adjustments?.[field]?.under || 0) > 0 ||
+                                Number(row.adjustments?.[field]?.over || 0) > 0) && (
+                                <Box
+                                  sx={{
+                                    display: "flex",
+                                    flexDirection: "column",
+                                    alignItems: "center",
+                                    gap: 0.5,
+                                  }}
                                 >
-                                  <ErrorIcon
-                                    color="error"
-                                    sx={{
-                                      fontSize: 16,
-                                      ml: 0.5,
-                                      verticalAlign: "middle",
-                                    }}
-                                  />
-                                </Tooltip>
+                                  {Number(row.adjustments?.[field]?.under || 0) > 0 && (
+                                    <Chip
+                                      size="small"
+                                      label={`Under: \u20B1${Number(
+                                        row.adjustments?.[field]?.under || 0
+                                      ).toLocaleString("en-PH", {
+                                        minimumFractionDigits: 2,
+                                        maximumFractionDigits: 2,
+                                      })}`}
+                                      sx={{
+                                        height: 24,
+                                        fontWeight: 700,
+                                        color: theme.palette.warning.dark,
+                                        backgroundColor: alpha(
+                                          theme.palette.warning.main,
+                                          0.14
+                                        ),
+                                        border: `1px solid ${alpha(
+                                          theme.palette.warning.main,
+                                          0.35
+                                        )}`,
+                                        "& .MuiChip-label": {
+                                          px: 1.1,
+                                        },
+                                      }}
+                                    />
+                                  )}
+                                  {Number(row.adjustments?.[field]?.over || 0) > 0 && (
+                                    <Chip
+                                      size="small"
+                                      label={`Over: \u20B1${Number(
+                                        row.adjustments?.[field]?.over || 0
+                                      ).toLocaleString("en-PH", {
+                                        minimumFractionDigits: 2,
+                                        maximumFractionDigits: 2,
+                                      })}`}
+                                      sx={{
+                                        height: 24,
+                                        fontWeight: 700,
+                                        color: theme.palette.success.dark,
+                                        backgroundColor: alpha(
+                                          theme.palette.success.main,
+                                          0.14
+                                        ),
+                                        border: `1px solid ${alpha(
+                                          theme.palette.success.main,
+                                          0.35
+                                        )}`,
+                                        "& .MuiChip-label": {
+                                          px: 1.1,
+                                        },
+                                      }}
+                                    />
+                                  )}
+                                </Box>
                               )}
                             </Box>
                           )}
@@ -1101,9 +1392,11 @@ function FullReport() {
           elevation={0}
           sx={{
             mt: 4,
-            p: 3,
-            borderRadius: 3,
-            backgroundColor: "#f9fafb",
+            p: { xs: 2, md: 3 },
+            borderRadius: 4,
+            backgroundColor: "#fff",
+            border: `1px solid ${alpha(theme.palette.primary.main, 0.08)}`,
+            boxShadow: "0 14px 30px rgba(15, 39, 71, 0.06)",
           }}
         >
           <Box
@@ -1121,28 +1414,37 @@ function FullReport() {
                 flex: 1,
                 p: 3,
                 borderRadius: 3,
-                boxShadow: "0 4px 14px rgba(0,0,0,0.06)",
-                borderTop: `4px solid ${theme.palette.success.main}`,
+                boxShadow: "0 10px 24px rgba(15,39,71,0.08)",
+                border: `1px solid ${alpha(theme.palette.success.main, 0.14)}`,
                 minWidth: 250,
+                position: "relative",
+                overflow: "hidden",
+                "&::before": {
+                  content: '""',
+                  position: "absolute",
+                  inset: 0,
+                  background:
+                    "linear-gradient(135deg, rgba(15,107,98,0.08), transparent 45%)",
+                },
               }}
             >
               <Box sx={{ display: "flex", alignItems: "center", mb: 1 }}>
                 <MonetizationOnIcon
-                  sx={{ color: theme.palette.success.main, mr: 1 }}
+                  sx={{ color: uiColors.teal, mr: 1 }}
                 />
                 <Typography
                   variant="subtitle2"
-                  sx={{ color: theme.palette.text.secondary }}
+                  sx={{ color: theme.palette.text.secondary, fontWeight: 700 }}
                 >
                   TOTAL COLLECTIONS
                 </Typography>
               </Box>
-              <Typography variant="h6" sx={{ fontWeight: 600 }}>
+              <Typography variant="h6" sx={{ fontWeight: 700, color: uiColors.navy }}>
                 RCD Total
               </Typography>
               <Typography
                 variant="h5"
-                sx={{ fontWeight: 700, color: theme.palette.success.main }}
+                sx={{ fontWeight: 800, color: uiColors.teal }}
               >
                 ₱{totalRcd.toLocaleString("en-PH")}
               </Typography>
@@ -1154,28 +1456,37 @@ function FullReport() {
                 flex: 1,
                 p: 3,
                 borderRadius: 3,
-                boxShadow: "0 4px 14px rgba(0,0,0,0.06)",
-                borderTop: `4px solid ${theme.palette.error.main}`,
+                boxShadow: "0 10px 24px rgba(15,39,71,0.08)",
+                border: `1px solid ${alpha(theme.palette.error.main, 0.14)}`,
                 minWidth: 250,
+                position: "relative",
+                overflow: "hidden",
+                "&::before": {
+                  content: '""',
+                  position: "absolute",
+                  inset: 0,
+                  background:
+                    "linear-gradient(135deg, rgba(178,59,59,0.08), transparent 45%)",
+                },
               }}
             >
               <Box sx={{ display: "flex", alignItems: "center", mb: 1 }}>
                 <TrendingDownIcon
-                  sx={{ color: theme.palette.error.main, mr: 1 }}
+                  sx={{ color: uiColors.red, mr: 1 }}
                 />
                 <Typography
                   variant="subtitle2"
-                  sx={{ color: theme.palette.text.secondary }}
+                  sx={{ color: theme.palette.text.secondary, fontWeight: 700 }}
                 >
                   DEDUCTIONS
                 </Typography>
               </Box>
-              <Typography variant="h6" sx={{ fontWeight: 600 }}>
+              <Typography variant="h6" sx={{ fontWeight: 700, color: uiColors.navy }}>
                 Due From
               </Typography>
               <Typography
                 variant="h5"
-                sx={{ fontWeight: 700, color: theme.palette.error.main }}
+                sx={{ fontWeight: 800, color: uiColors.red }}
               >
                 ₱{totalDueFrom.toLocaleString("en-PH")}
               </Typography>
@@ -1187,14 +1498,14 @@ function FullReport() {
                 flex: 1,
                 p: 3,
                 borderRadius: 3,
-                background: `linear-gradient(135deg, ${theme.palette.primary.main}, ${theme.palette.primary.dark})`,
+                background: uiColors.cardGradients[0],
                 color: "#fff",
-                boxShadow: "0 6px 18px rgba(0,0,0,0.1)",
+                boxShadow: "0 14px 28px rgba(15,39,71,0.18)",
                 minWidth: 250,
               }}
             >
               <Box sx={{ display: "flex", alignItems: "center", mb: 1 }}>
-                <BarChartIcon sx={{ color: "white", mr: 1 }} />
+                <AccountBalanceIcon sx={{ color: "white", mr: 1 }} />
                 <Typography variant="subtitle2" sx={{ opacity: 0.9 }}>
                   FINAL TOTAL
                 </Typography>
@@ -1287,13 +1598,12 @@ function FullReport() {
       </Paper>
 
       <GenerateReport
-        open={reportDialog.open}
+        open={reportDialogOpen}
         onClose={handleCloseDialog}
-        status={reportDialog.status}
-        progress={reportDialog.progress}
       />
-    </div>
+    </Box>
   );
 }
 
 export default FullReport;
+
