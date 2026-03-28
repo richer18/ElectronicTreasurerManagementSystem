@@ -40,6 +40,8 @@ import Row from "react-bootstrap/Row";
 import axiosInstance from "../../../../../api/axiosInstance";
 import { useMaterialUIController } from "../../../../../context";
 
+const getTodayDate = () => new Date().toISOString().split("T")[0];
+
 function GenerateReport({ open, onClose }) {
   const [controller] = useMaterialUIController();
   const { darkMode } = controller;
@@ -81,9 +83,9 @@ function GenerateReport({ open, onClose }) {
   };
   const [status, setStatus] = useState("idle");
   const [dateType, setDateType] = useState("dateRange");
-  const [dateFrom, setDateFrom] = useState("");
-  const [dateTo, setDateTo] = useState("");
-  const [reportType, setReportType] = useState("51");
+  const [dateFrom, setDateFrom] = useState(getTodayDate);
+  const [dateTo, setDateTo] = useState(getTodayDate);
+  const reportType = "real_property_tax_data";
   const [cashier, setCashier] = useState("");
   const [data, setData] = useState([]);
   const [page, setPage] = useState(0);
@@ -93,19 +95,27 @@ function GenerateReport({ open, onClose }) {
 
   // ✅ Corrected Cashier Mapping
   const cashierOptionsByReport = {
-    CTCI: ["flora", "angelique", "agnes", "ricardo"],
-    real_property_tax_data: [
-      "RICARDO ENOPIA",
-      "IRIS RAFALES",
-      "FLORA MY FERRER",
-    ],
-    51: ["FLORA MY", "IRIS", "AGNES", "RICARDO", "AMABELLA"],
+    real_property_tax_data: ["angelique", "flora", "ricardo"],
   };
 
   // Reset page when data changes
   useEffect(() => {
     setPage(0);
   }, [data]);
+
+  useEffect(() => {
+    if (open) {
+      const today = getTodayDate();
+      setStatus("idle");
+      setDateType("dateRange");
+      setDateFrom(today);
+      setDateTo(today);
+      setCashier("");
+      setOrFrom("");
+      setOrTo("");
+      setData([]);
+    }
+  }, [open]);
 
   // Debug function to check data format
   useEffect(() => {
@@ -249,7 +259,7 @@ function GenerateReport({ open, onClose }) {
 
     const link = document.createElement("a");
     link.href = url;
-    link.setAttribute("GeneralFundReport", `report-${Date.now()}.csv`);
+    link.setAttribute("download", `rpt-report-${Date.now()}.csv`);
     document.body.appendChild(link);
     link.click();
     document.body.removeChild(link);
@@ -292,7 +302,7 @@ function GenerateReport({ open, onClose }) {
           <Box display="flex" alignItems="center">
             <DescriptionOutlined sx={{ mr: 1.5, fontSize: 28 }} />
             <Typography variant="h5" fontWeight="500">
-              Generate Financial Report
+              Collector Collection Report
             </Typography>
           </Box>
           <Button
@@ -322,7 +332,7 @@ function GenerateReport({ open, onClose }) {
               <Box display="flex" alignItems="center" mb={1}>
                 <CalendarMonthOutlined sx={{ mr: 1, color: uiColors.navy }} />
                 <Typography variant="subtitle1" fontWeight="bold">
-                  Date Selection
+                  Collection Period
                 </Typography>
               </Box>
               <Divider />
@@ -332,14 +342,14 @@ function GenerateReport({ open, onClose }) {
           <Row className="mt-3">
             <Col>
               <FormControl fullWidth size="small" variant="outlined">
-                <InputLabel>Date Selection Type</InputLabel>
+                <InputLabel>Filter Type</InputLabel>
                 <Select
                   value={dateType}
                   onChange={(e) => setDateType(e.target.value)}
-                  label="Date Selection Type"
+                  label="Filter Type"
                   sx={inputSx}
                 >
-                  <MenuItem value="dateRange">Date Range</MenuItem>
+                  <MenuItem value="dateRange">Daily or Date Range</MenuItem>
                   <MenuItem value="monthYear">Month & Year</MenuItem>
                 </Select>
               </FormControl>
@@ -352,7 +362,7 @@ function GenerateReport({ open, onClose }) {
                 <Col md={6} className="mb-3">
                   <TextField
                     fullWidth
-                    label="From Date"
+                    label="From Collection Date"
                     type="date"
                     value={dateFrom}
                     onChange={(e) => setDateFrom(e.target.value)}
@@ -368,7 +378,7 @@ function GenerateReport({ open, onClose }) {
                 <Col md={6} className="mb-3">
                   <TextField
                     fullWidth
-                    label="To Date"
+                    label="To Collection Date"
                     type="date"
                     value={dateTo}
                     onChange={(e) => setDateTo(e.target.value)}
@@ -390,7 +400,7 @@ function GenerateReport({ open, onClose }) {
               <Col>
                 <TextField
                   fullWidth
-                  label="Month"
+                  label="Collection Month"
                   type="month"
                   value={dateFrom}
                   onChange={(e) => setDateFrom(e.target.value)}
@@ -403,7 +413,7 @@ function GenerateReport({ open, onClose }) {
               <Col>
                 <TextField
                   fullWidth
-                  label="Year"
+                  label="Collection Year"
                   type="number"
                   value={dateTo}
                   onChange={(e) => setDateTo(e.target.value)}
@@ -420,7 +430,7 @@ function GenerateReport({ open, onClose }) {
               <Box display="flex" alignItems="center" mb={1}>
                 <ReceiptLongOutlined sx={{ mr: 1, color: uiColors.navy }} />
                 <Typography variant="subtitle1" fontWeight="bold">
-                  Report Details
+                  Collector Details
                 </Typography>
               </Box>
               <Divider />
@@ -428,33 +438,20 @@ function GenerateReport({ open, onClose }) {
           </Row>
 
           <Row className="mt-3">
-            <Col>
+            <Col md={12}>
               <FormControl fullWidth size="small" variant="outlined">
-                <InputLabel>Report Type</InputLabel>
-                <Select
-                  value={reportType}
-                  onChange={(e) => setReportType(e.target.value)}
-                  label="Report Type"
-                  sx={inputSx}
-                >
-                  <MenuItem value="real_property_tax_data">RPT</MenuItem>
-                </Select>
-              </FormControl>
-            </Col>
-            <Col>
-              <FormControl fullWidth size="small" variant="outlined">
-                <InputLabel>Cashier</InputLabel>
+                <InputLabel>Collector</InputLabel>
                 <Select
                   value={cashier}
                   onChange={(e) => setCashier(e.target.value)}
-                  label="Cashier"
+                  label="Collector"
                   startAdornment={<PersonOutlined sx={{ mr: 1, ml: -0.5 }} />}
                   disabled={!reportType} // Disable until reportType is selected
                   sx={inputSx}
                 >
                   {cashierOptionsByReport[reportType]?.map((name) => (
                     <MenuItem key={name} value={name}>
-                      {name}
+                      {name.toUpperCase()}
                     </MenuItem>
                   ))}
                 </Select>
@@ -467,7 +464,7 @@ function GenerateReport({ open, onClose }) {
               <Box display="flex" alignItems="center" mb={1} mt={2}>
                 <SearchOutlined sx={{ mr: 1, color: uiColors.navy }} />
                 <Typography variant="subtitle1" fontWeight="bold">
-                  Optional Filters
+                  Receipt Filters
                 </Typography>
               </Box>
               <Divider />
@@ -478,7 +475,7 @@ function GenerateReport({ open, onClose }) {
             <Col>
               <TextField
                 fullWidth
-                label="OR From"
+                label="Receipt No. From"
                 type="number"
                 value={orFrom}
                 onChange={(e) => setOrFrom(e.target.value)}
@@ -490,7 +487,7 @@ function GenerateReport({ open, onClose }) {
             <Col>
               <TextField
                 fullWidth
-                label="OR To"
+                label="Receipt No. To"
                 type="number"
                 value={orTo}
                 onChange={(e) => setOrTo(e.target.value)}
@@ -527,8 +524,8 @@ function GenerateReport({ open, onClose }) {
                 }
               >
                 {status === "loading"
-                  ? "Generating Report..."
-                  : "Generate Report"}
+                  ? "Checking Collection..."
+                  : "Check Collection"}
               </Button>
             </Col>
           </Row>
@@ -537,7 +534,7 @@ function GenerateReport({ open, onClose }) {
             {status === "error" && (
               <Col>
                 <Alert severity="error" sx={{ mt: 2 }}>
-                  Failed to generate report. Please try again.
+                  Failed to load the collector collection report. Please try again.
                 </Alert>
               </Col>
             )}
@@ -547,7 +544,7 @@ function GenerateReport({ open, onClose }) {
             {data.length === 0 && status === "success" && (
               <Col>
                 <Alert severity="info" sx={{ mt: 2 }}>
-                  No records found matching your criteria.
+                  No receipts found for the selected collector and date filter.
                 </Alert>
               </Col>
             )}
@@ -577,12 +574,12 @@ function GenerateReport({ open, onClose }) {
                     }}
                   >
                     <Typography variant="h6">
-                      Results ({data.length} records)
+                      Receipt Results ({data.length} records)
                     </Typography>
                     <Box sx={{ display: "flex", alignItems: "center" }}>
                       <CurrencyExchangeOutlined sx={{ mr: 1 }} />
                       <Typography variant="subtitle1">
-                        Total: {formatCurrency(totalAmount)}
+                        Total Collection: {formatCurrency(totalAmount)}
                       </Typography>
                     </Box>
                   </Box>
@@ -606,7 +603,7 @@ function GenerateReport({ open, onClose }) {
                               color: "#fff",
                             }}
                           >
-                            Cashier
+                            Collector
                           </TableCell>
                           <TableCell
                             sx={{
@@ -615,7 +612,7 @@ function GenerateReport({ open, onClose }) {
                               color: "#fff",
                             }}
                           >
-                            Type of Report
+                            Receipt Type
                           </TableCell>
                           <TableCell
                             sx={{
@@ -624,7 +621,7 @@ function GenerateReport({ open, onClose }) {
                               color: "#fff",
                             }}
                           >
-                            OR#
+                            Receipt No.
                           </TableCell>
                           <TableCell
                             sx={{

@@ -43,9 +43,15 @@ const years = [
   { label: "2027", value: "2027" },
 ];
 
-function ReportTable({ onBack }) {
-  const [month, setMonth] = useState({ label: "January", value: "1" });
-  const [year, setYear] = useState({ label: "2025", value: "2025" });
+function ReportTable({ month, year, onMonthChange, onYearChange, onBack }) {
+  const selectedMonth = months.find((option) => option.value === month) || {
+    label: "January",
+    value: "1",
+  };
+  const selectedYear = years.find((option) => option.value === year) || {
+    label: "2025",
+    value: "2025",
+  };
 
   // Memoize defaultFields to ensure it's stable across renders
   const defaultFields = useMemo(
@@ -113,8 +119,8 @@ function ReportTable({ onBack }) {
     const fetchAllData = async () => {
       try {
         const params = {
-          month: month?.value || "",
-          year: year?.value || "",
+          month: selectedMonth.value || "",
+          year: selectedYear.value || "",
         };
 
         const responses = await Promise.all(
@@ -167,14 +173,14 @@ function ReportTable({ onBack }) {
     };
 
     fetchAllData();
-  }, [month, year, defaultFields]);
+  }, [selectedMonth.value, selectedYear.value, defaultFields]);
 
   const handleMonthChange = (event, value) => {
-    setMonth(value || { label: "January", value: "1" });
+    onMonthChange(value?.value ?? null);
   };
 
   const handleYearChange = (event, value) => {
-    setYear(value || { label: "2024", value: "2024" });
+    onYearChange(value?.value ?? null);
   };
 
   // Inject print-specific styles
@@ -414,7 +420,7 @@ function ReportTable({ onBack }) {
     const workbook = XLSX.utils.book_new();
     XLSX.utils.book_append_sheet(workbook, worksheet, "Report");
 
-    XLSX.writeFile(workbook, `SOCRPT_${month.label}_${year.label}.xlsx`);
+    XLSX.writeFile(workbook, `SOCRPT_${selectedMonth.label}_${selectedYear.label}.xlsx`);
   };
 
   return (
@@ -464,7 +470,7 @@ function ReportTable({ onBack }) {
               "& .MuiInputBase-root": { borderRadius: "8px" },
             }}
             onChange={handleMonthChange}
-            value={month}
+            value={selectedMonth}
             renderInput={(params) => (
               <TextField
                 {...params}
@@ -502,7 +508,7 @@ function ReportTable({ onBack }) {
               "& .MuiInputBase-root": { borderRadius: "8px" },
             }}
             onChange={handleYearChange}
-            value={year}
+            value={selectedYear}
             renderInput={(params) => (
               <TextField
                 {...params}
@@ -562,7 +568,7 @@ function ReportTable({ onBack }) {
             </Grid>
             <Grid item>
               <Typography variant="body2" fontStyle="bold" align="center">
-                Month of {month.label} {year.label}
+                Month of {selectedMonth.label} {selectedYear.label}
               </Typography>
             </Grid>
           </Grid>
@@ -2661,6 +2667,10 @@ function ReportTable({ onBack }) {
 }
 
 ReportTable.propTypes = {
+  month: PropTypes.string,
+  year: PropTypes.string,
+  onMonthChange: PropTypes.func.isRequired,
+  onYearChange: PropTypes.func.isRequired,
   onBack: PropTypes.func.isRequired,
 };
 

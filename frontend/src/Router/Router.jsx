@@ -38,13 +38,46 @@ function ProtectedRoute() {
   return isAuthenticated ? <Outlet /> : <Navigate to="/" replace />;
 }
 
+const routeAliases = [
+  { from: "/General-Fund", to: "/my-app/general-fund" },
+  { from: "/general-fund", to: "/my-app/general-fund" },
+  { from: "/Trust-Fund", to: "/my-app/trust-fund" },
+  { from: "/trust-fund", to: "/my-app/trust-fund" },
+  { from: "/Real-Property-Tax", to: "/my-app/real-property-tax" },
+  { from: "/real-property-tax", to: "/my-app/real-property-tax" },
+  {
+    from: "/community-tax-certificate",
+    to: "/my-app/community-tax-certificate",
+  },
+  { from: "/calendar", to: "/my-app/calendar" },
+  { from: "/rcd", to: "/my-app/rcd" },
+  { from: "/business-registration", to: "/my-app/business-registration" },
+  { from: "/mch", to: "/my-app/mch" },
+  { from: "/e-bike-trisikad", to: "/my-app/e-bike-trisikad" },
+  { from: "/business-card", to: "/my-app/business-card" },
+  { from: "/rpt-card", to: "/my-app/rpt-card" },
+  { from: "/full-report", to: "/my-app/full-report" },
+  { from: "/esre", to: "/my-app/esre" },
+  { from: "/collection", to: "/my-app/collection" },
+  { from: "/new-application", to: "/my-app/new-application" },
+  { from: "/renew-application", to: "/my-app/renew-application" },
+  { from: "/business-operation", to: "/my-app/business-operation" },
+  { from: "/business-address", to: "/my-app/business-address" },
+  { from: "/business-submit", to: "/my-app/business-submit" },
+  { from: "/water-works", to: "/my-app/water-works" },
+];
+
 function Routers() {
   return (
     <Router>
       <Routes>
         <Route path="/" element={<Login />} />
+        {routeAliases.map(({ from, to }) => (
+          <Route key={from} path={from} element={<Navigate to={to} replace />} />
+        ))}
         <Route element={<ProtectedRoute />}>
           <Route path="/my-app" element={<Dashboard />}>
+            <Route index element={<Navigate to="." replace />} />
             <Route path="real-property-tax" element={<RealPropertyTax />} />
             <Route path="general-fund" element={<GeneralFund />} />
             <Route path="trust-fund" element={<TrustFund />} />

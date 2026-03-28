@@ -2,71 +2,83 @@
 
 namespace App\Http\Controllers;
 
+use App\Helpers\QueryHelpers;
+use App\Helpers\RealPropertyTaxQueryHelper;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Log;
-use App\Helpers\QueryHelpers;
 
 class RealPropertyTaxDataGrandTotalSharingController extends Controller
 {
     public function index(Request $request)
     {
         try {
-            // Base queries for Land and Building
-            $landQuery = DB::table('real_property_tax_data')
+            $landQuery = DB::table(RealPropertyTaxQueryHelper::table())
                 ->selectRaw('
-                    SUM(IFNULL(current_year, 0) - IFNULL(current_discounts, 0)) AS current,
-                    SUM(IFNULL(prev_year, 0) + IFNULL(prior_years, 0)) AS prior,
-                    SUM(IFNULL(current_penalties, 0) + IFNULL(prev_penalties, 0) + IFNULL(prior_penalties, 0)) AS penalties
+                    SUM(IFNULL(BASIC_CURRENT_YEAR, 0) - IFNULL(BASIC_DISCOUNTS, 0)) AS current,
+                    SUM(IFNULL(BASIC_PRECEDING_YEAR, 0) + IFNULL(BASIC_PRIOR_YEARS, 0)) AS prior,
+                    SUM(IFNULL(BASIC_CURRENT_PENALTIES, 0) + IFNULL(BASIC_PRECEDING_PENALTIES, 0) + IFNULL(BASIC_PRIOR_PENALTIES, 0)) AS penalties
                 ')
-                ->where('status', 'LIKE', 'LAND%');
+                ->whereIn(
+                    RealPropertyTaxQueryHelper::classificationColumn(),
+                    RealPropertyTaxQueryHelper::landStatuses()
+                );
 
-            $buildingQuery = DB::table('real_property_tax_data')
+            $buildingQuery = DB::table(RealPropertyTaxQueryHelper::table())
                 ->selectRaw('
-                    SUM(IFNULL(current_year, 0) - IFNULL(current_discounts, 0)) AS current,
-                    SUM(IFNULL(prev_year, 0) + IFNULL(prior_years, 0)) AS prior,
-                    SUM(IFNULL(current_penalties, 0) + IFNULL(prev_penalties, 0) + IFNULL(prior_penalties, 0)) AS penalties
+                    SUM(IFNULL(BASIC_CURRENT_YEAR, 0) - IFNULL(BASIC_DISCOUNTS, 0)) AS current,
+                    SUM(IFNULL(BASIC_PRECEDING_YEAR, 0) + IFNULL(BASIC_PRIOR_YEARS, 0)) AS prior,
+                    SUM(IFNULL(BASIC_CURRENT_PENALTIES, 0) + IFNULL(BASIC_PRECEDING_PENALTIES, 0) + IFNULL(BASIC_PRIOR_PENALTIES, 0)) AS penalties
                 ')
-                ->whereIn('status', ['MACHINERY', 'BLDG-RES', 'BLDG-COMML', 'BLDG-INDUS']);
+                ->whereIn(
+                    RealPropertyTaxQueryHelper::classificationColumn(),
+                    RealPropertyTaxQueryHelper::buildingStatuses()
+                );
 
-            // Apply reusable date filter helper
-            $landQuery = QueryHelpers::addDateFilters($landQuery, $request, 'date');
-            $buildingQuery = QueryHelpers::addDateFilters($buildingQuery, $request, 'date');
+            $landQuery = QueryHelpers::addDateFilters(
+                $landQuery,
+                $request,
+                RealPropertyTaxQueryHelper::dateColumn()
+            );
+            $buildingQuery = QueryHelpers::addDateFilters(
+                $buildingQuery,
+                $request,
+                RealPropertyTaxQueryHelper::dateColumn()
+            );
 
             $landData = (array) $landQuery->first();
             $bldgData = (array) $buildingQuery->first();
 
-            // Ensure all values exist
             $land = [
-                'current'   => $landData['current'] ?? 0,
-                'prior'     => $landData['prior'] ?? 0,
+                'current' => $landData['current'] ?? 0,
+                'prior' => $landData['prior'] ?? 0,
                 'penalties' => $landData['penalties'] ?? 0,
             ];
 
             $bldg = [
-                'current'   => $bldgData['current'] ?? 0,
-                'prior'     => $bldgData['prior'] ?? 0,
+                'current' => $bldgData['current'] ?? 0,
+                'prior' => $bldgData['prior'] ?? 0,
                 'penalties' => $bldgData['penalties'] ?? 0,
             ];
 
-            // Compute grand total
-            $grandTotal = $land['current'] + $land['prior'] + $land['penalties']
-                        + $bldg['current'] + $bldg['prior'] + $bldg['penalties'];
+            $grandTotal =
+                $land['current'] + $land['prior'] + $land['penalties'] +
+                $bldg['current'] + $bldg['prior'] + $bldg['penalties'];
 
             $result = [
                 'category' => 'TOTAL',
-                'Grand Total'           => round($grandTotal, 2),
-                '35% Prov’l Share'      => round($grandTotal * 0.35, 2),
-                '40% Mun. Share'        => round($grandTotal * 0.40, 2),
-                '25% Brgy. Share'       => round($grandTotal * 0.25, 2),
+                'Grand Total' => round($grandTotal, 2),
+                '35% Prov’l Share' => round($grandTotal * 0.35, 2),
+                '40% Mun. Share' => round($grandTotal * 0.40, 2),
+                '25% Brgy. Share' => round($grandTotal * 0.25, 2),
             ];
 
-            Log::info("🏛 Grand Total Sharing: ₱" . number_format($grandTotal, 2));
+            Log::info('Grand Total Sharing: ' . number_format($grandTotal, 2));
 
             return response()->json([$result]);
-
         } catch (\Exception $e) {
-            Log::error("Error fetching grand total sharing: " . $e->getMessage());
+            Log::error('Error fetching grand total sharing: ' . $e->getMessage());
+
             return response()->json(['error' => 'Error fetching grand total sharing data'], 500);
         }
     }

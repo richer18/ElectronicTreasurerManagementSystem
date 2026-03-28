@@ -2,6 +2,8 @@
 
 namespace App\Http\Controllers;
 
+use App\Helpers\QueryHelpers;
+use App\Helpers\RealPropertyTaxQueryHelper;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Log;
@@ -11,85 +13,56 @@ class RealPropertyTaxDataBuildingSharingDataController extends Controller
     public function index(Request $request)
     {
         try {
-            // 📥 Input
-            $year  = (int) $request->query('year');
-            $months = array_filter(array_map('intval', explode(',', $request->query('month', ''))));
-            $month = isset($months[0]) ? $months[0] : null; // For day-level use
-            $day   = (int) $request->query('day');
+            $query = DB::table(RealPropertyTaxQueryHelper::table())
+                ->whereIn(
+                    RealPropertyTaxQueryHelper::classificationColumn(),
+                    RealPropertyTaxQueryHelper::buildingStatuses()
+                );
 
-            // 🧱 Base WHERE clause
-            $where = "WHERE status IN ('MACHINERY', 'BLDG-RES', 'BLDG-COMML', 'BLDG-INDUS')";
+            $query = QueryHelpers::addDateFilters(
+                $query,
+                $request,
+                RealPropertyTaxQueryHelper::dateColumn()
+            );
 
-            if ($year && $month && $day) {
-                $dateStr = sprintf('%04d-%02d-%02d', $year, $month, $day);
-                $where .= " AND DATE(`date`) = '{$dateStr}'";
-            } elseif ($year && !empty($months)) {
-                $monthList = implode(',', $months);
-                $where .= " AND YEAR(`date`) = {$year} AND MONTH(`date`) IN ({$monthList})";
-            } elseif ($year) {
-                $where .= " AND YEAR(`date`) = {$year}";
+            $breakdowns = [
+                'Current' => "SUM(IFNULL(BASIC_CURRENT_YEAR, 0) - IFNULL(BASIC_DISCOUNTS, 0))",
+                'Prior' => "SUM(IFNULL(BASIC_PRECEDING_YEAR, 0) + IFNULL(BASIC_PRIOR_YEARS, 0))",
+                'Penalties' => "SUM(IFNULL(BASIC_CURRENT_PENALTIES, 0) + IFNULL(BASIC_PRECEDING_PENALTIES, 0) + IFNULL(BASIC_PRIOR_PENALTIES, 0))",
+            ];
+
+            $results = [];
+
+            foreach ($breakdowns as $label => $expression) {
+                $results[] = (clone $query)
+                    ->selectRaw("'{$label}' AS category")
+                    ->selectRaw("ROUND({$expression}, 2) AS BUILDING")
+                    ->selectRaw("ROUND({$expression} * 0.35, 2) AS `35% Prov’l Share`")
+                    ->selectRaw("ROUND({$expression} * 0.40, 2) AS `40% Mun. Share`")
+                    ->selectRaw("ROUND({$expression} * 0.25, 2) AS `25% Brgy. Share`")
+                    ->first();
             }
 
-            // 🧠 Final query with UNIONs for all categories
-            $sql = "
-    SELECT
-        'Current' AS category,
-        ROUND(SUM(IFNULL(current_year, 0) - IFNULL(current_discounts, 0)), 2) AS `BUILDING`,
-        ROUND(SUM((IFNULL(current_year, 0) - IFNULL(current_discounts, 0)) * 0.35), 2) AS `35% Prov’l Share`,
-        ROUND(SUM((IFNULL(current_year, 0) - IFNULL(current_discounts, 0)) * 0.40), 2) AS `40% Mun. Share`,
-        ROUND(SUM((IFNULL(current_year, 0) - IFNULL(current_discounts, 0)) * 0.25), 2) AS `25% Brgy. Share`
-    FROM real_property_tax_data
-    {$where}
-    UNION ALL
-    SELECT
-        'Prior' AS category,
-        ROUND(SUM(IFNULL(prev_year, 0) + IFNULL(prior_years, 0)), 2) AS `BUILDING`,
-        ROUND(SUM((IFNULL(prev_year, 0) + IFNULL(prior_years, 0)) * 0.35), 2) AS `35% Prov’l Share`,
-        ROUND(SUM((IFNULL(prev_year, 0) + IFNULL(prior_years, 0)) * 0.40), 2) AS `40% Mun. Share`,
-        ROUND(SUM((IFNULL(prev_year, 0) + IFNULL(prior_years, 0)) * 0.25), 2) AS `25% Brgy. Share`
-    FROM real_property_tax_data
-    {$where}
-    UNION ALL
-    SELECT
-        'Penalties' AS category,
-        ROUND(SUM(
-            IFNULL(current_penalties, 0) +
-            IFNULL(prev_penalties, 0) +
-            IFNULL(prior_penalties, 0)
-        ), 2) AS `BUILDING`,
-        ROUND(SUM((IFNULL(current_penalties, 0) + IFNULL(prev_penalties, 0) + IFNULL(prior_penalties, 0)) * 0.35), 2) AS `35% Prov’l Share`,
-        ROUND(SUM((IFNULL(current_penalties, 0) + IFNULL(prev_penalties, 0) + IFNULL(prior_penalties, 0)) * 0.40), 2) AS `40% Mun. Share`,
-        ROUND(SUM((IFNULL(current_penalties, 0) + IFNULL(prev_penalties, 0) + IFNULL(prior_penalties, 0)) * 0.25), 2) AS `25% Brgy. Share`
-    FROM real_property_tax_data
-    {$where}
-    UNION ALL
-    SELECT
-        'TOTAL' AS category,
-        ROUND(SUM(
-            (IFNULL(current_year, 0) - IFNULL(current_discounts, 0)) +
-            (IFNULL(prev_year, 0) + IFNULL(prior_years, 0)) +
-            (IFNULL(current_penalties, 0) + IFNULL(prev_penalties, 0) + IFNULL(prior_penalties, 0))
-        ), 2) AS `BUILDING`,
-        ROUND(SUM(((IFNULL(current_year, 0) - IFNULL(current_discounts, 0)) +
-             (IFNULL(prev_year, 0) + IFNULL(prior_years, 0)) +
-             (IFNULL(current_penalties, 0) + IFNULL(prev_penalties, 0) + IFNULL(prior_penalties, 0))) * 0.35), 2) AS `35% Prov’l Share`,
-        ROUND(SUM(((IFNULL(current_year, 0) - IFNULL(current_discounts, 0)) +
-             (IFNULL(prev_year, 0) + IFNULL(prior_years, 0)) +
-             (IFNULL(current_penalties, 0) + IFNULL(prev_penalties, 0) + IFNULL(prior_penalties, 0))) * 0.40), 2) AS `40% Mun. Share`,
-        ROUND(SUM(((IFNULL(current_year, 0) - IFNULL(current_discounts, 0)) +
-             (IFNULL(prev_year, 0) + IFNULL(prior_years, 0)) +
-             (IFNULL(current_penalties, 0) + IFNULL(prev_penalties, 0) + IFNULL(prior_penalties, 0))) * 0.25), 2) AS `25% Brgy. Share`
-    FROM real_property_tax_data
-    {$where}
-";
+            $totalExpression = "SUM(
+                (IFNULL(BASIC_CURRENT_YEAR, 0) - IFNULL(BASIC_DISCOUNTS, 0)) +
+                (IFNULL(BASIC_PRECEDING_YEAR, 0) + IFNULL(BASIC_PRIOR_YEARS, 0)) +
+                (IFNULL(BASIC_CURRENT_PENALTIES, 0) + IFNULL(BASIC_PRECEDING_PENALTIES, 0) + IFNULL(BASIC_PRIOR_PENALTIES, 0))
+            )";
 
+            $results[] = (clone $query)
+                ->selectRaw("'TOTAL' AS category")
+                ->selectRaw("ROUND({$totalExpression}, 2) AS BUILDING")
+                ->selectRaw("ROUND({$totalExpression} * 0.35, 2) AS `35% Prov’l Share`")
+                ->selectRaw("ROUND({$totalExpression} * 0.40, 2) AS `40% Mun. Share`")
+                ->selectRaw("ROUND({$totalExpression} * 0.25, 2) AS `25% Brgy. Share`")
+                ->first();
 
-            $results = DB::select($sql);
-            Log::info("✅ Building Sharing Data fetched successfully");
+            Log::info('Building Sharing Data fetched successfully');
+
             return response()->json($results);
-
         } catch (\Exception $e) {
-            Log::error("❌ Error fetching building sharing data: " . $e->getMessage());
+            Log::error('Error fetching building sharing data: ' . $e->getMessage());
+
             return response()->json(['error' => 'Error fetching building sharing data'], 500);
         }
     }

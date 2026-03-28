@@ -2,42 +2,38 @@
 
 namespace App\Http\Controllers;
 
+use App\Helpers\QueryHelpers;
+use App\Helpers\RealPropertyTaxQueryHelper;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Log;
-use App\Helpers\QueryHelpers;
 
 class RealPropertyTaxDataSefBldgDataController extends Controller
 {
     public function index(Request $request)
     {
         try {
-            $statuses = [
-                'MACHINERY'    => 'MACHINERIES',
-                'BLDG-RES'     => 'BLDG-RES',
-                'BLDG-COMML'   => 'BLDG-COMML',
-                'BLDG-INDUS'   => 'BLDG-INDUS',
-            ];
-
             $results = [];
 
-            foreach ($statuses as $statusCode => $label) {
-                $query = DB::table('real_property_tax_data')
+            foreach (RealPropertyTaxQueryHelper::buildingCategoryMap() as $label => $statuses) {
+                $query = DB::table(RealPropertyTaxQueryHelper::table())
                     ->selectRaw("'{$label}' AS category")
-                    ->selectRaw('IFNULL(SUM(additional_current_year), 0) AS current')
-                    ->selectRaw('IFNULL(SUM(additional_discounts), 0) AS discount')
-                    ->selectRaw('IFNULL(SUM(additional_prev_year + additional_prior_years), 0) AS prior')
-                    ->selectRaw('IFNULL(SUM(additional_penalties), 0) AS penaltiesCurrent')
-                    ->selectRaw('IFNULL(SUM(additional_prev_penalties + additional_prior_penalties), 0) AS penaltiesPrior')
-                    ->where('status', $statusCode);
+                    ->selectRaw('IFNULL(SUM(SEF_CURRENT_YEAR), 0) AS current')
+                    ->selectRaw('IFNULL(SUM(SEF_DISCOUNTS), 0) AS discount')
+                    ->selectRaw('IFNULL(SUM(SEF_PRECEDING_YEAR + SEF_PRIOR_YEARS), 0) AS prior')
+                    ->selectRaw('IFNULL(SUM(SEF_CURRENT_PENALTIES), 0) AS penaltiesCurrent')
+                    ->selectRaw('IFNULL(SUM(SEF_PRECEDING_PENALTIES + SEF_PRIOR_PENALTIES), 0) AS penaltiesPrior')
+                    ->whereIn(RealPropertyTaxQueryHelper::classificationColumn(), $statuses);
 
-                // ✅ Apply centralized date filtering
-                $query = QueryHelpers::addDateFilters($query, $request, 'date');
+                $query = QueryHelpers::addDateFilters(
+                    $query,
+                    $request,
+                    RealPropertyTaxQueryHelper::dateColumn()
+                );
 
                 $results[] = (array) $query->first();
             }
 
-            // 🔢 Totals Computation
             $totals = [
                 'category' => 'TOTAL',
                 'current' => 0,
@@ -48,11 +44,11 @@ class RealPropertyTaxDataSefBldgDataController extends Controller
             ];
 
             foreach ($results as $row) {
-                $totals['current'] += $row['current'];
-                $totals['discount'] += $row['discount'];
-                $totals['prior'] += $row['prior'];
-                $totals['penaltiesCurrent'] += $row['penaltiesCurrent'];
-                $totals['penaltiesPrior'] += $row['penaltiesPrior'];
+                $totals['current'] += (float) $row['current'];
+                $totals['discount'] += (float) $row['discount'];
+                $totals['prior'] += (float) $row['prior'];
+                $totals['penaltiesCurrent'] += (float) $row['penaltiesCurrent'];
+                $totals['penaltiesPrior'] += (float) $row['penaltiesPrior'];
             }
 
             $totals['totalSum'] =
@@ -62,12 +58,12 @@ class RealPropertyTaxDataSefBldgDataController extends Controller
                 $totals['penaltiesCurrent'] +
                 $totals['penaltiesPrior'];
 
-            Log::info("SEF BLDG Total = ₱" . number_format($totals['totalSum'], 2));
+            Log::info('SEF BLDG Total = ' . number_format($totals['totalSum'], 2));
 
             return response()->json([...$results, $totals]);
-
         } catch (\Exception $e) {
-            Log::error("Error fetching SEF building data: " . $e->getMessage());
+            Log::error('Error fetching SEF building data: ' . $e->getMessage());
+
             return response()->json(['error' => 'Error fetching SEF building data'], 500);
         }
     }

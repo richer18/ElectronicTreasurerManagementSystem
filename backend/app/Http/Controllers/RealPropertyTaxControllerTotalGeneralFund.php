@@ -2,25 +2,23 @@
 
 namespace App\Http\Controllers;
 
+use App\Helpers\QueryHelpers;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
-use App\Helpers\QueryHelpers;
 
 class RealPropertyTaxControllerTotalGeneralFund extends Controller
 {
     public function index(Request $request)
     {
         try {
-            $query = DB::table('real_property_tax_data')->select('total');
+            $query = DB::table('real_property_tax_payment')
+                ->selectRaw('BASIC_TOTAL as total');
 
-            // Use shared date filter helper (adjust 'date' to your actual date column)
-            $query = QueryHelpers::addDateFilters($query, $request, 'date');
+            $query = QueryHelpers::addDateFilters($query, $request, 'DATE');
 
-            $results = $query->get();
-
-            return response()->json($results);
+            return response()->json($query->get());
         } catch (\Exception $e) {
-            return response()->json(['error' => 'Error fetching General Fund data'], 500);
+            return response()->json(['error' => $e->getMessage()], 500);
         }
     }
 }

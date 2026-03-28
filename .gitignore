@@ -3,3 +3,10 @@ treasurer_management_app.sql
 /backend/storage/logs/
 /backend/storage/*.log
 /run_file/
+/.tools/
+/.python-packages/
+/.db-working-copy/
+/.venv/
+/backend/.env
+/frontend/.env
+/frontend/_env copy

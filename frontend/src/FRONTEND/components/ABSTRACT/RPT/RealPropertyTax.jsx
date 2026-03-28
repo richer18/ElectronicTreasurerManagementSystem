@@ -50,6 +50,7 @@ import {
   default as PopupDialogView,
 } from "../../../../components/MD-Components/Popup/PopupDialogRPT_FORM";
 import DailyTable from "./TableData/DailyTable";
+import BarangaySharesTable from "./TableData/BarangaySharesTable";
 import GenerateReport from "./TableData/GenerateReport";
 import ReportTable from "./TableData/ReportTable";
 import SummaryTable from "./TableData/Summary";
@@ -98,6 +99,15 @@ const formatDate = (dateString) => {
     day: "numeric",
     year: "numeric",
   });
+};
+
+const formatMoney = (value, options = {}) => {
+  const amount = Number(value || 0);
+  const normalized = options.absolute ? Math.abs(amount) : amount;
+  return new Intl.NumberFormat("en-PH", {
+    minimumFractionDigits: 2,
+    maximumFractionDigits: 2,
+  }).format(normalized);
 };
 
 const initialFormData = {
@@ -189,6 +199,7 @@ function Row({ row }) {
       name: row.name,
       receipt: row.receipt_no, // ✅ Match `receipt_no` to `receipt`
       status: row.status,
+      advanced_payment: row.advanced_payment,
       comments: row.comments,
     };
 
@@ -241,23 +252,21 @@ function Row({ row }) {
       {/* 🟢 Table Row */}
       <TableRow sx={{ "& > *": { borderBottom: "unset" } }}>
         <TableCell align="center">{formatDate(row.date)}</TableCell>
-        <TableCell align="center">{row.name}</TableCell>
+        <TableCell align="center">{row.paid_by || row.name}</TableCell>
         <TableCell align="center">{row.receipt_no}</TableCell>
-        <TableCell align="center">{row.current_year}</TableCell>
-        <TableCell align="center">{row.current_penalties}</TableCell>
-        <TableCell align="center">{row.current_discounts}</TableCell>
-        <TableCell align="center">{row.prev_year}</TableCell>
-        <TableCell align="center">{row.prev_penalties}</TableCell>
-        <TableCell align="center">{row.prior_years}</TableCell>
-        <TableCell align="center">{row.prior_penalties}</TableCell>
+        <TableCell align="center">{formatMoney(row.current_year)}</TableCell>
+        <TableCell align="center">{formatMoney(row.current_penalties)}</TableCell>
+        <TableCell align="center">
+          {formatMoney(row.current_discounts, { absolute: true })}
+        </TableCell>
+        <TableCell align="center">{formatMoney(row.prev_year)}</TableCell>
+        <TableCell align="center">{formatMoney(row.prev_penalties)}</TableCell>
+        <TableCell align="center">{formatMoney(row.prior_years)}</TableCell>
+        <TableCell align="center">{formatMoney(row.prior_penalties)}</TableCell>
         <TableCell align="center">
           {" "}
           <Typography variant="body2" fontWeight={600} color="success.main">
-            {new Intl.NumberFormat("en-PH", {
-              style: "currency",
-              currency: "PHP",
-              minimumFractionDigits: 2,
-            }).format(row.total)}
+            {formatMoney(row.total)}
           </Typography>
         </TableCell>
         <TableCell align="center">
@@ -325,6 +334,7 @@ function Row({ row }) {
                     {[
                       "Date",
                       "Name of Taxpayer",
+                      "Paid By",
                       "Receipt No.",
                       "Current Year",
                       "Penalties",
@@ -365,64 +375,71 @@ function Row({ row }) {
                     </TableCell>
                     <TableCell align="center">{selectedRowView.name}</TableCell>
                     <TableCell align="center">
+                      {selectedRowView.paid_by}
+                    </TableCell>
+                    <TableCell align="center">
                       {selectedRowView.receipt_no}
                     </TableCell>
                     <TableCell align="center">
-                      {selectedRowView.current_year}
+                      {formatMoney(selectedRowView.current_year)}
                     </TableCell>
                     <TableCell align="center">
-                      {selectedRowView.current_penalties}
+                      {formatMoney(selectedRowView.current_penalties)}
                     </TableCell>
                     <TableCell align="center">
-                      {selectedRowView.current_discounts}
+                      {formatMoney(selectedRowView.current_discounts, {
+                        absolute: true,
+                      })}
                     </TableCell>
                     <TableCell align="center">
-                      {selectedRowView.prev_year}
+                      {formatMoney(selectedRowView.prev_year)}
                     </TableCell>
                     <TableCell align="center">
-                      {selectedRowView.prev_penalties}
+                      {formatMoney(selectedRowView.prev_penalties)}
                     </TableCell>
                     <TableCell align="center">
-                      {selectedRowView.prior_years}
+                      {formatMoney(selectedRowView.prior_years)}
                     </TableCell>
                     <TableCell align="center">
-                      {selectedRowView.prior_penalties}
+                      {formatMoney(selectedRowView.prior_penalties)}
                     </TableCell>
                     <TableCell align="center">
-                      {selectedRowView.total}
+                      {formatMoney(selectedRowView.total)}
                     </TableCell>
                     <TableCell align="center">
                       {selectedRowView.barangay}
                     </TableCell>
                     <TableCell align="center">
-                      {selectedRowView.share}
+                      {formatMoney(selectedRowView.share)}
                     </TableCell>
                     <TableCell align="center">
-                      {selectedRowView.additional_current_year}
+                      {formatMoney(selectedRowView.additional_current_year)}
                     </TableCell>
                     <TableCell align="center">
-                      {selectedRowView.additional_penalties}
+                      {formatMoney(selectedRowView.additional_penalties)}
                     </TableCell>
                     <TableCell align="center">
-                      {selectedRowView.additional_discounts}
+                      {formatMoney(selectedRowView.additional_discounts, {
+                        absolute: true,
+                      })}
                     </TableCell>
                     <TableCell align="center">
-                      {selectedRowView.additional_prev_year}
+                      {formatMoney(selectedRowView.additional_prev_year)}
                     </TableCell>
                     <TableCell align="center">
-                      {selectedRowView.additional_prev_penalties}
+                      {formatMoney(selectedRowView.additional_prev_penalties)}
                     </TableCell>
                     <TableCell align="center">
-                      {selectedRowView.additional_prior_years}
+                      {formatMoney(selectedRowView.additional_prior_years)}
                     </TableCell>
                     <TableCell align="center">
-                      {selectedRowView.additional_prior_penalties}
+                      {formatMoney(selectedRowView.additional_prior_penalties)}
                     </TableCell>
                     <TableCell align="center">
-                      {selectedRowView.additional_total}
+                      {formatMoney(selectedRowView.additional_total)}
                     </TableCell>
                     <TableCell align="center">
-                      {selectedRowView.gf_total}
+                      {formatMoney(selectedRowView.gf_total)}
                     </TableCell>
                     <TableCell align="center">
                       {selectedRowView.status}
@@ -554,6 +571,7 @@ function RealPropertyTax() {
   const [showDailyTable, setShowDailyTable] = useState(false);
   const [showMainTable, setShowMainTable] = useState(true);
   const [showSummaryTable, setShowSummaryTable] = useState(false);
+  const [showBarangaySharesTable, setShowBarangaySharesTable] = useState(false);
   const [month, setMonth] = useState(null);
   const [year, setYear] = useState(null);
   const [dailyTableData, setDailyTableData] = useState([]);
@@ -574,6 +592,21 @@ function RealPropertyTax() {
     status: "idle", // 'idle' | 'loading' | 'success' | 'error'
     progress: 0,
   });
+
+  const filteredSummaryTotals = useMemo(
+    () =>
+      filteredData.reduce(
+        (acc, row) => {
+          acc.total += Number(row?.gf_total || 0);
+          acc.shareTotal += Number(row?.share || 0);
+          acc.gfTotal += Number(row?.total || 0);
+          acc.sefTotal += Number(row?.additional_total || 0);
+          return acc;
+        },
+        { total: 0, shareTotal: 0, gfTotal: 0, sefTotal: 0 }
+      ),
+    [filteredData]
+  );
 
   const handleCloseDialog = () => {
     setReportDialog({ ...reportDialog, open: false });
@@ -703,7 +736,7 @@ function RealPropertyTax() {
       }
     };
     fetchData();
-  }, [showDailyTable, showSummaryTable, showMainTable]);
+  }, [showDailyTable, showSummaryTable, showBarangaySharesTable, showMainTable]);
 
   useEffect(() => {
     if (!Array.isArray(data)) {
@@ -747,6 +780,7 @@ function RealPropertyTax() {
     setShowMainTable(false);
     setShowSummaryTable(false);
     setShowReportTable(false);
+    setShowBarangaySharesTable(false);
     setShowFilters(false);
   };
 
@@ -755,6 +789,7 @@ function RealPropertyTax() {
     setShowMainTable(false);
     setShowDailyTable(false);
     setShowReportTable(false);
+    setShowBarangaySharesTable(false);
     setShowFilters(false);
   };
 
@@ -763,6 +798,16 @@ function RealPropertyTax() {
     setShowMainTable(false);
     setShowDailyTable(false);
     setShowSummaryTable(false);
+    setShowBarangaySharesTable(false);
+    setShowFilters(false);
+  };
+
+  const toggleBarangaySharesTable = () => {
+    setShowBarangaySharesTable(true);
+    setShowMainTable(false);
+    setShowDailyTable(false);
+    setShowSummaryTable(false);
+    setShowReportTable(false);
     setShowFilters(false);
   };
 
@@ -838,6 +883,7 @@ function RealPropertyTax() {
     setShowMainTable(true);
     setShowDailyTable(false);
     setShowSummaryTable(false);
+    setShowBarangaySharesTable(false);
     setShowFilters(false);
   };
 
@@ -858,6 +904,7 @@ function RealPropertyTax() {
     setShowReportTable(false);
     setShowDailyTable(false);
     setShowSummaryTable(false);
+    setShowBarangaySharesTable(false);
     setShowMainTable(true);
     setShowFilters(true);
   };
@@ -928,6 +975,7 @@ function RealPropertyTax() {
                   disablePortal
                   options={months}
                   sx={{ width: 180 }}
+                  value={months.find((option) => option.value === month) ?? null}
                   renderInput={(params) => (
                     <TextField
                       {...params}
@@ -942,6 +990,7 @@ function RealPropertyTax() {
                   disablePortal
                   options={years}
                   sx={{ width: 150 }}
+                  value={years.find((option) => option.value === year) ?? null}
                   renderInput={(params) => (
                     <TextField
                       {...params}
@@ -1077,6 +1126,7 @@ function RealPropertyTax() {
               <Button
                 variant="contained"
                 startIcon={<MdSummarize size={18} />}
+                onClick={toggleBarangaySharesTable}
                 sx={{
                   px: 3,
                   height: 44,
@@ -1193,22 +1243,22 @@ function RealPropertyTax() {
         >
           {[
             {
-              value: total,
+              value: filteredSummaryTotals.total,
               text: "Total Revenue",
               icon: <AccountBalanceIcon fontSize="large" />,
             },
             {
-              value: shareTotal,
+              value: filteredSummaryTotals.shareTotal,
               text: "25% Share Income",
               icon: <PieChartIcon fontSize="large" />,
             },
             {
-              value: gfTotal,
+              value: filteredSummaryTotals.gfTotal,
               text: "General Fund",
               icon: <AccountTreeIcon fontSize="large" />,
             },
             {
-              value: sefTotal,
+              value: filteredSummaryTotals.sefTotal,
               text: "SEF",
               icon: <SchoolIcon fontSize="large" />,
             },
@@ -1330,14 +1380,41 @@ function RealPropertyTax() {
 
       {showSummaryTable && (
         <SummaryTable
-          setMonth={setMonth}
-          setYear={setYear}
+          month={month}
+          year={year}
+          onMonthChange={setMonth}
+          onYearChange={setYear}
           onBack={handleBack}
         />
       )}
-      {showReportTable && <ReportTable onBack={handleBack} />}
+      {showBarangaySharesTable && (
+        <BarangaySharesTable
+          data={data}
+          month={month}
+          year={year}
+          onMonthChange={setMonth}
+          onYearChange={setYear}
+          onBack={handleBack}
+        />
+      )}
+      {showReportTable && (
+        <ReportTable
+          month={month}
+          year={year}
+          onMonthChange={setMonth}
+          onYearChange={setYear}
+          onBack={handleBack}
+        />
+      )}
       {showDailyTable && (
-        <DailyTable onDataFiltered={setDailyTableData} onBack={handleBack} />
+        <DailyTable
+          month={month}
+          year={year}
+          onMonthChange={setMonth}
+          onYearChange={setYear}
+          onDataFiltered={setDailyTableData}
+          onBack={handleBack}
+        />
       )}
       {showMainTable && (
         <TableContainer

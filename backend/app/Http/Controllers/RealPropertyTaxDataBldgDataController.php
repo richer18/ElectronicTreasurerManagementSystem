@@ -2,37 +2,34 @@
 
 namespace App\Http\Controllers;
 
+use App\Helpers\QueryHelpers;
+use App\Helpers\RealPropertyTaxQueryHelper;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Log;
-use App\Helpers\QueryHelpers; // ✅ Import your helper
 
 class RealPropertyTaxDataBldgDataController extends Controller
 {
     public function index(Request $request)
     {
         try {
-            $statuses = [
-                'MACHINERY'    => 'MACHINERIES',
-                'BLDG-RES'     => 'BLDG-RES',
-                'BLDG-COMML'   => 'BLDG-COMML',
-                'BLDG-INDUS'   => 'BLDG-INDUS',
-            ];
-
             $results = [];
 
-            foreach ($statuses as $statusCode => $label) {
-                $query = DB::table('real_property_tax_data')
+            foreach (RealPropertyTaxQueryHelper::buildingCategoryMap() as $label => $statuses) {
+                $query = DB::table(RealPropertyTaxQueryHelper::table())
                     ->selectRaw("'{$label}' AS category")
-                    ->selectRaw('IFNULL(SUM(current_year), 0) AS current')
-                    ->selectRaw('IFNULL(SUM(current_discounts), 0) AS discount')
-                    ->selectRaw('IFNULL(SUM(prev_year + prior_years), 0) AS prior')
-                    ->selectRaw('IFNULL(SUM(current_penalties), 0) AS penaltiesCurrent')
-                    ->selectRaw('IFNULL(SUM(prev_penalties + prior_penalties), 0) AS penaltiesPrior')
-                    ->where('status', $statusCode);
+                    ->selectRaw('IFNULL(SUM(BASIC_CURRENT_YEAR), 0) AS current')
+                    ->selectRaw('IFNULL(SUM(BASIC_DISCOUNTS), 0) AS discount')
+                    ->selectRaw('IFNULL(SUM(BASIC_PRECEDING_YEAR + BASIC_PRIOR_YEARS), 0) AS prior')
+                    ->selectRaw('IFNULL(SUM(BASIC_CURRENT_PENALTIES), 0) AS penaltiesCurrent')
+                    ->selectRaw('IFNULL(SUM(BASIC_PRECEDING_PENALTIES + BASIC_PRIOR_PENALTIES), 0) AS penaltiesPrior')
+                    ->whereIn(RealPropertyTaxQueryHelper::classificationColumn(), $statuses);
 
-                // ✅ Apply reusable date filters
-                $query = QueryHelpers::addDateFilters($query, $request, 'date');
+                $query = QueryHelpers::addDateFilters(
+                    $query,
+                    $request,
+                    RealPropertyTaxQueryHelper::dateColumn()
+                );
 
                 $results[] = (array) $query->first();
             }
@@ -47,11 +44,11 @@ class RealPropertyTaxDataBldgDataController extends Controller
             ];
 
             foreach ($results as $row) {
-                $totals['current'] += $row['current'];
-                $totals['discount'] += $row['discount'];
-                $totals['prior'] += $row['prior'];
-                $totals['penaltiesCurrent'] += $row['penaltiesCurrent'];
-                $totals['penaltiesPrior'] += $row['penaltiesPrior'];
+                $totals['current'] += (float) $row['current'];
+                $totals['discount'] += (float) $row['discount'];
+                $totals['prior'] += (float) $row['prior'];
+                $totals['penaltiesCurrent'] += (float) $row['penaltiesCurrent'];
+                $totals['penaltiesPrior'] += (float) $row['penaltiesPrior'];
             }
 
             $totals['totalSum'] =
@@ -61,12 +58,12 @@ class RealPropertyTaxDataBldgDataController extends Controller
                 $totals['penaltiesCurrent'] +
                 $totals['penaltiesPrior'];
 
-            Log::info("Backend Building Total Sum: ₱" . number_format($totals['totalSum'], 2));
+            Log::info('Backend Building Total Sum: ' . number_format($totals['totalSum'], 2));
 
             return response()->json([...$results, $totals]);
-
         } catch (\Exception $e) {
-            Log::error("Error fetching building data: " . $e->getMessage());
+            Log::error('Error fetching building data: ' . $e->getMessage());
+
             return response()->json(['error' => 'Error fetching building data'], 500);
         }
     }

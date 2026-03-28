@@ -2,45 +2,49 @@
 
 namespace App\Http\Controllers;
 
+use App\Helpers\QueryHelpers;
+use App\Helpers\RealPropertyTaxQueryHelper;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Log;
-use App\Helpers\QueryHelpers;
 
 class RealPropertyTaxDataSefGrandTotalSharingController extends Controller
 {
     public function index(Request $request)
     {
         try {
-            // LAND query
-            $landQuery = DB::table('real_property_tax_data')
+            $landQuery = DB::table(RealPropertyTaxQueryHelper::table())
                 ->selectRaw('
-                    SUM(IFNULL(additional_current_year, 0)) - SUM(IFNULL(additional_discounts, 0)) AS current,
-                    SUM(IFNULL(additional_prev_year, 0) + IFNULL(additional_prior_years, 0)) AS prior,
-                    SUM(
-                        IFNULL(additional_penalties, 0) +
-                        IFNULL(additional_prev_penalties, 0) +
-                        IFNULL(additional_prior_penalties, 0)
-                    ) AS penalties
+                    SUM(IFNULL(SEF_CURRENT_YEAR, 0) - IFNULL(SEF_DISCOUNTS, 0)) AS current,
+                    SUM(IFNULL(SEF_PRECEDING_YEAR, 0) + IFNULL(SEF_PRIOR_YEARS, 0)) AS prior,
+                    SUM(IFNULL(SEF_CURRENT_PENALTIES, 0) + IFNULL(SEF_PRECEDING_PENALTIES, 0) + IFNULL(SEF_PRIOR_PENALTIES, 0)) AS penalties
                 ')
-                ->where('status', 'LIKE', 'LAND%');
+                ->whereIn(
+                    RealPropertyTaxQueryHelper::classificationColumn(),
+                    RealPropertyTaxQueryHelper::landStatuses()
+                );
 
-            $landQuery = QueryHelpers::addDateFilters($landQuery, $request, 'date');
-
-            // BUILDING query
-            $buildingQuery = DB::table('real_property_tax_data')
+            $buildingQuery = DB::table(RealPropertyTaxQueryHelper::table())
                 ->selectRaw('
-                    SUM(IFNULL(additional_current_year, 0)) - SUM(IFNULL(additional_discounts, 0)) AS current,
-                    SUM(IFNULL(additional_prev_year, 0) + IFNULL(additional_prior_years, 0)) AS prior,
-                    SUM(
-                        IFNULL(additional_penalties, 0) +
-                        IFNULL(additional_prev_penalties, 0) +
-                        IFNULL(additional_prior_penalties, 0)
-                    ) AS penalties
+                    SUM(IFNULL(SEF_CURRENT_YEAR, 0) - IFNULL(SEF_DISCOUNTS, 0)) AS current,
+                    SUM(IFNULL(SEF_PRECEDING_YEAR, 0) + IFNULL(SEF_PRIOR_YEARS, 0)) AS prior,
+                    SUM(IFNULL(SEF_CURRENT_PENALTIES, 0) + IFNULL(SEF_PRECEDING_PENALTIES, 0) + IFNULL(SEF_PRIOR_PENALTIES, 0)) AS penalties
                 ')
-                ->whereIn('status', ['MACHINERY', 'BLDG-RES', 'BLDG-COMML', 'BLDG-INDUS']);
+                ->whereIn(
+                    RealPropertyTaxQueryHelper::classificationColumn(),
+                    RealPropertyTaxQueryHelper::buildingStatuses()
+                );
 
-            $buildingQuery = QueryHelpers::addDateFilters($buildingQuery, $request, 'date');
+            $landQuery = QueryHelpers::addDateFilters(
+                $landQuery,
+                $request,
+                RealPropertyTaxQueryHelper::dateColumn()
+            );
+            $buildingQuery = QueryHelpers::addDateFilters(
+                $buildingQuery,
+                $request,
+                RealPropertyTaxQueryHelper::dateColumn()
+            );
 
             $landData = (array) $landQuery->first();
             $buildingData = (array) $buildingQuery->first();
@@ -68,12 +72,12 @@ class RealPropertyTaxDataSefGrandTotalSharingController extends Controller
                 '50% Mun. Share' => round($grandTotal * 0.50, 2),
             ];
 
-            Log::info("✅ SEF Grand Total: ₱" . number_format($grandTotal, 2));
+            Log::info('SEF Grand Total: ' . number_format($grandTotal, 2));
 
             return response()->json([$result]);
-
         } catch (\Exception $e) {
-            Log::error('❌ Error fetching SEF grand total sharing: ' . $e->getMessage());
+            Log::error('Error fetching SEF grand total sharing: ' . $e->getMessage());
+
             return response()->json(['error' => 'Error fetching SEF grand total sharing data'], 500);
         }
     }

@@ -85,6 +85,43 @@ const cashierData = [
   },
 ];
 
+const normalizeRptClassification = (value) => {
+  switch ((value || "").toUpperCase()) {
+    case "LAND-COMML":
+    case "LAND-COMMERCIAL":
+      return "landComm";
+    case "LAND-AGRI":
+    case "LAND-AGRICULTURAL":
+      return "landAgri";
+    case "LAND-RES":
+    case "LAND-RESIDENTIAL":
+      return "landRes";
+    case "BLDG-RES":
+    case "BUILDING-RESIDENTIAL":
+      return "bldgRes";
+    case "BLDG-COMML":
+    case "BUILDING-COMMERCIAL":
+      return "bldgComm";
+    case "BLDG-AGRI":
+    case "BUILDING-AGRICULTURAL":
+      return "bldgAgri";
+    case "MACHINERY":
+    case "MACHINERIES":
+    case "MACHINERIES-AGRICULTURAL":
+    case "MACHINERIES-COMMERCIAL":
+    case "MACHINERIES-RESIDENTIAL":
+      return "machinery";
+    case "BLDG-INDUS":
+    case "BUILDING-INDUSTRIAL":
+      return "bldgIndus";
+    case "SPECIAL":
+    case "BUILDING-SS":
+      return "special";
+    default:
+      return null;
+  }
+};
+
 
 
 function ViewDialog({ open, onClose, data,selectedDate, onDataUpdate }) {
@@ -149,12 +186,12 @@ function ViewDialog({ open, onClose, data,selectedDate, onDataUpdate }) {
      })
      .map((row) => {
        const rowDate = row.date instanceof Date ? row.date : new Date(row.date);
-       const entry = {
+        const entry = {
          ...row,
          id: row.id,
          date: row.date,
          name: row.name || "",
-         receipt_no: row.receipt || "",
+         receipt_no: row.receipt || row.receipt_no || "",
          comments: row.comments || "",
          landComm: 0,
          landAgri: 0,
@@ -166,41 +203,15 @@ function ViewDialog({ open, onClose, data,selectedDate, onDataUpdate }) {
          bldgIndus: 0,
          special: 0,
          total: parseFloat(row.total) || 0,
+         gfTotal: parseFloat(row.gfTotal) || 0,
          cashier: row.cashier || "",
          formattedDate: formatDate(rowDate),
        };
 
        const amount = parseFloat(row.total) || 0;
-       switch (row.status) {
-         case "LAND-COMML":
-           entry.landComm = amount;
-           break;
-         case "LAND-AGRI":
-           entry.landAgri = amount;
-           break;
-         case "LAND-RES":
-           entry.landRes = amount;
-           break;
-         case "BLDG-RES":
-           entry.bldgRes = amount;
-           break;
-         case "BLDG-COMML":
-           entry.bldgComm = amount;
-           break;
-         case "BLDG-AGRI":
-           entry.bldgAgri = amount;
-           break;
-         case "MACHINERIES":
-           entry.machinery = amount;
-           break;
-         case "BLDG-INDUS":
-           entry.bldgIndus = amount;
-           break;
-         case "SPECIAL":
-           entry.special = amount;
-           break;
-         default:
-           break;
+       const bucket = normalizeRptClassification(row.status);
+       if (bucket) {
+         entry[bucket] = amount;
        }
        return entry;
      })
@@ -316,7 +327,7 @@ const handleDownload = () => {
     const values = [
       `"${row.formattedDate}"`, 
       `"${row.name}"`,
-      `"${row.receipt}"`,
+        `"${row.receipt_no}"`,
       row.landComm.toFixed(2), 
       row.landAgri.toFixed(2), 
       row.landRes.toFixed(2),
@@ -668,7 +679,7 @@ const handlePrint = () => {
                     <StyledTableRow key={index}>
                       <CenteredTableCell>{row.formattedDate}</CenteredTableCell>
                       <CenteredTableCell>{row.name}</CenteredTableCell>
-                      <CenteredTableCell>{row.receipt}</CenteredTableCell>
+                      <CenteredTableCell>{row.receipt_no}</CenteredTableCell>
                       {[
                         row.landComm,
                         row.landAgri,
@@ -680,7 +691,7 @@ const handlePrint = () => {
                         row.bldgIndus,
                         row.special,
                         row.total,
-                        row.total * 2,
+                        row.gfTotal || row.total,
                       ].map((value, i) => (
                         <RightAlignedTableCell key={i}>
                           {value.toFixed(2)}

@@ -13,6 +13,11 @@ import { animated, useSpring } from "@react-spring/web";
 import { useEffect, useState } from "react";
 import axiosInstance from "../../../../api/axiosInstance";
 
+const toNumber = (value) => {
+  const parsed = Number(value);
+  return Number.isFinite(parsed) ? parsed : 0;
+};
+
 function CedulaCollected() {
   const [chartData, setChartData] = useState([]);
   const [total, setTotal] = useState(0);
@@ -27,15 +32,17 @@ function CedulaCollected() {
     reset: true,
   });
 
-
-
   useEffect(() => {
     axiosInstance
       .get("/cedulaSummaryCollectionDataReport")
       .then((res) => {
-        const values = res.data.map((item) => item.value);
+        const values = res.data.map((item) => ({
+          ...item,
+          month: item?.month ?? "",
+          collected: toNumber(item?.collected ?? item?.value),
+        }));
         setChartData(values);
-        setTotal(values.reduce((sum, val) => sum + val, 0));
+        setTotal(values.reduce((sum, item) => sum + item.collected, 0));
       })
       .catch((err) => console.error("API error:", err))
       .finally(() => setLoading(false));
@@ -59,7 +66,6 @@ function CedulaCollected() {
       }}
     >
       <Box sx={{ p: isMobile ? 2 : 3 }}>
-        {/* Header */}
         <Box
           sx={{
             display: "flex",
@@ -93,7 +99,6 @@ function CedulaCollected() {
           </Typography>
         </Box>
 
-        {/* Total */}
         <Box sx={{ mb: 3 }}>
           {loading ? (
             <>
@@ -121,7 +126,7 @@ function CedulaCollected() {
                       color: "#1976d2",
                     }}
                   >
-                    ₱
+                    PHP
                   </Typography>
                   <animated.div
                     style={{
@@ -131,7 +136,7 @@ function CedulaCollected() {
                     }}
                   >
                     {animatedTotal.to((x) =>
-                      x.toLocaleString("en-PH", {
+                      toNumber(x).toLocaleString("en-PH", {
                         maximumFractionDigits: 0,
                       })
                     )}
@@ -152,7 +157,6 @@ function CedulaCollected() {
           )}
         </Box>
 
-        {/* Chart */}
         {loading ? (
           <Skeleton
             variant="rectangular"
@@ -190,7 +194,7 @@ function CedulaCollected() {
                     label: "Collected",
                     color: "#1976d2",
                     valueFormatter: (value) =>
-                      `₱ ${Number(value).toLocaleString("en-PH", {
+                      `PHP ${toNumber(value).toLocaleString("en-PH", {
                         maximumFractionDigits: 0,
                       })}`,
                   },
@@ -206,7 +210,6 @@ function CedulaCollected() {
           </Fade>
         )}
 
-        {/* Footer */}
         <Box
           sx={{
             display: "flex",
@@ -224,7 +227,7 @@ function CedulaCollected() {
               color: "#555",
             }}
           >
-            📊 Monthly Distribution
+            Monthly Distribution
           </Typography>
           <Typography
             sx={{

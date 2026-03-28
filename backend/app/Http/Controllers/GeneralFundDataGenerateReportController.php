@@ -42,18 +42,18 @@ class GeneralFundDataGenerateReportController extends Controller
             if ($reportType === 'real_property_tax_data') {
                 $query = "
                     SELECT
-                        DATE_FORMAT(date, '%Y-%m-%d') AS date,
-                        cashier,
+                        DATE_FORMAT(DATE, '%Y-%m-%d') AS date,
+                        CASHIER AS cashier,
                         'RPT' AS report_type,
-                        receipt_no AS or_number,
-                        CAST(gf_total AS DECIMAL(10,2)) AS total
-                    FROM real_property_tax_data
-                    WHERE date BETWEEN ? AND ? AND cashier = ?
+                        OR_NO AS or_number,
+                        CAST(BASIC_AND_SEF AS DECIMAL(10,2)) AS total
+                    FROM real_property_tax_payment
+                    WHERE DATE BETWEEN ? AND ? AND CASHIER = ?
                 ";
                 $queryParams = [$startDate, $endDate, $cashier];
 
                 if ($orFrom && $orTo) {
-                    $query .= " AND receipt_no BETWEEN ? AND ?";
+                    $query .= " AND OR_NO BETWEEN ? AND ?";
                     array_push($queryParams, $orFrom, $orTo);
                 }
 

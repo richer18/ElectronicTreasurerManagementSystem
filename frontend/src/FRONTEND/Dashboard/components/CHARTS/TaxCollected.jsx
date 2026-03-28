@@ -13,6 +13,11 @@ import { animated, useSpring } from "@react-spring/web";
 import { useEffect, useState } from "react";
 import axiosInstance from "../../../../api/axiosInstance";
 
+const toNumber = (value) => {
+  const parsed = Number(value);
+  return Number.isFinite(parsed) ? parsed : 0;
+};
+
 function TaxCollected() {
   const [sparkData, setSparkData] = useState([]);
   const [total, setTotal] = useState(0);
@@ -28,15 +33,25 @@ function TaxCollected() {
   });
 
   const months = [
-    "Jan", "Feb", "Mar", "Apr", "May", "Jun",
-    "Jul", "Aug", "Sep", "Oct", "Nov", "Dec",
+    "Jan",
+    "Feb",
+    "Mar",
+    "Apr",
+    "May",
+    "Jun",
+    "Jul",
+    "Aug",
+    "Sep",
+    "Oct",
+    "Nov",
+    "Dec",
   ];
 
   useEffect(() => {
     axiosInstance
       .get("/tax/monthly")
       .then((res) => {
-        const values = res.data.map((item) => item.value);
+        const values = res.data.map((item) => toNumber(item?.value));
         setSparkData(values);
         setTotal(values.reduce((sum, val) => sum + val, 0));
       })
@@ -63,7 +78,6 @@ function TaxCollected() {
       }}
     >
       <Box sx={{ p: isMobile ? 2 : 3 }}>
-        {/* Header */}
         <Box
           sx={{
             display: "flex",
@@ -97,7 +111,6 @@ function TaxCollected() {
           </Typography>
         </Box>
 
-        {/* Total */}
         <Box sx={{ mb: 3 }}>
           {loading ? (
             <>
@@ -125,7 +138,7 @@ function TaxCollected() {
                       color: "#1976d2",
                     }}
                   >
-                    ₱
+                    PHP
                   </Typography>
                   <animated.div
                     style={{
@@ -135,8 +148,9 @@ function TaxCollected() {
                     }}
                   >
                     {animatedTotal.to((x) =>
-                      x.toLocaleString("en-PH", {
+                      toNumber(x).toLocaleString("en-PH", {
                         minimumFractionDigits: 2,
+                        maximumFractionDigits: 2,
                       })
                     )}
                   </animated.div>
@@ -156,7 +170,6 @@ function TaxCollected() {
           )}
         </Box>
 
-        {/* Chart Area (Same height as Cedula) */}
         <Box
           sx={{
             width: "100%",
@@ -200,8 +213,9 @@ function TaxCollected() {
                     to: "rgba(25,118,210,0.05)",
                   }}
                   valueFormatter={(val) =>
-                    `₱ ${val.toLocaleString(undefined, {
+                    `PHP ${toNumber(val).toLocaleString("en-PH", {
                       minimumFractionDigits: 2,
+                      maximumFractionDigits: 2,
                     })}`
                   }
                   margin={{ top: 10, bottom: 20 }}
@@ -212,7 +226,6 @@ function TaxCollected() {
           )}
         </Box>
 
-        {/* Footer */}
         <Box
           sx={{
             display: "flex",
@@ -230,7 +243,7 @@ function TaxCollected() {
               color: "#555",
             }}
           >
-            📈 Monthly Trend
+            Monthly Trend
           </Typography>
           <Typography
             sx={{

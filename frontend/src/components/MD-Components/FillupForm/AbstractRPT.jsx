@@ -156,6 +156,58 @@ const initialFormData = {
   advanced_payment: "",
 };
 
+const normalizeValue = (value) => (value ?? "").toString().trim();
+
+const normalizeBarangay = (value) => {
+  const normalized = normalizeValue(value).toUpperCase().replace(/\s+/g, "-");
+  const barangayMap = {
+    BASAK: "BASAK",
+    BASAC: "BASAK",
+    CALANGO: "CALANGO",
+    LUTOBAN: "LUTOBAN",
+    "MALONGCAY-DIOT": "MALONGCAY-DIOT",
+    MALUAY: "MALUAY",
+    MAYABON: "MAYABON",
+    NABAGO: "NABAGO",
+    "NASIG-ID": "NASIG-ID",
+    NAJANDIG: "NAJANDIG",
+    POBLACION: "POBLACION",
+  };
+
+  return barangayMap[normalized] || normalized;
+};
+
+const normalizeCashier = (value) => normalizeValue(value).toLowerCase();
+
+const normalizeStatus = (value) => {
+  const normalized = normalizeValue(value).toUpperCase();
+  const statusMap = {
+    "LAND-COMML": "LAND-COMMERCIAL",
+    "LAND-COMMERCIAL": "LAND-COMMERCIAL",
+    "LAND-AGRI": "LAND-AGRICULTURAL",
+    "LAND-AGRICULTURAL": "LAND-AGRICULTURAL",
+    "LAND-RES": "LAND-RESIDENTIAL",
+    "LAND-RESIDENTIAL": "LAND-RESIDENTIAL",
+    "BLDG-RES": "BUILDING-RESIDENTIAL",
+    "BUILDING-RESIDENTIAL": "BUILDING-RESIDENTIAL",
+    "BLDG-COMML": "BUILDING-COMMERCIAL",
+    "BUILDING-COMMERCIAL": "BUILDING-COMMERCIAL",
+    "BLDG-AGRI": "BUILDING-AGRICULTURAL",
+    "BUILDING-AGRICULTURAL": "BUILDING-AGRICULTURAL",
+    MACHINERY: "MACHINERIES-COMMERCIAL",
+    MACHINERIES: "MACHINERIES-COMMERCIAL",
+    "MACHINERIES-COMMERCIAL": "MACHINERIES-COMMERCIAL",
+    "MACHINERIES-AGRICULTURAL": "MACHINERIES-AGRICULTURAL",
+    "MACHINERIES-RESIDENTIAL": "MACHINERIES-RESIDENTIAL",
+    "BLDG-INDUS": "BUILDING-INDUSTRIAL",
+    "BUILDING-INDUSTRIAL": "BUILDING-INDUSTRIAL",
+    SPECIAL: "BUILDING-SS",
+    "BUILDING-SS": "BUILDING-SS",
+  };
+
+  return statusMap[normalized] || normalized;
+};
+
 function LinearProgressWithLabel({ value }) {
   return (
     <Box display="flex" alignItems="center" mb={2}>
@@ -199,6 +251,10 @@ function AbstractRPT({ data, onSave }) {
       const updatedFormData = {
         ...initialFormData,
         ...data,
+        barangay: normalizeBarangay(data?.barangay),
+        cashier: normalizeCashier(data?.cashier),
+        status: normalizeStatus(data?.status),
+        advanced_payment: normalizeValue(data?.advanced_payment),
         date:
           parsedDate && isValid(parsedDate)
             ? format(new Date(parsedDate), "yyyy-MM-dd") // <-- Only date
@@ -214,7 +270,14 @@ function AbstractRPT({ data, onSave }) {
   React.useEffect(() => {
     console.log("Received data in AbstractRPT:", data);
     if (data) {
-      setFormData({ ...initialFormData, ...data }); // Merge missing fields
+      setFormData({
+        ...initialFormData,
+        ...data,
+        barangay: normalizeBarangay(data?.barangay),
+        cashier: normalizeCashier(data?.cashier),
+        status: normalizeStatus(data?.status),
+        advanced_payment: normalizeValue(data?.advanced_payment),
+      });
     }
   }, [data]); // ✅ Now it's correctly inside AbstractRPT
 
@@ -684,7 +747,7 @@ function AbstractRPT({ data, onSave }) {
               label="Barangay"
               sx={selectControlSx}
             >
-              <MenuItem value="BASAC">BASAC</MenuItem>
+              <MenuItem value="BASAK">BASAK</MenuItem>
               <MenuItem value="CALANGO">CALANGO</MenuItem>
               <MenuItem value="LUTOBAN">LUTOBAN</MenuItem>
               <MenuItem value="MALONGCAY-DIOT">MALONGCAY-DIOT</MenuItem>
@@ -931,14 +994,31 @@ function AbstractRPT({ data, onSave }) {
               onChange={handleFormDataChange}
               label="Status"
             >
-              <MenuItem value="LAND-COMML">LAND-COMML</MenuItem>
-              <MenuItem value="LAND-AGRI">LAND-AGRI</MenuItem>
-              <MenuItem value="LAND-RES">LAND-RES</MenuItem>
-              <MenuItem value="BLDG-RES">BLDG-RES</MenuItem>
-              <MenuItem value="BLDG-COMML">BLDG-COMML</MenuItem>
-              <MenuItem value="MACHINERY">MACHINERY</MenuItem>
-              <MenuItem value="BLDG-INDUS">BLDG-INDUS</MenuItem>
-              <MenuItem value="SPECIAL">SPECIAL</MenuItem>
+              <MenuItem value="LAND-COMMERCIAL">LAND-COMMERCIAL</MenuItem>
+              <MenuItem value="LAND-AGRICULTURAL">LAND-AGRICULTURAL</MenuItem>
+              <MenuItem value="LAND-RESIDENTIAL">LAND-RESIDENTIAL</MenuItem>
+              <MenuItem value="BUILDING-RESIDENTIAL">
+                BUILDING-RESIDENTIAL
+              </MenuItem>
+              <MenuItem value="BUILDING-COMMERCIAL">
+                BUILDING-COMMERCIAL
+              </MenuItem>
+              <MenuItem value="BUILDING-AGRICULTURAL">
+                BUILDING-AGRICULTURAL
+              </MenuItem>
+              <MenuItem value="MACHINERIES-COMMERCIAL">
+                MACHINERIES-COMMERCIAL
+              </MenuItem>
+              <MenuItem value="MACHINERIES-AGRICULTURAL">
+                MACHINERIES-AGRICULTURAL
+              </MenuItem>
+              <MenuItem value="MACHINERIES-RESIDENTIAL">
+                MACHINERIES-RESIDENTIAL
+              </MenuItem>
+              <MenuItem value="BUILDING-INDUSTRIAL">
+                BUILDING-INDUSTRIAL
+              </MenuItem>
+              <MenuItem value="BUILDING-SS">BUILDING-SS</MenuItem>
             </Select>
             <FormHelperText>{errors.status}</FormHelperText>
           </FormControl>
@@ -956,10 +1036,9 @@ function AbstractRPT({ data, onSave }) {
               onChange={handleFormDataChange}
               label="Cashier"
             >
-              <MenuItem value="IRIS RAFALES">IRIS RAFALES</MenuItem>
-              <MenuItem value="RICARDO ENOPIA">RICARDO ENOPIA</MenuItem>
-              <MenuItem value="FLORA MY FERRER">FLORA MY FERRER</MenuItem>
-              <MenuItem value="AGNES ELLO">AGNES ELLO</MenuItem>
+              <MenuItem value="angelique">ANGELIQUE</MenuItem>
+              <MenuItem value="flora">FLORA</MenuItem>
+              <MenuItem value="ricardo">RICARDO</MenuItem>
             </Select>
             <FormHelperText>{errors.cashier}</FormHelperText>
           </FormControl>

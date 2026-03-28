@@ -2,41 +2,38 @@
 
 namespace App\Http\Controllers;
 
+use App\Helpers\QueryHelpers;
+use App\Helpers\RealPropertyTaxQueryHelper;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Log;
-use App\Helpers\QueryHelpers;
 
 class RealPropertyTaxDataLandDataController extends Controller
 {
     public function index(Request $request)
     {
         try {
-            $categories = [
-                'LAND-AGRI'   => 'AGRI',
-                'LAND-RES'    => 'RES',
-                'LAND-COMML'  => 'COMML',
-                'SPECIAL'     => 'SPECIAL'
-            ];
-
             $results = [];
 
-            foreach ($categories as $statusCode => $label) {
-                $query = DB::table('real_property_tax_data')
+            foreach (RealPropertyTaxQueryHelper::landCategoryMap() as $label => $statuses) {
+                $query = DB::table(RealPropertyTaxQueryHelper::table())
                     ->selectRaw('? AS category', [$label])
-                    ->selectRaw('IFNULL(SUM(current_year), 0) AS current')
-                    ->selectRaw('IFNULL(SUM(current_discounts), 0) AS discount')
-                    ->selectRaw('IFNULL(SUM(prev_year), 0) + IFNULL(SUM(prior_years), 0) AS prior')
-                    ->selectRaw('IFNULL(SUM(current_penalties), 0) AS penaltiesCurrent')
-                    ->selectRaw('IFNULL(SUM(prev_penalties), 0) + IFNULL(SUM(prior_penalties), 0) AS penaltiesPrior')
-                    ->where('status', $statusCode);
+                    ->selectRaw('IFNULL(SUM(BASIC_CURRENT_YEAR), 0) AS current')
+                    ->selectRaw('IFNULL(SUM(BASIC_DISCOUNTS), 0) AS discount')
+                    ->selectRaw('IFNULL(SUM(BASIC_PRECEDING_YEAR), 0) + IFNULL(SUM(BASIC_PRIOR_YEARS), 0) AS prior')
+                    ->selectRaw('IFNULL(SUM(BASIC_CURRENT_PENALTIES), 0) AS penaltiesCurrent')
+                    ->selectRaw('IFNULL(SUM(BASIC_PRECEDING_PENALTIES), 0) + IFNULL(SUM(BASIC_PRIOR_PENALTIES), 0) AS penaltiesPrior')
+                    ->whereIn(RealPropertyTaxQueryHelper::classificationColumn(), $statuses);
 
-                $query = QueryHelpers::addDateFilters($query, $request, 'date');
+                $query = QueryHelpers::addDateFilters(
+                    $query,
+                    $request,
+                    RealPropertyTaxQueryHelper::dateColumn()
+                );
 
                 $results[] = (array) $query->first();
             }
 
-            // Calculate grand total row
             $totals = [
                 'category' => 'TOTAL',
                 'current' => 0,
@@ -44,15 +41,15 @@ class RealPropertyTaxDataLandDataController extends Controller
                 'prior' => 0,
                 'penaltiesCurrent' => 0,
                 'penaltiesPrior' => 0,
-                'totalSum' => 0
+                'totalSum' => 0,
             ];
 
             foreach ($results as $row) {
-                $totals['current']          += (float) $row['current'];
-                $totals['discount']         += (float) $row['discount'];
-                $totals['prior']            += (float) $row['prior'];
+                $totals['current'] += (float) $row['current'];
+                $totals['discount'] += (float) $row['discount'];
+                $totals['prior'] += (float) $row['prior'];
                 $totals['penaltiesCurrent'] += (float) $row['penaltiesCurrent'];
-                $totals['penaltiesPrior']   += (float) $row['penaltiesPrior'];
+                $totals['penaltiesPrior'] += (float) $row['penaltiesPrior'];
             }
 
             $totals['totalSum'] =
@@ -62,12 +59,12 @@ class RealPropertyTaxDataLandDataController extends Controller
                 $totals['penaltiesCurrent'] +
                 $totals['penaltiesPrior'];
 
-            Log::info("🧾 Total Land Data Sum = ₱" . number_format($totals['totalSum'], 2));
+            Log::info('Total Land Data Sum = ' . number_format($totals['totalSum'], 2));
 
             return response()->json([...$results, $totals]);
-
         } catch (\Exception $e) {
-            Log::error('❌ Error fetching land data: ' . $e->getMessage());
+            Log::error('Error fetching land data: ' . $e->getMessage());
+
             return response()->json(['error' => 'Error fetching land data'], 500);
         }
     }

@@ -2,73 +2,89 @@
 
 namespace App\Http\Controllers;
 
+use App\Helpers\QueryHelpers;
+use App\Helpers\RealPropertyTaxQueryHelper;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Log;
-use App\Helpers\QueryHelpers;
 
 class RealPropertyTaxDataOverAllTotalBasicAndSEFController extends Controller
 {
     public function index(Request $request)
     {
         try {
-            // 📦 BASIC - LAND
-            $landBasic = DB::table('real_property_tax_data')
+            $landBasic = DB::table(RealPropertyTaxQueryHelper::table())
                 ->selectRaw('
-                    SUM(IFNULL(current_year, 0)) AS current,
-                    SUM(IFNULL(current_discounts, 0)) AS discount,
-                    SUM(IFNULL(prev_year, 0) + IFNULL(prior_years, 0)) AS prior,
-                    SUM(IFNULL(current_penalties, 0)) AS penaltiesCurrent,
-                    SUM(IFNULL(prev_penalties, 0) + IFNULL(prior_penalties, 0)) AS penaltiesPrior
+                    SUM(IFNULL(BASIC_CURRENT_YEAR, 0)) AS current,
+                    SUM(IFNULL(BASIC_DISCOUNTS, 0)) AS discount,
+                    SUM(IFNULL(BASIC_PRECEDING_YEAR, 0) + IFNULL(BASIC_PRIOR_YEARS, 0)) AS prior,
+                    SUM(IFNULL(BASIC_CURRENT_PENALTIES, 0)) AS penaltiesCurrent,
+                    SUM(IFNULL(BASIC_PRECEDING_PENALTIES, 0) + IFNULL(BASIC_PRIOR_PENALTIES, 0)) AS penaltiesPrior
                 ')
-                ->where('status', 'LIKE', 'LAND%');
-            $landBasic = QueryHelpers::addDateFilters($landBasic, $request, 'date');
+                ->whereIn(
+                    RealPropertyTaxQueryHelper::classificationColumn(),
+                    RealPropertyTaxQueryHelper::landStatuses()
+                );
+            $landBasic = QueryHelpers::addDateFilters(
+                $landBasic,
+                $request,
+                RealPropertyTaxQueryHelper::dateColumn()
+            );
             $landBasic = (array) $landBasic->first();
 
-            // 🏢 BASIC - BUILDING
-            $bldgBasic = DB::table('real_property_tax_data')
+            $bldgBasic = DB::table(RealPropertyTaxQueryHelper::table())
                 ->selectRaw('
-                    SUM(IFNULL(current_year, 0)) AS current,
-                    SUM(IFNULL(current_discounts, 0)) AS discount,
-                    SUM(IFNULL(prev_year, 0) + IFNULL(prior_years, 0)) AS prior,
-                    SUM(IFNULL(current_penalties, 0)) AS penaltiesCurrent,
-                    SUM(IFNULL(prev_penalties, 0) + IFNULL(prior_penalties, 0)) AS penaltiesPrior
+                    SUM(IFNULL(BASIC_CURRENT_YEAR, 0)) AS current,
+                    SUM(IFNULL(BASIC_DISCOUNTS, 0)) AS discount,
+                    SUM(IFNULL(BASIC_PRECEDING_YEAR, 0) + IFNULL(BASIC_PRIOR_YEARS, 0)) AS prior,
+                    SUM(IFNULL(BASIC_CURRENT_PENALTIES, 0)) AS penaltiesCurrent,
+                    SUM(IFNULL(BASIC_PRECEDING_PENALTIES, 0) + IFNULL(BASIC_PRIOR_PENALTIES, 0)) AS penaltiesPrior
                 ')
-                ->whereIn('status', ['MACHINERY', 'BLDG-RES', 'BLDG-COMML', 'BLDG-INDUS']);
-            $bldgBasic = QueryHelpers::addDateFilters($bldgBasic, $request, 'date');
+                ->whereIn(
+                    RealPropertyTaxQueryHelper::classificationColumn(),
+                    RealPropertyTaxQueryHelper::buildingStatuses()
+                );
+            $bldgBasic = QueryHelpers::addDateFilters(
+                $bldgBasic,
+                $request,
+                RealPropertyTaxQueryHelper::dateColumn()
+            );
             $bldgBasic = (array) $bldgBasic->first();
 
-            // 🌱 SEF - LAND
-            $landSEF = DB::table('real_property_tax_data')
+            $landSEF = DB::table(RealPropertyTaxQueryHelper::table())
                 ->selectRaw('
-                    SUM(IFNULL(additional_current_year, 0)) - SUM(IFNULL(additional_discounts, 0)) AS current,
-                    SUM(IFNULL(additional_prev_year, 0) + IFNULL(additional_prior_years, 0)) AS prior,
-                    SUM(
-                        IFNULL(additional_penalties, 0) +
-                        IFNULL(additional_prev_penalties, 0) +
-                        IFNULL(additional_prior_penalties, 0)
-                    ) AS penalties
+                    SUM(IFNULL(SEF_CURRENT_YEAR, 0)) - SUM(IFNULL(SEF_DISCOUNTS, 0)) AS current,
+                    SUM(IFNULL(SEF_PRECEDING_YEAR, 0) + IFNULL(SEF_PRIOR_YEARS, 0)) AS prior,
+                    SUM(IFNULL(SEF_CURRENT_PENALTIES, 0) + IFNULL(SEF_PRECEDING_PENALTIES, 0) + IFNULL(SEF_PRIOR_PENALTIES, 0)) AS penalties
                 ')
-                ->where('status', 'LIKE', 'LAND%');
-            $landSEF = QueryHelpers::addDateFilters($landSEF, $request, 'date');
+                ->whereIn(
+                    RealPropertyTaxQueryHelper::classificationColumn(),
+                    RealPropertyTaxQueryHelper::landStatuses()
+                );
+            $landSEF = QueryHelpers::addDateFilters(
+                $landSEF,
+                $request,
+                RealPropertyTaxQueryHelper::dateColumn()
+            );
             $landSEF = (array) $landSEF->first();
 
-            // 🏭 SEF - BUILDING
-            $bldgSEF = DB::table('real_property_tax_data')
+            $bldgSEF = DB::table(RealPropertyTaxQueryHelper::table())
                 ->selectRaw('
-                    SUM(IFNULL(additional_current_year, 0)) - SUM(IFNULL(additional_discounts, 0)) AS current,
-                    SUM(IFNULL(additional_prev_year, 0) + IFNULL(additional_prior_years, 0)) AS prior,
-                    SUM(
-                        IFNULL(additional_penalties, 0) +
-                        IFNULL(additional_prev_penalties, 0) +
-                        IFNULL(additional_prior_penalties, 0)
-                    ) AS penalties
+                    SUM(IFNULL(SEF_CURRENT_YEAR, 0)) - SUM(IFNULL(SEF_DISCOUNTS, 0)) AS current,
+                    SUM(IFNULL(SEF_PRECEDING_YEAR, 0) + IFNULL(SEF_PRIOR_YEARS, 0)) AS prior,
+                    SUM(IFNULL(SEF_CURRENT_PENALTIES, 0) + IFNULL(SEF_PRECEDING_PENALTIES, 0) + IFNULL(SEF_PRIOR_PENALTIES, 0)) AS penalties
                 ')
-                ->whereIn('status', ['MACHINERY', 'BLDG-RES', 'BLDG-COMML', 'BLDG-INDUS']);
-            $bldgSEF = QueryHelpers::addDateFilters($bldgSEF, $request, 'date');
+                ->whereIn(
+                    RealPropertyTaxQueryHelper::classificationColumn(),
+                    RealPropertyTaxQueryHelper::buildingStatuses()
+                );
+            $bldgSEF = QueryHelpers::addDateFilters(
+                $bldgSEF,
+                $request,
+                RealPropertyTaxQueryHelper::dateColumn()
+            );
             $bldgSEF = (array) $bldgSEF->first();
 
-            // 🧮 Compute Grand Total
             $grandTotal =
                 ($landBasic['current'] ?? 0) - ($landBasic['discount'] ?? 0) +
                 ($bldgBasic['current'] ?? 0) - ($bldgBasic['discount'] ?? 0) +
@@ -90,11 +106,12 @@ class RealPropertyTaxDataOverAllTotalBasicAndSEFController extends Controller
                 'Grand Total' => round($grandTotal, 2),
             ];
 
-            Log::info("📊 Overall RPT + SEF Grand Total = ₱" . number_format($grandTotal, 2));
-            return response()->json([$result]);
+            Log::info('Overall RPT + SEF Grand Total = ' . number_format($grandTotal, 2));
 
+            return response()->json([$result]);
         } catch (\Exception $e) {
-            Log::error("❌ Error computing overall total: " . $e->getMessage());
+            Log::error('Error computing overall total: ' . $e->getMessage());
+
             return response()->json(['error' => 'Error computing overall total'], 500);
         }
     }

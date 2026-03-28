@@ -59,12 +59,14 @@ import RcdPrintTable from "./components/RcdPrintTable";
 
 const StyledTableCell = styled(TableCell)(({ theme }) => ({
   whiteSpace: "nowrap",
-  fontWeight: "bold",
+  fontWeight: 700,
   textAlign: "center",
-  background: "linear-gradient(135deg, #1976d2, #63a4ff)",
-  color: theme.palette.common.white,
-  borderBottom: `2px solid ${theme.palette.primary.dark}`,
-  fontSize: 14,
+  textTransform: "uppercase",
+  letterSpacing: "0.8px",
+  background: "#f7f9fc",
+  color: "#0f2747",
+  borderBottom: "2px solid #d6a12b",
+  fontSize: 11.5,
 }));
 
 // Function to format date
@@ -105,6 +107,76 @@ const years = [
   { label: "2028", value: "2028" },
   { label: "2029", value: "2029" },
 ];
+
+const uiColors = {
+  navy: "#0f2747",
+  navyHover: "#0b1e38",
+  teal: "#0f6b62",
+  tealHover: "#0b544d",
+  amber: "#d6a12b",
+  amberSoft: "rgba(214,161,43,0.14)",
+  steel: "#4b5d73",
+  sky: "#2f6db5",
+  skyHover: "#255894",
+  pageBg: "#f5f7fb",
+  cardBorder: "#d8e2ee",
+  cardBg: "#ffffff",
+};
+
+const metricCardStyles = {
+  flex: 1,
+  borderRadius: "16px",
+  color: uiColors.navy,
+  backgroundColor: uiColors.cardBg,
+  border: `1px solid ${uiColors.cardBorder}`,
+  boxShadow: "0 10px 26px rgba(15,39,71,0.08)",
+  transition: "all 0.25s ease",
+  cursor: "pointer",
+  minWidth: 0,
+  position: "relative",
+  overflow: "hidden",
+  "&:hover": {
+    transform: "translateY(-4px)",
+    boxShadow: "0 16px 34px rgba(15,39,71,0.13)",
+    borderColor: "rgba(15,39,71,0.24)",
+  },
+};
+
+const toolbarButtonSx = (bg, hover) => ({
+  px: 3,
+  height: 44,
+  fontSize: 14,
+  fontWeight: 600,
+  textTransform: "none",
+  borderRadius: 2,
+  color: "#fff",
+  backgroundColor: bg,
+  boxShadow: "0 4px 10px rgba(15, 39, 71, 0.14)",
+  transition: "all 0.2s ease",
+  "&:hover": {
+    backgroundColor: hover,
+    transform: "translateY(-1px)",
+  },
+});
+
+const secondaryToolbarButtonSx = (accent, soft) => ({
+  px: 2.75,
+  height: 44,
+  fontSize: 14,
+  fontWeight: 700,
+  textTransform: "none",
+  borderRadius: 2,
+  color: accent,
+  backgroundColor: soft,
+  border: `1px solid ${soft}`,
+  boxShadow: "none",
+  transition: "all 0.2s ease",
+  "&:hover": {
+    backgroundColor: "#fff",
+    borderColor: accent,
+    transform: "translateY(-1px)",
+  },
+});
 
 function ReportCollectionDeposit() {
     // Dialog states
@@ -1001,11 +1073,70 @@ function ReportCollectionDeposit() {
         flexGrow: 1,
         padding: 3,
         minHeight: "100vh",
+        backgroundColor: uiColors.pageBg,
         }}>
+
+        <Paper
+          sx={{
+            mb: 3,
+            p: { xs: 2.5, md: 3.5 },
+            borderRadius: 4,
+            background:
+              "linear-gradient(135deg, rgba(15,39,71,0.98) 0%, rgba(15,39,71,0.92) 58%, rgba(214,161,43,0.25) 100%)",
+            color: "white",
+            boxShadow: "0 18px 36px rgba(9,30,66,0.24)",
+            border: "1px solid rgba(214,161,43,0.45)",
+          }}
+        >
+          <Box
+            sx={{
+              display: "flex",
+              justifyContent: "space-between",
+              gap: 2,
+              flexWrap: "wrap",
+            }}
+          >
+            <Box>
+              <Typography variant="h4" sx={{ fontWeight: 800, letterSpacing: 0.2 }}>
+                Report of Collection and Deposit
+              </Typography>
+              <Typography variant="body2" sx={{ mt: 0.9, opacity: 0.92 }}>
+                Treasury accountability tracking, collector balances, stock movement, and daily reporting.
+              </Typography>
+              <Box sx={{ mt: 1.5, display: "flex", gap: 1, flexWrap: "wrap" }}>
+                <Chip
+                  label={month ? `Month: ${months.find((m) => m.value === month)?.label || month}` : "Month: All"}
+                  size="small"
+                  sx={{ bgcolor: uiColors.amberSoft, color: "#fff" }}
+                />
+                <Chip
+                  label={year ? `Year: ${year}` : "Year: All"}
+                  size="small"
+                  sx={{ bgcolor: uiColors.amberSoft, color: "#fff" }}
+                />
+                <Chip
+                  label={showMainTable ? "Main Table" : activeSection.toUpperCase()}
+                  size="small"
+                  sx={{ bgcolor: "rgba(255,255,255,0.12)", color: "#fff" }}
+                />
+              </Box>
+            </Box>
+          </Box>
+        </Paper>
 
         <Box sx={{ mb: 4 }}>
         {/* Search & Filters Row */}
-        <Box display="flex" alignItems="center" gap={3} sx={{ py: 2 }}>
+        <Paper
+          sx={{
+            p: 2.5,
+            mb: 2,
+            borderRadius: 3,
+            border: `1px solid ${uiColors.cardBorder}`,
+            boxShadow: "0 8px 22px rgba(15,39,71,0.06)",
+            backgroundColor: uiColors.cardBg,
+          }}
+        >
+        <Box display="flex" alignItems="center" gap={3} sx={{ py: 0.5 }}>
           {showFilters && (
             <Box display="flex" alignItems="center" gap={2} flexGrow={1}>
               <TextField
@@ -1021,7 +1152,7 @@ function ReportCollectionDeposit() {
                       <SearchIcon color="action" />
                     </InputAdornment>
                   ),
-                  sx: { borderRadius: "8px" },
+                  sx: { borderRadius: "10px", backgroundColor: "#fff" },
                 }}
               />
               <Box display="flex" gap={2}>
@@ -1029,11 +1160,13 @@ function ReportCollectionDeposit() {
                   disablePortal
                   options={months}
                   sx={{ width: 180 }}
+                  value={months.find((option) => option.value === month) ?? null}
                   renderInput={(params) => (
                     <TextField
                       {...params}
                       label="Select Month"
                       variant="outlined"
+                      sx={{ "& .MuiInputBase-root": { borderRadius: "10px" } }}
                     />
                   )}
                   onChange={(e, v) => setMonth(v?.value)}
@@ -1043,11 +1176,13 @@ function ReportCollectionDeposit() {
                   disablePortal
                   options={years}
                   sx={{ width: 150 }}
+                  value={years.find((option) => option.value === year) ?? null}
                   renderInput={(params) => (
                     <TextField
                       {...params}
                       label="Select Year"
                       variant="outlined"
+                      sx={{ "& .MuiInputBase-root": { borderRadius: "10px" } }}
                     />
                   )}
                   onChange={(e, v) => setYear(v?.value)}
@@ -1055,15 +1190,7 @@ function ReportCollectionDeposit() {
 
                 <Button
                   variant="contained"
-                  color="primary"
-                  sx={{
-                    px: 4,
-                    height: "56px",
-                    color: "white",
-                    borderRadius: "8px",
-                    boxShadow: "none",
-                    "&:hover": { boxShadow: "0px 3px 6px rgba(0, 0, 0, 0.1)" },
-                  }}
+                  sx={toolbarButtonSx(uiColors.navy, uiColors.navyHover)}
                   onClick={handleSearchClick}
                 >
                   Apply Filters
@@ -1072,33 +1199,26 @@ function ReportCollectionDeposit() {
             </Box>
           )}
         </Box>
+        </Paper>
 
         {/* Action Buttons Row */}
-        <Box display="flex" alignItems="center" gap={2} sx={{ py: 1 }}>
+        <Paper
+          sx={{
+            p: 2.5,
+            borderRadius: 3,
+            border: `1px solid ${uiColors.cardBorder}`,
+            boxShadow: "0 8px 22px rgba(15,39,71,0.06)",
+            backgroundColor: uiColors.cardBg,
+          }}
+        >
+        <Box display="flex" alignItems="center" gap={2} sx={{ py: 0.5 }}>
           <Box display="flex" gap={2} flexGrow={1}>
             {/* New Entry - Primary CTA */}
             <Tooltip title="Add New Entry" arrow>
               <Button
                 variant="contained"
                 startIcon={<IoMdAdd size={18} />}
-                sx={{
-                  px: 3.5,
-                  backgroundColor: "#1976d2",
-                  color: "white",
-                  "&:hover": {
-                    backgroundColor: "#1565c0",
-                    transform: "translateY(-1px)",
-                    boxShadow: "0 3px 10px rgba(25, 118, 210, 0.3)",
-                  },
-                  textTransform: "none",
-                  fontSize: 15,
-                  fontWeight: 600,
-                  borderRadius: "10px",
-                  minWidth: "130px",
-                  height: "44px",
-                  transition: "all 0.2s ease",
-                  boxShadow: "0 2px 6px rgba(25, 118, 210, 0.2)",
-                }}
+                sx={toolbarButtonSx(uiColors.navy, uiColors.navyHover)}
                 onClick={handleNewEntryClick}
               >
                 New Entry
@@ -1109,25 +1229,8 @@ function ReportCollectionDeposit() {
             <Tooltip title="Generate Daily Report" arrow>
               <Button
                 variant="contained"
-                color="success"
                 startIcon={<IoToday size={16} />}
-                sx={{
-                  px: 3.5,
-                  backgroundColor: "#2e7d32",
-                  color: "white",
-                  "&:hover": {
-                    backgroundColor: "#1b5e20",
-                    transform: "translateY(-1px)",
-                  },
-                  textTransform: "none",
-                  fontSize: 15,
-                  fontWeight: 600,
-                  borderRadius: "10px",
-                  minWidth: "130px",
-                  height: "44px",
-                  transition: "all 0.2s ease",
-                  boxShadow: "0 2px 6px rgba(46, 125, 50, 0.2)",
-                }}
+                sx={secondaryToolbarButtonSx(uiColors.teal, "rgba(15,107,98,0.12)")}
                 onClick={toggleDailyTable}
               >
                 Daily Report
@@ -1138,25 +1241,8 @@ function ReportCollectionDeposit() {
             <Tooltip title="Generate Receipt Report" arrow>
               <Button
                 variant="contained"
-                color="secondary"
                 startIcon={<ReceiptIcon size={16} />}
-                sx={{
-                  px: 3.5,
-                  backgroundColor: "#7b1fa2",
-                  color: "white",
-                  "&:hover": {
-                    backgroundColor: "#6a1b9a",
-                    transform: "translateY(-1px)",
-                  },
-                  textTransform: "none",
-                  fontSize: 15,
-                  fontWeight: 600,
-                  borderRadius: "10px",
-                  minWidth: "130px",
-                  height: "44px",
-                  transition: "all 0.2s ease",
-                  boxShadow: "0 2px 6px rgba(123, 31, 162, 0.2)",
-                }}
+                sx={secondaryToolbarButtonSx(uiColors.sky, "rgba(47,109,181,0.12)")}
                 onClick={handleCheckStockClick}
               >
                 Check Stock
@@ -1167,25 +1253,8 @@ function ReportCollectionDeposit() {
             <Tooltip title="Generate Receipt Report" arrow>
               <Button
                 variant="contained"
-                color="secondary"
                 startIcon={<ReceiptIcon size={16} />}
-                sx={{
-                  px: 3.5,
-                  backgroundColor: "#e2138cff",
-                  color: "white",
-                  "&:hover": {
-                    backgroundColor: "#d820dfff",
-                    transform: "translateY(-1px)",
-                  },
-                  textTransform: "none",
-                  fontSize: 15,
-                  fontWeight: 600,
-                  borderRadius: "10px",
-                  minWidth: "130px",
-                  height: "44px",
-                  transition: "all 0.2s ease",
-                  boxShadow: "0 2px 6px rgba(123, 31, 162, 0.2)",
-                }}
+                sx={secondaryToolbarButtonSx(uiColors.amber, "rgba(214,161,43,0.14)")}
                 onClick={handleInventoryClick}
               >
                 Inventory
@@ -1196,25 +1265,8 @@ function ReportCollectionDeposit() {
             <Tooltip title="Generate Receipt Report" arrow>
               <Button
                 variant="contained"
-                color="secondary"
                 startIcon={<ReceiptIcon size={16} />}
-                sx={{
-                  px: 3.5,
-                  backgroundColor: "#e90712ff",
-                  color: "white",
-                  "&:hover": {
-                    backgroundColor: "#df1a44ff",
-                    transform: "translateY(-1px)",
-                  },
-                  textTransform: "none",
-                  fontSize: 15,
-                  fontWeight: 600,
-                  borderRadius: "10px",
-                  minWidth: "130px",
-                  height: "44px",
-                  transition: "all 0.2s ease",
-                  boxShadow: "0 2px 6px rgba(123, 31, 162, 0.2)",
-                }}
+                sx={secondaryToolbarButtonSx("#8f3d2e", "rgba(143,61,46,0.12)")}
                 onClick={handleIssueFormClick}
               >
                 Issue Form
@@ -1225,23 +1277,9 @@ function ReportCollectionDeposit() {
             <Tooltip title="Financial Reports" arrow>
               <Button
                 variant="contained"
-                color="error"
                 startIcon={<BiSolidReport size={18} />}
                 onClick={handleOpenPurchaseForm}
-                sx={{
-                  px: 3,
-                  height: 44,
-                  fontSize: 14,
-                  fontWeight: 600,
-                  textTransform: "none",
-                  borderRadius: 2,
-                  boxShadow: 2,
-                  transition: "all 0.2s ease",
-                  "&:hover": {
-                    backgroundColor: "error.dark",
-                    transform: "translateY(-1px)",
-                  },
-                }}
+                sx={secondaryToolbarButtonSx(uiColors.steel, "rgba(75,93,115,0.12)")}
               >
                 Purchase Form
               </Button>
@@ -1255,23 +1293,9 @@ function ReportCollectionDeposit() {
             <Tooltip title="Financial Reports" arrow>
               <Button
                 variant="contained"
-                color="error"
                 startIcon={<BiSolidReport size={18} />}
                 onClick={handleOpenAssignForm}
-                sx={{
-                  px: 3,
-                  height: 44,
-                  fontSize: 14,
-                  fontWeight: 600,
-                  textTransform: "none",
-                  borderRadius: 2,
-                  boxShadow: 2,
-                  transition: "all 0.2s ease",
-                  "&:hover": {
-                    backgroundColor: "error.dark",
-                    transform: "translateY(-1px)",
-                  },
-                }}
+                sx={secondaryToolbarButtonSx("#6d4c9a", "rgba(109,76,154,0.12)")}
               >
                 Assign Form
               </Button>
@@ -1281,24 +1305,9 @@ function ReportCollectionDeposit() {
             <Tooltip title="Print Report" arrow>
               <Button
                 variant="contained"
-                color="info"
                 startIcon={<IoMdPrint size={18} />}
                 onClick={handleToolbarPrintClick}
-                sx={{
-                  px: 3,
-                  height: 44,
-                  fontSize: 14,
-                  fontWeight: 600,
-                  textTransform: "none",
-                  color: "white",
-                  borderRadius: 2,
-                  boxShadow: 2,
-                  transition: "all 0.2s ease",
-                  "&:hover": {
-                    backgroundColor: "info.dark",
-                    transform: "translateY(-1px)",
-                  },
-                }}
+                sx={toolbarButtonSx(uiColors.teal, uiColors.tealHover)}
               >
                 Print
               </Button>
@@ -1308,24 +1317,9 @@ function ReportCollectionDeposit() {
             <Tooltip title="Export Data" arrow>
               <Button
                 variant="contained"
-                color="info"
                 startIcon={<IoMdDownload size={18} />}
                 onClick={handleLogsClick}
-                sx={{
-                  px: 3,
-                  height: 44,
-                  fontSize: 14,
-                  fontWeight: 600,
-                  textTransform: "none",
-                  color: "white",
-                  borderRadius: 2,
-                  boxShadow: 2,
-                  transition: "all 0.2s ease",
-                  "&:hover": {
-                    backgroundColor: "info.dark",
-                    transform: "translateY(-1px)",
-                  },
-                }}
+                sx={secondaryToolbarButtonSx(uiColors.steel, "rgba(75,93,115,0.12)")}
                 
               >
                 Logs
@@ -1333,6 +1327,7 @@ function ReportCollectionDeposit() {
             </Tooltip>
           </Box>
         </Box>
+        </Paper>
 
         {/* Summary Cards */}
         <Box
@@ -1349,98 +1344,87 @@ function ReportCollectionDeposit() {
               value: allTotal,
               text: "Total Collection",
               icon: <AccountBalanceIcon />,
-              gradient: "linear-gradient(135deg, #1976d2, #63a4ff)",
+              accent: uiColors.navy,
+              soft: "rgba(15,39,71,0.08)",
               onClick: handleClickTotal,
             },
             {
               value: taxOnBusinessTotal,
               text: "Flora My D. Ferrer",
               icon: <BusinessCenterIcon />,
-              gradient: "linear-gradient(135deg, #2e7d32, #66bb6a)",
+              accent: uiColors.teal,
+              soft: "rgba(15,107,98,0.08)",
               onClick: handleClickTax,
             },
             {
               value: regulatoryFeesTotal,
               text: "Emily E. Credo",
               icon: <GavelIcon />,
-              gradient: "linear-gradient(135deg, #ed6c02, #ffb74d)",
+              accent: uiColors.amber,
+              soft: "rgba(214,161,43,0.1)",
               onClick: handleClickRF,
             },
             {
               value: receiptsFromEconomicEnterprisesTotal,
               text: "Ricardo T Enopia",
               icon: <StorefrontIcon />,
-              gradient: "linear-gradient(135deg, #6a1b9a, #ab47bc)",
+              accent: "#6d4c9a",
+              soft: "rgba(109,76,154,0.08)",
               onClick: handleClickRFEE,
             },
             {
               value: serviceUserChargesTotal,
               text: "Agnes B. Ello",
               icon: <ReceiptLongIcon />,
-              gradient: "linear-gradient(135deg, #00838f, #4dd0e1)",
+              accent: uiColors.sky,
+              soft: "rgba(47,109,181,0.08)",
               onClick: handleClickSUC,
             },
-          ].map(({ value, text, icon, gradient, onClick }) => (
+          ].map(({ value, text, icon, accent, soft, onClick }) => (
             <Card
               key={text}
               onClick={onClick}
               sx={{
-                flex: 1,
-                p: 3,
-                borderRadius: "16px",
-                background: gradient,
-                color: "white",
-                boxShadow: "0 8px 32px rgba(0,0,0,0.12)",
-                transition: "all 0.4s cubic-bezier(0.25, 0.8, 0.25, 1)",
-                cursor: "pointer",
-                minWidth: 0,
-                position: "relative",
-                overflow: "hidden",
-                "&:hover": {
-                  transform: "translateY(-8px)",
-                  boxShadow: "0 12px 40px rgba(0,0,0,0.2)",
-                },
-                "&::before": {
-                  content: '""',
-                  position: "absolute",
-                  top: "-50%",
-                  right: "-50%",
-                  width: "100%",
-                  height: "100%",
-                  background: "rgba(255,255,255,0.1)",
-                  transform: "rotate(30deg)",
-                  transition: "all 0.4s ease",
-                },
-                "&:hover::before": {
-                  transform: "rotate(30deg) translate(20%, 20%)",
-                },
+                ...metricCardStyles,
               }}
             >
+              <Box
+                sx={{
+                  px: 2.5,
+                  py: 1.4,
+                  background: `linear-gradient(135deg, ${uiColors.navy}, ${accent})`,
+                  color: "#fff",
+                  borderBottom: `1px solid ${uiColors.cardBorder}`,
+                }}
+              >
+                <Typography
+                  variant="subtitle2"
+                  sx={{
+                    fontSize: "0.8rem",
+                    fontWeight: 700,
+                    letterSpacing: "0.9px",
+                    textTransform: "uppercase",
+                    opacity: 0.95,
+                  }}
+                >
+                  {text}
+                </Typography>
+              </Box>
               <Box
                 display="flex"
                 justifyContent="space-between"
                 alignItems="flex-start"
+                sx={{ px: 2.5, py: 2.3 }}
               >
                 <Box>
                   <Typography
-                    variant="subtitle2"
-                    sx={{
-                      opacity: 0.9,
-                      mb: 0.5,
-                      fontSize: "0.875rem",
-                      fontWeight: 500,
-                      letterSpacing: "0.5px",
-                    }}
-                  >
-                    {text}
-                  </Typography>
-                  <Typography
                     variant="h5"
                     sx={{
-                      fontWeight: 700,
-                      fontSize: "1.5rem",
+                      color: uiColors.navy,
+                      fontWeight: 800,
+                      fontSize: "1.45rem",
                       lineHeight: 1.2,
-                      mb: 1,
+                      mb: 0.5,
                     }}
                   >
                     {typeof value === "number"
@@ -1451,15 +1435,28 @@ function ReportCollectionDeposit() {
                         }).format(value)
                       : value}
                   </Typography>
+                  <Typography
+                    variant="body2"
+                    sx={{
+                      color: uiColors.steel,
+                      fontWeight: 500,
+                    }}
+                  >
+                    Click to view details
+                  </Typography>
                 </Box>
                 <Box
                   sx={{
-                    opacity: 0.2,
-                    position: "absolute",
-                    right: 20,
-                    top: 20,
+                    width: 56,
+                    height: 56,
+                    borderRadius: "16px",
+                    backgroundColor: soft,
+                    display: "flex",
+                    alignItems: "center",
+                    justifyContent: "center",
+                    color: accent,
                     "& svg": {
-                      fontSize: "3.5rem",
+                      fontSize: "1.9rem",
                     },
                   }}
                 >
@@ -1467,22 +1464,22 @@ function ReportCollectionDeposit() {
                 </Box>
               </Box>
 
-              <Box sx={{ display: "flex", alignItems: "center", mt: 1.5 }}>
+              <Box sx={{ display: "flex", alignItems: "center", px: 2.5, pb: 2.2 }}>
                 <Box
                   sx={{
                     width: "100%",
-                    height: "4px",
-                    backgroundColor: "rgba(255,255,255,0.3)",
-                    borderRadius: "2px",
+                    height: "6px",
+                    backgroundColor: "#edf2f7",
+                    borderRadius: "999px",
                     overflow: "hidden",
                   }}
                 >
                   <Box
                     sx={{
-                      width: "70%", // Adjust dynamically if needed
+                      width: "68%",
                       height: "100%",
-                      backgroundColor: "white",
-                      borderRadius: "2px",
+                      backgroundColor: accent,
+                      borderRadius: "999px",
                     }}
                   />
                 </Box>
@@ -1503,10 +1500,13 @@ function ReportCollectionDeposit() {
                 component={Paper}
                 sx={{
                   borderRadius: 4,
-                  boxShadow: 6,
+                  boxShadow: "0 10px 26px rgba(15,39,71,0.08)",
                   overflow: "hidden",
+                  border: `1px solid ${uiColors.cardBorder}`,
+                  backgroundColor: uiColors.cardBg,
                   "& .MuiTableCell-root": {
                     py: 2,
+                    px: 2,
                   },
                 }}
               >
@@ -1532,33 +1532,41 @@ function ReportCollectionDeposit() {
                           key={row.id}
                           hover
                           sx={{
+                            transition: "background-color 0.2s ease",
                             "&:hover": {
-                              backgroundColor: "action.hover",
+                              backgroundColor: "#f7f9fc",
+                            },
+                            "&:nth-of-type(even)": {
+                              backgroundColor: "rgba(15,39,71,0.02)",
                             },
                           }}
                         >
                           <TableCell align="center">
-                            <Typography variant="body2" fontWeight={500}>
+                            <Typography variant="body2" fontWeight={600} color="#334e68">
                               {formatDate(row.issued_date || row.Date || row.date)}
                             </Typography>
                           </TableCell>
       
                           <TableCell align="center">
-                            <Typography variant="body2">{row.Collector || row.collector}</Typography>
+                            <Typography variant="body2" fontWeight={600} color="#102a43">
+                              {row.Collector || row.collector}
+                            </Typography>
                           </TableCell>
       
                           <TableCell align="center">
-                            <Typography variant="body2">{row.Type_Of_Receipt || row.type_of_receipt}</Typography>
+                            <Typography variant="body2" color="#486581">
+                              {row.Type_Of_Receipt || row.type_of_receipt}
+                            </Typography>
                           </TableCell>
       
                           <TableCell align="center">
-                            <Typography variant="body2">
+                            <Typography variant="body2" color="#486581">
                               {row.Receipt_No_From || row.receipt_no_from}
                             </Typography>
                           </TableCell>
       
                           <TableCell align="center">
-                            <Typography variant="body2">
+                            <Typography variant="body2" color="#486581">
                               {row.Receipt_No_To || row.receipt_no_to}
                             </Typography>
                           </TableCell>
@@ -1566,8 +1574,8 @@ function ReportCollectionDeposit() {
                           <TableCell align="center">
                             <Typography
                               variant="body2"
-                              fontWeight={600}
-                              color="success.main"
+                              fontWeight={700}
+                              color="#0f6b62"
                             >
                               {new Intl.NumberFormat("en-PH", {
                                 style: "currency",
@@ -1580,9 +1588,19 @@ function ReportCollectionDeposit() {
                           <TableCell align="center">
                             <Chip
                               label={row.Status || row.status || "Not Remit"}
-                              color="info"
                               size="small"
-                              sx={{ fontWeight: 500 }}
+                              sx={{
+                                fontWeight: 700,
+                                minWidth: 92,
+                                color: "#0f2747",
+                                backgroundColor:
+                                  String(row.Status || row.status || "").toLowerCase() === "remit"
+                                    ? "rgba(46,125,50,0.14)"
+                                    : String(row.Status || row.status || "").toLowerCase() === "deposit"
+                                      ? "rgba(2,136,209,0.14)"
+                                      : "rgba(214,161,43,0.18)",
+                                border: "1px solid rgba(15,39,71,0.08)",
+                              }}
                             />
                           </TableCell>
       
@@ -1597,6 +1615,12 @@ function ReportCollectionDeposit() {
                                 py: 0.75,
                                 fontSize: "0.75rem",
                                 borderRadius: 2,
+                                fontWeight: 700,
+                                backgroundColor: uiColors.navy,
+                                boxShadow: "0 4px 10px rgba(15,39,71,0.18)",
+                                "&:hover": {
+                                  backgroundColor: uiColors.navyHover,
+                                },
                               }}
                             >
                               Actions
@@ -1613,6 +1637,11 @@ function ReportCollectionDeposit() {
                   justifyContent="flex-end"
                   alignItems="center"
                   m={2}
+                  sx={{
+                    borderTop: "1px solid #e6edf3",
+                    pt: 1,
+                    mt: 0,
+                  }}
                 >
                   <TablePagination
                     rowsPerPageOptions={[10, 15, 20, 30, 50, 100]}

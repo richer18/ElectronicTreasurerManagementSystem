@@ -84,21 +84,73 @@ const years = [
   { label: '2030', value: '2030' },
 ];
 
+const normalizeRptClassification = (value) => {
+  switch ((value || "").toUpperCase()) {
+    case "LAND-COMML":
+    case "LAND-COMMERCIAL":
+      return "landComm";
+    case "LAND-AGRI":
+    case "LAND-AGRICULTURAL":
+      return "landAgri";
+    case "LAND-RES":
+    case "LAND-RESIDENTIAL":
+      return "landRes";
+    case "BLDG-RES":
+    case "BUILDING-RESIDENTIAL":
+      return "bldgRes";
+    case "BLDG-COMML":
+    case "BUILDING-COMMERCIAL":
+      return "bldgComm";
+    case "BLDG-AGRI":
+    case "BUILDING-AGRICULTURAL":
+      return "bldgAgri";
+    case "MACHINERY":
+    case "MACHINERIES":
+    case "MACHINERIES-AGRICULTURAL":
+    case "MACHINERIES-COMMERCIAL":
+    case "MACHINERIES-RESIDENTIAL":
+      return "machinery";
+    case "BLDG-INDUS":
+    case "BUILDING-INDUSTRIAL":
+      return "bldgIndus";
+    case "SPECIAL":
+    case "BUILDING-SS":
+      return "special";
+    default:
+      return null;
+  }
+};
+
+const formatMoney = (value) =>
+  new Intl.NumberFormat("en-PH", {
+    minimumFractionDigits: 2,
+    maximumFractionDigits: 2,
+  }).format(Number(value || 0));
+
 DailyTable.propTypes = {
+  month: PropTypes.string,
+  year: PropTypes.string,
+  onMonthChange: PropTypes.func.isRequired,
+  onYearChange: PropTypes.func.isRequired,
   onDataFiltered: PropTypes.func.isRequired,
   onBack: PropTypes.func.isRequired,
 };
 
 
 
-function DailyTable({ onDataFiltered, onBack }) {
+function DailyTable({
+  month,
+  year,
+  onMonthChange,
+  onYearChange,
+  onDataFiltered,
+  onBack,
+}) {
   const [data, setData] = useState([]);
   const [openCommentDialogs, setOpenCommentDialogs] = useState(false);
   const [openViewDialogs, setOpenViewDialogs] = useState(false);
   const [currentComment, setCurrentComment] = useState('');
   const [currentRow, setCurrentRow] = useState(null);
-  const [month, setMonth] = useState(null);
-  const [year, setYear] = useState(null);
   const [anchorEl, setAnchorEl] = useState(null); // For menu
   const [selectedDate, setSelectedDate] = useState(null);
   const [openCommentDialog, setOpenCommentDialog] = useState(false);
@@ -223,11 +275,11 @@ function DailyTable({ onDataFiltered, onBack }) {
   
 
   const handleMonthChange = (event, value) => {
-    setMonth(value ? value.value : '');
+    onMonthChange(value ? value.value : null);
   };
 
   const handleYearChange = (event, value) => {
-    setYear(value ? value.value : '');
+    onYearChange(value ? value.value : null);
   };
 
   const filteredData = useMemo(() => {
@@ -275,37 +327,13 @@ function DailyTable({ onDataFiltered, onBack }) {
       const amount = parseFloat(row.total) || 0;
       dataByDate[dateKey].total += amount;
 
-      switch (row.status) {
-        case "LAND-COMML":
-          dataByDate[dateKey].landComm += amount;
-          break;
-        case "LAND-AGRI":
-          dataByDate[dateKey].landAgri += amount;
-          break;
-        case "LAND-RES":
-          dataByDate[dateKey].landRes += amount;
-          break;
-        case "BLDG-RES":
-          dataByDate[dateKey].bldgRes += amount;
-          break;
-        case "BLDG-COMML":
-          dataByDate[dateKey].bldgComm += amount;
-          break;
-        case "BLDG-AGRI":
-          dataByDate[dateKey].bldgAgri += amount;
-          break;
-        case "MACHINERY":
-          dataByDate[dateKey].machinery += amount;
-          break;
-        case "SPECIAL":
-          dataByDate[dateKey].special += amount;
-          break;
-        default:
-          break;
+      const bucket = normalizeRptClassification(row.status);
+      if (bucket) {
+        dataByDate[dateKey][bucket] += amount;
       }
 
       // Update the comments for the date
-      dataByDate[dateKey].comments = row.remarks;
+      dataByDate[dateKey].comments = row.comments || "";
     });
 
     const sortedData = Object.values(dataByDate).sort(
@@ -411,6 +439,7 @@ function DailyTable({ onDataFiltered, onBack }) {
               "& .MuiInputBase-root": { borderRadius: "8px" },
             }}
             onChange={handleMonthChange}
+            value={months.find((option) => option.value === month) ?? null}
             renderInput={(params) => (
               <TextField
                 {...params}
@@ -448,6 +477,7 @@ function DailyTable({ onDataFiltered, onBack }) {
               "& .MuiInputBase-root": { borderRadius: "8px" },
             }}
             onChange={handleYearChange}
+            value={years.find((option) => option.value === year) ?? null}
             renderInput={(params) => (
               <TextField
                 {...params}
@@ -515,16 +545,16 @@ function DailyTable({ onDataFiltered, onBack }) {
             {filteredData.map((row, index) => (
               <StyledTableRow key={index}>
                 <CenteredTableCell>{formatDate(row.date)}</CenteredTableCell>
-                <CenteredTableCell>{row.landComm.toFixed(2)}</CenteredTableCell>
-                <CenteredTableCell>{row.landAgri.toFixed(2)}</CenteredTableCell>
-                <CenteredTableCell>{row.landRes.toFixed(2)}</CenteredTableCell>
-                <CenteredTableCell>{row.bldgRes.toFixed(2)}</CenteredTableCell>
-                <CenteredTableCell>{row.bldgComm.toFixed(2)}</CenteredTableCell>
-                <CenteredTableCell>{row.bldgAgri.toFixed(2)}</CenteredTableCell>
-                <CenteredTableCell>{row.machinery.toFixed(2)}</CenteredTableCell>
-                <CenteredTableCell>{row.bldgIndus.toFixed(2)}</CenteredTableCell>
-                <CenteredTableCell>{row.special.toFixed(2)}</CenteredTableCell>
-                <CenteredTableCell>{row.total.toFixed(2)}</CenteredTableCell>
+                <CenteredTableCell>{formatMoney(row.landComm)}</CenteredTableCell>
+                <CenteredTableCell>{formatMoney(row.landAgri)}</CenteredTableCell>
+                <CenteredTableCell>{formatMoney(row.landRes)}</CenteredTableCell>
+                <CenteredTableCell>{formatMoney(row.bldgRes)}</CenteredTableCell>
+                <CenteredTableCell>{formatMoney(row.bldgComm)}</CenteredTableCell>
+                <CenteredTableCell>{formatMoney(row.bldgAgri)}</CenteredTableCell>
+                <CenteredTableCell>{formatMoney(row.machinery)}</CenteredTableCell>
+                <CenteredTableCell>{formatMoney(row.bldgIndus)}</CenteredTableCell>
+                <CenteredTableCell>{formatMoney(row.special)}</CenteredTableCell>
+                <CenteredTableCell>{formatMoney(row.total)}</CenteredTableCell>
                 <CenteredTableCell>
   <Badge
     badgeContent={commentCounts[new Date(row.date).toISOString().split("T")[0]]}
@@ -580,7 +610,7 @@ function DailyTable({ onDataFiltered, onBack }) {
                 <Typography fontWeight="bold">TOTAL</Typography>
               </RightAlignedTableCell>
               <RightAlignedTableCell colSpan={3}>
-                <Typography fontWeight="bold">₱{totalAmount.toFixed(2)}</Typography>
+                <Typography fontWeight="bold">PHP {formatMoney(totalAmount)}</Typography>
               </RightAlignedTableCell>
             </StyledTableRow>
           </TableBody>
