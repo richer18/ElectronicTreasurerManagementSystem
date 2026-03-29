@@ -1,45 +1,59 @@
-import AccountBalanceWalletIcon from "@mui/icons-material/AccountBalanceWallet";
-import AppRegistrationIcon from "@mui/icons-material/AppRegistration";
-import ArticleIcon from "@mui/icons-material/Article";
-import AssignmentIcon from "@mui/icons-material/Assignment";
-import AssignmentIndIcon from "@mui/icons-material/AssignmentInd";
-import AssessmentIcon from "@mui/icons-material/Assessment";
-import BarChartIcon from "@mui/icons-material/BarChart";
-import BookOnlineIcon from "@mui/icons-material/BookOnline";
-import BusinessIcon from "@mui/icons-material/Business";
-import CalendarMonthIcon from "@mui/icons-material/CalendarMonth";
+import AccountBalanceWalletRoundedIcon from "@mui/icons-material/AccountBalanceWalletRounded";
+import AppRegistrationRoundedIcon from "@mui/icons-material/AppRegistrationRounded";
+import ArticleRoundedIcon from "@mui/icons-material/ArticleRounded";
+import AssignmentIndRoundedIcon from "@mui/icons-material/AssignmentIndRounded";
+import AssessmentRoundedIcon from "@mui/icons-material/AssessmentRounded";
+import BalanceRoundedIcon from "@mui/icons-material/BalanceRounded";
+import BarChartRoundedIcon from "@mui/icons-material/BarChartRounded";
+import BookOnlineRoundedIcon from "@mui/icons-material/BookOnlineRounded";
+import BusinessRoundedIcon from "@mui/icons-material/BusinessRounded";
+import CalendarMonthRoundedIcon from "@mui/icons-material/CalendarMonthRounded";
 import AccountTreeIcon from "@mui/icons-material/AccountTree";
-import DashboardIcon from "@mui/icons-material/Dashboard";
-import DescriptionIcon from "@mui/icons-material/Description";
-import DirectionsTransitFilledIcon from "@mui/icons-material/DirectionsTransitFilled";
-import ElectricScooterIcon from "@mui/icons-material/ElectricScooter";
-import EmailIcon from "@mui/icons-material/Email";
-import GavelIcon from "@mui/icons-material/Gavel";
-import HouseIcon from "@mui/icons-material/House";
-import HowToRegIcon from "@mui/icons-material/HowToReg";
-import ImportExportIcon from "@mui/icons-material/ImportExport";
-import InboxIcon from "@mui/icons-material/Inbox";
+import DashboardCustomizeRoundedIcon from "@mui/icons-material/DashboardCustomizeRounded";
+import DescriptionRoundedIcon from "@mui/icons-material/DescriptionRounded";
+import DirectionsBusRoundedIcon from "@mui/icons-material/DirectionsBusRounded";
+import ElectricRickshawRoundedIcon from "@mui/icons-material/ElectricRickshawRounded";
+import LogoutRoundedIcon from "@mui/icons-material/LogoutRounded";
+import MailRoundedIcon from "@mui/icons-material/MailRounded";
+import NotificationsRoundedIcon from "@mui/icons-material/NotificationsRounded";
+import PrintRoundedIcon from "@mui/icons-material/PrintRounded";
+import HomeWorkRoundedIcon from "@mui/icons-material/HomeWorkRounded";
+import ImportExportRoundedIcon from "@mui/icons-material/ImportExportRounded";
+import InboxRoundedIcon from "@mui/icons-material/InboxRounded";
+import PersonRoundedIcon from "@mui/icons-material/PersonRounded";
 // import ReceiptLongIcon from "@mui/icons-material/ReceiptLong";
-import ScubaDivingIcon from "@mui/icons-material/ScubaDiving";
-import SellIcon from "@mui/icons-material/Sell";
-import SendIcon from "@mui/icons-material/Send";
-import TrendingUpIcon from "@mui/icons-material/TrendingUp";
-import WaterDropIcon from "@mui/icons-material/WaterDrop";
+import ScubaDivingRoundedIcon from "@mui/icons-material/ScubaDivingRounded";
+import SecurityRoundedIcon from "@mui/icons-material/SecurityRounded";
+import SellRoundedIcon from "@mui/icons-material/SellRounded";
+import SendRoundedIcon from "@mui/icons-material/SendRounded";
+import SettingsRoundedIcon from "@mui/icons-material/SettingsRounded";
+import SummarizeRoundedIcon from "@mui/icons-material/SummarizeRounded";
+import TrendingUpRoundedIcon from "@mui/icons-material/TrendingUpRounded";
+import WarningAmberRoundedIcon from "@mui/icons-material/WarningAmberRounded";
+import WaterDropRoundedIcon from "@mui/icons-material/WaterDropRounded";
 import Box from "@mui/material/Box";
 import Breadcrumbs from "@mui/material/Breadcrumbs";
 import Grid from "@mui/material/Grid";
 import Link from "@mui/material/Link";
 import Paper from "@mui/material/Paper";
 import Button from "@mui/material/Button";
-import ReceiptIcon from "@mui/icons-material/Receipt";
+import ReceiptLongRoundedIcon from "@mui/icons-material/ReceiptLongRounded";
+import Avatar from "@mui/material/Avatar";
+import Badge from "@mui/material/Badge";
+import IconButton from "@mui/material/IconButton";
+import ListItemIcon from "@mui/material/ListItemIcon";
+import ListItemText from "@mui/material/ListItemText";
+import Menu from "@mui/material/Menu";
 
 import Select from "@mui/material/Select";
 import MenuItem from "@mui/material/MenuItem";
 import FormControl from "@mui/material/FormControl";
 import InputLabel from "@mui/material/InputLabel";
+import Stack from "@mui/material/Stack";
 
 import LinearProgress from "@mui/material/LinearProgress";
 import Chip from "@mui/material/Chip";
+import Tooltip from "@mui/material/Tooltip";
 import Typography from "@mui/material/Typography";
 import { createTheme } from "@mui/material/styles";
 import { AppProvider } from "@toolpad/core/AppProvider";
@@ -57,232 +71,257 @@ import "./system.css";
 // import RealPropertyTaxCollected from "./components/CHARTS/RealPropertyTaxCollected";
 // import Status from "./components/CHARTS/status";
 
+const navIconPrimary = { color: "#355070" };
+const navIconAccent = { color: "#4f6d8c" };
+const navIconMuted = { color: "#6b7c93" };
+
 const NAVIGATION = [
   {
     kind: "header",
-    title: "Core Operations",
+    title: "Dashboard",
   },
   {
     segment: "my-app",
     title: "Dashboard",
-    icon: <DashboardIcon sx={{ color: "primary.main" }} />,
+    icon: <DashboardCustomizeRoundedIcon sx={navIconPrimary} />,
+  },
+  {
+    kind: "divider",
+  },
+  {
+    kind: "header",
+    title: "Daily Operations",
   },
   {
     segment: "rcd",
-    title: "Report of Collection and Deposit",
-    icon: <AssignmentIcon sx={{ color: "primary.main" }} />,
+    title: "Collection and Deposit",
+    icon: <SummarizeRoundedIcon sx={navIconPrimary} />,
   },
   {
     segment: "calendar",
     title: "Calendar",
-    icon: <CalendarMonthIcon sx={{ color: "primary.main" }} />,
+    icon: <CalendarMonthRoundedIcon sx={navIconPrimary} />,
   },
   {
-    title: "Abstract",
-    icon: <ArticleIcon sx={{ color: "secondary.main" }} />,
+    kind: "divider",
+  },
+  {
+    kind: "header",
+    title: "Collections",
+  },
+  {
+    title: "Abstract Collections",
+    icon: <ArticleRoundedIcon sx={navIconAccent} />,
     children: [
       {
         segment: "real-property-tax",
         title: "Real Property Tax",
-        icon: <HouseIcon sx={{ color: "primary.main" }} />,
+        icon: <HomeWorkRoundedIcon sx={navIconPrimary} />,
       },
       {
         segment: "general-fund",
         title: "General Fund",
-        icon: <AccountBalanceWalletIcon sx={{ color: "success.main" }} />,
+        icon: <AccountBalanceWalletRoundedIcon sx={navIconAccent} />,
       },
       {
         segment: "trust-fund",
         title: "Trust Fund",
-        icon: <GavelIcon sx={{ color: "success.main" }} />,
+        icon: <BalanceRoundedIcon sx={navIconAccent} />,
       },
       {
         segment: "community-tax-certificate",
         title: "Community Tax Certificate",
-        icon: <AssignmentIndIcon sx={{ color: "warning.main" }} />,
+        icon: <AssignmentIndRoundedIcon sx={navIconMuted} />,
       },
     ],
   },
   {
+    kind: "divider",
+  },
+  {
+    kind: "header",
+    title: "Business and Utilities",
+  },
+  {
     title: "Business",
-    icon: <BusinessIcon sx={{ color: "warning.main" }} />,
+    icon: <BusinessRoundedIcon sx={navIconAccent} />,
     children: [
       {
         segment: "business-registration",
         title: "Business Registration",
-        icon: <HowToRegIcon sx={{ color: "primary.main" }} />,
+        icon: <AppRegistrationRoundedIcon sx={navIconPrimary} />,
       },
       {
         segment: "mch",
-        title: "MCH FRANCHISE",
-        icon: <DirectionsTransitFilledIcon sx={{ color: "warning.main" }} />,
+        title: "MCH Franchise",
+        icon: <DirectionsBusRoundedIcon sx={navIconAccent} />,
       },
       {
         segment: "e-bike-trisikad",
-        title: "E_BIKE-TRISIKAD",
-        icon: <ElectricScooterIcon sx={{ color: "info.main" }} />,
+        title: "E-Bike / Trisikad",
+        icon: <ElectricRickshawRoundedIcon sx={navIconMuted} />,
       },
     ],
   },
   {
     title: "Tickets",
-    icon: <BookOnlineIcon sx={{ color: "info.main" }} />,
+    icon: <BookOnlineRoundedIcon sx={navIconAccent} />,
     children: [
       {
         segment: "dive-ticket",
         title: "Diving Ticket",
-        icon: <ScubaDivingIcon sx={{ color: "info.dark" }} />,
+        icon: <ScubaDivingRoundedIcon sx={navIconMuted} />,
       },
       {
         segment: "cash-ticket",
         title: "Cash Ticket",
-        icon: <SellIcon sx={{ color: "secondary.main" }} />,
+        icon: <SellRoundedIcon sx={navIconMuted} />,
       },
     ],
   },
   {
-    title: "Doc Stamp",
-    icon: <AssignmentIcon sx={{ color: "primary.main" }} />,
+    title: "Document Stamp",
+    icon: <DescriptionRoundedIcon sx={navIconPrimary} />,
   },
   {
     segment: "water-works",
     title: "Water Works",
-    icon: <WaterDropIcon sx={{ color: "info.main" }} />,
+    icon: <WaterDropRoundedIcon sx={navIconAccent} />,
   },
   {
     kind: "divider",
   },
   {
     kind: "header",
-    title: "Administration",
+    title: "Administration and Setup",
   },
   {
     title: "Import Data",
-    icon: <ImportExportIcon sx={{ color: "info.main" }} />,
+    icon: <ImportExportRoundedIcon sx={navIconAccent} />,
     children: [
       {
         segment: "import-general-fund",
         title: "General Fund",
-        icon: <AccountBalanceWalletIcon sx={{ color: "success.main" }} />,
+        icon: <AccountBalanceWalletRoundedIcon sx={navIconAccent} />,
       },
       {
         segment: "import-trust-fund",
         title: "Trust Fund",
-        icon: <GavelIcon sx={{ color: "warning.main" }} />,
+        icon: <BalanceRoundedIcon sx={navIconMuted} />,
       },
       {
         segment: "import-real-property-tax",
         title: "Real Property Tax",
-        icon: <HouseIcon sx={{ color: "primary.main" }} />,
+        icon: <HomeWorkRoundedIcon sx={navIconPrimary} />,
       },
       {
         segment: "import-cedula",
         title: "Cedula",
-        icon: <AssignmentIndIcon sx={{ color: "info.main" }} />,
+        icon: <AssignmentIndRoundedIcon sx={navIconMuted} />,
       },
     ],
   },
   {
-    title: "Templates",
-    icon: <DescriptionIcon sx={{ color: "info.main" }} />,
+    title: "Document Templates",
+    icon: <DescriptionRoundedIcon sx={navIconAccent} />,
     children: [
       {
         segment: "email-inbox",
         title: "Voucher",
-        icon: <AssignmentIcon sx={{ color: "primary.main" }} />,
+        icon: <DescriptionRoundedIcon sx={navIconPrimary} />,
       },
       {
         segment: "email-sent-rcd-gf",
         title: "RCD GF",
-        icon: <ArticleIcon sx={{ color: "success.main" }} />,
+        icon: <ArticleRoundedIcon sx={navIconAccent} />,
       },
       {
         segment: "email-sent-rcd-sef",
         title: "RCD SEF",
-        icon: <BookOnlineIcon sx={{ color: "success.main" }} />,
+        icon: <BookOnlineRoundedIcon sx={navIconAccent} />,
       },
       {
         segment: "email-sent-mch-application",
         title: "MCH Application",
-        icon: <DirectionsTransitFilledIcon sx={{ color: "warning.main" }} />,
+        icon: <DirectionsBusRoundedIcon sx={navIconMuted} />,
       },
       {
         segment: "email-sent-mch-certification",
         title: "MCH Certification",
-        icon: <HowToRegIcon sx={{ color: "info.main" }} />,
+        icon: <AppRegistrationRoundedIcon sx={navIconPrimary} />,
       },
       {
         segment: "email-sent-mch-order",
         title: "MCH Order",
-        icon: <SellIcon sx={{ color: "secondary.main" }} />,
+        icon: <SellRoundedIcon sx={navIconMuted} />,
       },
       {
         segment: "email-sent-mch-clearance",
         title: "MCH Clearance",
-        icon: <GavelIcon sx={{ color: "primary.main" }} />,
+        icon: <BalanceRoundedIcon sx={navIconMuted} />,
       },
     ],
   },
   {
-    title: "Email",
-    icon: <EmailIcon sx={{ color: "error.main" }} />,
+    title: "Email and Notices",
+    icon: <MailRoundedIcon sx={navIconAccent} />,
     children: [
       {
         segment: "email-inbox",
         title: "Inbox",
-        icon: <InboxIcon sx={{ color: "primary.main" }} />,
+        icon: <InboxRoundedIcon sx={navIconPrimary} />,
       },
       {
         segment: "email-sent",
         title: "Sent",
-        icon: <SendIcon sx={{ color: "success.main" }} />,
+        icon: <SendRoundedIcon sx={navIconAccent} />,
       },
     ],
   },
   {
     title: "Income Target",
-    icon: <TrendingUpIcon sx={{ color: "success.dark" }} />,
+    icon: <TrendingUpRoundedIcon sx={navIconAccent} />,
   },
   {
     segment: "register-user",
     title: "User Registration",
-    icon: <AppRegistrationIcon sx={{ color: "info.main" }} />,
+    icon: <AppRegistrationRoundedIcon sx={navIconPrimary} />,
   },
   {
     kind: "divider",
   },
   {
     kind: "header",
-    title: "Analytics",
+    title: "Reports and Analytics",
   },
   {
     title: "Reports",
-    icon: <BarChartIcon sx={{ color: "primary.main" }} />,
+    icon: <BarChartRoundedIcon sx={navIconPrimary} />,
     children: [
       {
         segment: "business-card",
         title: "Business Card",
-        icon: <DescriptionIcon sx={{ color: "text.secondary" }} />,
+        icon: <DescriptionRoundedIcon sx={navIconMuted} />,
       },
       {
         segment: "rpt-card",
         title: "RPT Card",
-        icon: <DescriptionIcon sx={{ color: "text.secondary" }} />,
+        icon: <ReceiptLongRoundedIcon sx={navIconMuted} />,
       },
       {
         segment: "full-report",
         title: "Full Report",
-        icon: <DescriptionIcon sx={{ color: "text.secondary" }} />,
+        icon: <AssessmentRoundedIcon sx={navIconMuted} />,
       },
       {
         segment: "esre",
         title: "ESRE",
-        icon: <DescriptionIcon sx={{ color: "text.secondary" }} />,
+        icon: <AssessmentRoundedIcon sx={navIconMuted} />,
       },
       {
         segment: "collection",
-        title: "Summary of Collection Report",
-        icon: <DescriptionIcon sx={{ color: "text.secondary" }} />,
+        title: "Summary of Collection",
+        icon: <SummarizeRoundedIcon sx={navIconMuted} />,
       },
     ],
   },
@@ -314,7 +353,97 @@ const demoTheme = createTheme({
   },
 });
 
-const resolveNavigationTitle = (pathname) => {
+const filterNavigationByRole = (items, role) => {
+  const normalizedRole = String(role || "").toLowerCase();
+  const isAdmin = normalizedRole.includes("admin");
+
+  if (isAdmin) return items;
+
+  return items.filter((item) => {
+    if (item.kind) return true;
+    if (item.title === "Import Data") return false;
+    if (item.title === "Document Templates") return false;
+    if (item.title === "Income Target") return false;
+    if (item.title === "User Registration") return false;
+    return true;
+  });
+};
+
+const getStoredAuthUser = () => {
+  try {
+    return JSON.parse(localStorage.getItem("authUser") || "null");
+  } catch (error) {
+    return null;
+  }
+};
+
+const buildDashboardNotifications = ({
+  summaryRows = [],
+  calendarRows = [],
+  fetchError = "",
+  formatCurrency,
+  formatDate,
+}) => {
+  const items = [];
+  const dueFromTotal = summaryRows.reduce(
+    (total, row) => total + Number(row?.dueFrom || 0),
+    0
+  );
+  const hasMissingRemarks = summaryRows.some(
+    (row) => Number(row?.dueFrom || 0) > 0 && !(row?.comment || "").trim()
+  );
+  const upcomingEvents = calendarRows
+    .filter((event) => {
+      const eventDate = new Date(event?.start || event?.start_at || event?.date);
+      if (Number.isNaN(eventDate.getTime())) return false;
+      const now = new Date();
+      const inTwoWeeks = new Date();
+      inTwoWeeks.setDate(now.getDate() + 14);
+      return eventDate >= now && eventDate <= inTwoWeeks;
+    })
+    .sort(
+      (left, right) =>
+        new Date(left?.start || left?.start_at || left?.date).getTime() -
+        new Date(right?.start || right?.start_at || right?.date).getTime()
+    )
+    .slice(0, 4);
+
+  if (fetchError) {
+    items.push({
+      id: "fetch-error",
+      title: fetchError,
+      subtitle: "System alert",
+    });
+  }
+
+  if (dueFromTotal > 0) {
+    items.push({
+      id: "due-from",
+      title: `Due from collectors: PHP ${formatCurrency(dueFromTotal)}`,
+      subtitle: "Pending treasury follow-up",
+    });
+  }
+
+  if (hasMissingRemarks) {
+    items.push({
+      id: "missing-remarks",
+      title: "Some collection days still need remarks.",
+      subtitle: "Exception monitoring",
+    });
+  }
+
+  upcomingEvents.forEach((event) => {
+    items.push({
+      id: `event-${event.id}`,
+      title: event.title || "Upcoming event",
+      subtitle: formatDate(event.start || event.start_at || event.date),
+    });
+  });
+
+  return items.slice(0, 8);
+};
+
+const resolveNavigationTitle = (pathname, items = NAVIGATION) => {
   const segment = pathname.replace(/^\/my-app\/?/, "");
   const findTitle = (items) => {
     for (const item of items) {
@@ -390,12 +519,208 @@ DemoPageContent.propTypes = {
   pathname: PropTypes.string.isRequired,
 };
 
+function DashboardToolbarActions() {
+  const navigate = useNavigate();
+  const authUser = React.useMemo(() => getStoredAuthUser(), []);
+  const lastLoginAt = React.useMemo(
+    () => localStorage.getItem("lastLoginAt"),
+    []
+  );
+  const [notificationAnchorEl, setNotificationAnchorEl] = React.useState(null);
+  const [profileAnchorEl, setProfileAnchorEl] = React.useState(null);
+  const [notifications, setNotifications] = React.useState([]);
+
+  const formatCurrency = React.useCallback(
+    (value) =>
+      new Intl.NumberFormat("en-PH", {
+        minimumFractionDigits: 2,
+        maximumFractionDigits: 2,
+      }).format(Number(value || 0)),
+    []
+  );
+
+  const formatDate = React.useCallback((value) => {
+    if (!value) return "N/A";
+    const parsed = new Date(value);
+    if (Number.isNaN(parsed.getTime())) return String(value);
+    return parsed.toLocaleDateString("en-PH", {
+      month: "short",
+      day: "numeric",
+      year: "numeric",
+    });
+  }, []);
+
+  React.useEffect(() => {
+    let isMounted = true;
+
+    const loadNotifications = async () => {
+      try {
+        const responses = await Promise.allSettled([
+          axiosInstance.get("fetch-report"),
+          axiosInstance.get("calendar-events"),
+        ]);
+
+        const summaryRows =
+          responses[0]?.status === "fulfilled" &&
+          Array.isArray(responses[0].value.data)
+            ? responses[0].value.data
+            : [];
+        const calendarRows =
+          responses[1]?.status === "fulfilled" &&
+          Array.isArray(responses[1].value.data)
+            ? responses[1].value.data
+            : [];
+        const fetchError = responses.some((item) => item.status === "rejected")
+          ? "Some dashboard alerts could not be loaded."
+          : "";
+
+        if (isMounted) {
+          setNotifications(
+            buildDashboardNotifications({
+              summaryRows,
+              calendarRows,
+              fetchError,
+              formatCurrency,
+              formatDate,
+            })
+          );
+        }
+      } catch (error) {
+        if (isMounted) {
+          setNotifications([
+            {
+              id: "toolbar-fetch-error",
+              title: "Notifications could not be loaded.",
+              subtitle: "Please refresh the dashboard.",
+            },
+          ]);
+        }
+      }
+    };
+
+    loadNotifications();
+
+    return () => {
+      isMounted = false;
+    };
+  }, [formatCurrency, formatDate]);
+
+  const handleLogout = React.useCallback(() => {
+    localStorage.removeItem("isAuthenticated");
+    localStorage.removeItem("authUser");
+    navigate("/login");
+  }, [navigate]);
+
+  return (
+    <Stack direction="row" spacing={1} alignItems="center">
+      <Box sx={{ display: { xs: "none", md: "block" }, textAlign: "right", mr: 0.5 }}>
+        <Typography sx={{ fontWeight: 800, fontSize: 13, color: "#102a43", lineHeight: 1.2 }}>
+          {authUser?.username || "Treasury Staff"}
+        </Typography>
+        <Typography variant="caption" sx={{ color: "#6b7c93" }}>
+          {authUser?.role || "Staff"}
+          {lastLoginAt ? ` • ${formatDate(lastLoginAt)}` : ""}
+        </Typography>
+      </Box>
+
+      <Tooltip title="Notifications">
+        <IconButton onClick={(event) => setNotificationAnchorEl(event.currentTarget)}>
+          <Badge badgeContent={notifications.length} color="error">
+            <NotificationsRoundedIcon />
+          </Badge>
+        </IconButton>
+      </Tooltip>
+
+      <Tooltip title="User Settings">
+        <IconButton onClick={(event) => setProfileAnchorEl(event.currentTarget)}>
+          <Avatar sx={{ width: 36, height: 36, bgcolor: "#102a43" }}>
+            {(authUser?.username || "T").charAt(0).toUpperCase()}
+          </Avatar>
+        </IconButton>
+      </Tooltip>
+
+      <Menu
+        anchorEl={notificationAnchorEl}
+        open={Boolean(notificationAnchorEl)}
+        onClose={() => setNotificationAnchorEl(null)}
+        PaperProps={{ sx: { width: 360, maxWidth: "92vw", p: 0.5 } }}
+      >
+        <Typography sx={{ px: 2, py: 1.2, fontWeight: 800, color: "#102a43" }}>
+          Notification Center
+        </Typography>
+        {notifications.length === 0 ? (
+          <MenuItem disabled>No unread notifications</MenuItem>
+        ) : (
+          notifications.map((item) => (
+            <MenuItem key={item.id} onClick={() => setNotificationAnchorEl(null)}>
+              <ListItemIcon>
+                <NotificationsRoundedIcon fontSize="small" />
+              </ListItemIcon>
+              <ListItemText primary={item.title} secondary={item.subtitle} />
+            </MenuItem>
+          ))
+        )}
+      </Menu>
+
+      <Menu
+        anchorEl={profileAnchorEl}
+        open={Boolean(profileAnchorEl)}
+        onClose={() => setProfileAnchorEl(null)}
+        PaperProps={{ sx: { width: 260 } }}
+      >
+        <Box sx={{ px: 2, py: 1.5 }}>
+          <Typography sx={{ fontWeight: 800, color: "#102a43" }}>
+            {authUser?.username || "Treasury Staff"}
+          </Typography>
+          <Typography variant="body2" color="text.secondary">
+            {authUser?.role || "Staff"}
+          </Typography>
+        </Box>
+        <MenuItem onClick={() => setProfileAnchorEl(null)}>
+          <ListItemIcon>
+            <PersonRoundedIcon fontSize="small" />
+          </ListItemIcon>
+          <ListItemText primary="Profile" />
+        </MenuItem>
+        <MenuItem onClick={() => setProfileAnchorEl(null)}>
+          <ListItemIcon>
+            <SettingsRoundedIcon fontSize="small" />
+          </ListItemIcon>
+          <ListItemText primary="Settings" />
+        </MenuItem>
+        <MenuItem onClick={() => setProfileAnchorEl(null)}>
+          <ListItemIcon>
+            <SecurityRoundedIcon fontSize="small" />
+          </ListItemIcon>
+          <ListItemText primary="Change Password" />
+        </MenuItem>
+        <MenuItem
+          onClick={() => {
+            setProfileAnchorEl(null);
+            handleLogout();
+          }}
+        >
+          <ListItemIcon>
+            <LogoutRoundedIcon fontSize="small" />
+          </ListItemIcon>
+          <ListItemText primary="Logout" />
+        </MenuItem>
+      </Menu>
+    </Stack>
+  );
+}
+
 function DashboardLayoutBranding(props) {
   const { window } = props;
 
   const location = useLocation();
   const navigate = useNavigate();
+  const authUser = React.useMemo(() => getStoredAuthUser(), []);
   const pathname = `/my-app${location.pathname.startsWith("/my-app") ? location.pathname.slice(7) : location.pathname}`;
+  const navigationItems = React.useMemo(
+    () => filterNavigationByRole(NAVIGATION, authUser?.role),
+    [authUser?.role]
+  );
 
   const router = React.useMemo(
     () => ({
@@ -410,8 +735,8 @@ function DashboardLayoutBranding(props) {
     [pathname, navigate, location.search]
   );
   const resolvePageTitle = React.useMemo(
-    () => resolveNavigationTitle(router.pathname),
-    [router.pathname]
+    () => resolveNavigationTitle(router.pathname, navigationItems),
+    [navigationItems, router.pathname]
   );
   const brandingTitle = (
     <Box sx={{ display: "flex", alignItems: "center" }}>
@@ -444,7 +769,7 @@ function DashboardLayoutBranding(props) {
     <DemoProvider window={demoWindow}>
       {/* preview-start */}
       <AppProvider
-        navigation={NAVIGATION}
+        navigation={navigationItems}
         branding={{
           logo: <img src="/assets/images/ZAMBO_LOGO_P.png" alt="LGU logo" />,
           title: brandingTitle,
@@ -454,7 +779,7 @@ function DashboardLayoutBranding(props) {
         theme={demoTheme}
         window={demoWindow}
       >
-        <DashboardLayout>
+        <DashboardLayout slots={{ toolbarActions: DashboardToolbarActions }}>
           <DemoPageContent pathname={router.pathname} />
         </DashboardLayout>
       </AppProvider>
@@ -473,10 +798,22 @@ DashboardLayoutBranding.propTypes = {
 
 
 function DashboardHome() {
+  const navigate = useNavigate();
   const [month, setMonth] = React.useState(new Date().getMonth() + 1);
   const [year, setYear] = React.useState(new Date().getFullYear());
   const [data, setData] = React.useState([]);
+  const [rptRows, setRptRows] = React.useState([]);
+  const [gfRows, setGfRows] = React.useState([]);
+  const [tfRows, setTfRows] = React.useState([]);
+  const [cedulaRows, setCedulaRows] = React.useState([]);
+  const [calendarEvents, setCalendarEvents] = React.useState([]);
   const [loading, setLoading] = React.useState(false);
+  const [fetchError, setFetchError] = React.useState("");
+
+  const authUser = React.useMemo(() => {
+    return getStoredAuthUser();
+  }, []);
+  const lastLoginAt = localStorage.getItem("lastLoginAt");
 
   const months = [
     "January",
@@ -502,15 +839,95 @@ function DashboardHome() {
     []
   );
 
+  const formatDate = React.useCallback((value) => {
+    if (!value) return "N/A";
+    const parsed = new Date(value);
+    if (Number.isNaN(parsed.getTime())) return String(value);
+    return parsed.toLocaleDateString("en-PH", {
+      month: "short",
+      day: "numeric",
+      year: "numeric",
+    });
+  }, []);
+
+  const getRowDate = React.useCallback((row) => {
+    const candidate =
+      row?.date ||
+      row?.DATE ||
+      row?.Date ||
+      row?.start ||
+      row?.start_at ||
+      row?.DATEISSUED ||
+      null;
+    const parsed = candidate ? new Date(candidate) : null;
+    return parsed && !Number.isNaN(parsed.getTime()) ? parsed : null;
+  }, []);
+
   const fetchData = React.useCallback(async () => {
     setLoading(true);
+    setFetchError("");
     try {
-      const resp = await axiosInstance.get("fetch-report");
-      const rows = Array.isArray(resp.data) ? resp.data : [];
-      setData(rows);
+      const responses = await Promise.allSettled([
+        axiosInstance.get("fetch-report"),
+        axiosInstance.get("allData"),
+        axiosInstance.get("general_fund_data"),
+        axiosInstance.get("trust_fund_data"),
+        axiosInstance.get("cedula"),
+        axiosInstance.get("calendar-events"),
+      ]);
+
+      const [
+        summaryResp,
+        rptResp,
+        gfResp,
+        tfResp,
+        cedulaResp,
+        calendarResp,
+      ] = responses;
+
+      setData(
+        summaryResp.status === "fulfilled" && Array.isArray(summaryResp.value.data)
+          ? summaryResp.value.data
+          : []
+      );
+      setRptRows(
+        rptResp.status === "fulfilled" && Array.isArray(rptResp.value.data)
+          ? rptResp.value.data
+          : []
+      );
+      setGfRows(
+        gfResp.status === "fulfilled" && Array.isArray(gfResp.value.data)
+          ? gfResp.value.data
+          : []
+      );
+      setTfRows(
+        tfResp.status === "fulfilled" && Array.isArray(tfResp.value.data)
+          ? tfResp.value.data
+          : []
+      );
+      setCedulaRows(
+        cedulaResp.status === "fulfilled" && Array.isArray(cedulaResp.value.data)
+          ? cedulaResp.value.data
+          : []
+      );
+      setCalendarEvents(
+        calendarResp.status === "fulfilled" && Array.isArray(calendarResp.value.data)
+          ? calendarResp.value.data
+          : []
+      );
+
+      if (responses.some((item) => item.status === "rejected")) {
+        setFetchError("Some dashboard feeds could not be loaded. Showing available data.");
+      }
     } catch (error) {
       console.error("Dashboard fetch failed", error);
       setData([]);
+      setRptRows([]);
+      setGfRows([]);
+      setTfRows([]);
+      setCedulaRows([]);
+      setCalendarEvents([]);
+      setFetchError("Dashboard data could not be loaded.");
     } finally {
       setLoading(false);
     }
@@ -525,14 +942,48 @@ function DashboardHome() {
     const selectedYear = Number(year);
 
     return data.filter((row) => {
-      const rawDate = row?.date ? new Date(row.date) : null;
-      if (!rawDate || Number.isNaN(rawDate.getTime())) return false;
+      const rawDate = getRowDate(row);
+      if (!rawDate) return false;
       return (
         rawDate.getMonth() === monthIndex &&
         rawDate.getFullYear() === selectedYear
       );
     });
-  }, [data, month, year]);
+  }, [data, getRowDate, month, year]);
+
+  const filterModuleRows = React.useCallback(
+    (rows) => {
+      const monthIndex = Number(month) - 1;
+      const selectedYear = Number(year);
+
+      return rows.filter((row) => {
+        const rawDate = getRowDate(row);
+        if (!rawDate) return false;
+        return (
+          rawDate.getMonth() === monthIndex &&
+          rawDate.getFullYear() === selectedYear
+        );
+      });
+    },
+    [getRowDate, month, year]
+  );
+
+  const filteredRptRows = React.useMemo(
+    () => filterModuleRows(rptRows),
+    [filterModuleRows, rptRows]
+  );
+  const filteredGfRows = React.useMemo(
+    () => filterModuleRows(gfRows),
+    [filterModuleRows, gfRows]
+  );
+  const filteredTfRows = React.useMemo(
+    () => filterModuleRows(tfRows),
+    [filterModuleRows, tfRows]
+  );
+  const filteredCedulaRows = React.useMemo(
+    () => filterModuleRows(cedulaRows),
+    [cedulaRows, filterModuleRows]
+  );
 
   const overview = React.useMemo(() => {
     const totals = filteredRows.reduce(
@@ -580,10 +1031,155 @@ function DashboardHome() {
     [filteredRows]
   );
 
-  const recentRows = React.useMemo(
-    () => filteredRows.slice(-6).reverse(),
-    [filteredRows]
+  const collectorSnapshot = React.useMemo(() => {
+    const today = new Date();
+    const allRows = [
+      ...rptRows.map((row) => ({
+        date: row.date,
+        collector: row.cashier || "Unassigned",
+        amount: Number(row.gf_total || 0),
+      })),
+      ...cedulaRows.map((row) => ({
+        date: row.DATE,
+        collector: row.CASHIER || "Unassigned",
+        amount: Number(row.TOTALAMOUNTPAID || row.TOTAL || 0),
+      })),
+      ...gfRows.map((row) => ({
+        date: row.date,
+        collector: row.cashier || "Treasury Staff",
+        amount: Number(row.total || 0),
+      })),
+      ...tfRows.map((row) => ({
+        date: row.DATE || row.date,
+        collector: row.CASHIER || "Treasury Staff",
+        amount: Number(row.TOTAL || row.total || 0),
+      })),
+    ];
+
+    const grouped = allRows.reduce((acc, row) => {
+      const rowDate = getRowDate(row);
+      if (
+        !rowDate ||
+        rowDate.getDate() !== today.getDate() ||
+        rowDate.getMonth() !== today.getMonth() ||
+        rowDate.getFullYear() !== today.getFullYear()
+      ) {
+        return acc;
+      }
+
+      const key = row.collector;
+      if (!acc[key]) {
+        acc[key] = { collector: key, receiptCount: 0, total: 0 };
+      }
+      acc[key].receiptCount += 1;
+      acc[key].total += Number(row.amount || 0);
+      return acc;
+    }, {});
+
+    return Object.values(grouped).sort((a, b) => b.total - a.total).slice(0, 5);
+  }, [cedulaRows, getRowDate, gfRows, rptRows, tfRows]);
+
+  const topBarangays = React.useMemo(() => {
+    const grouped = filteredRptRows.reduce((acc, row) => {
+      const barangay = row.barangay || "Unassigned";
+      if (!acc[barangay]) {
+        acc[barangay] = { label: barangay, amount: 0, receipts: 0 };
+      }
+      acc[barangay].amount += Number(row.gf_total || 0);
+      acc[barangay].receipts += 1;
+      return acc;
+    }, {});
+
+    return Object.values(grouped).sort((a, b) => b.amount - a.amount).slice(0, 5);
+  }, [filteredRptRows]);
+
+  const recentTransactions = React.useMemo(() => {
+    return filteredRows
+      .slice(-8)
+      .reverse()
+      .map((row, index) => ({
+        ...row,
+        id: `${row.date}-${index}`,
+        module: "Daily Summary",
+        collector: "Treasury Summary",
+        reference: row.date,
+        detail: `RPT: PHP ${formatCurrency(row.rpt)} | CTC: PHP ${formatCurrency(
+          row.ctc
+        )} | GF+TF: PHP ${formatCurrency(row.gfAndTf)}`,
+        amount: Number(row.rcdTotal || 0),
+      }));
+  }, [filteredRows, formatCurrency]);
+
+  const moduleHealth = React.useMemo(
+    () => [
+      {
+        label: "RPT Rows",
+        count: filteredRptRows.length,
+        total: filteredRptRows.reduce(
+          (sum, row) => sum + Number(row.gf_total || 0),
+          0
+        ),
+      },
+      {
+        label: "Cedula Rows",
+        count: filteredCedulaRows.length,
+        total: filteredCedulaRows.reduce(
+          (sum, row) => sum + Number(row.TOTALAMOUNTPAID || row.TOTAL || 0),
+          0
+        ),
+      },
+      {
+        label: "GF Rows",
+        count: filteredGfRows.length,
+        total: filteredGfRows.reduce((sum, row) => sum + Number(row.total || 0), 0),
+      },
+      {
+        label: "TF Rows",
+        count: filteredTfRows.length,
+        total: filteredTfRows.reduce(
+          (sum, row) => sum + Number(row.TOTAL || row.total || 0),
+          0
+        ),
+      },
+    ],
+    [filteredCedulaRows, filteredGfRows, filteredRptRows, filteredTfRows]
   );
+
+  const upcomingEvents = React.useMemo(() => {
+    const now = new Date();
+    const cutoff = new Date();
+    cutoff.setDate(cutoff.getDate() + 14);
+
+    return calendarEvents
+      .filter((event) => {
+        const start = event?.start ? new Date(event.start) : null;
+        return start && !Number.isNaN(start.getTime()) && start >= now && start <= cutoff;
+      })
+      .sort((a, b) => new Date(a.start) - new Date(b.start))
+      .slice(0, 5);
+  }, [calendarEvents]);
+
+  const notifications = React.useMemo(
+    () =>
+      buildDashboardNotifications({
+        summaryRows: filteredRows,
+        calendarRows: upcomingEvents,
+        fetchError,
+        formatCurrency,
+        formatDate,
+      }),
+    [fetchError, filteredRows, formatCurrency, formatDate, upcomingEvents]
+  );
+
+  const monthlyTarget = React.useMemo(
+    () => Number(localStorage.getItem("incomeTarget") || 0),
+    []
+  );
+
+  const targetProgress = React.useMemo(() => {
+    if (!monthlyTarget) return 0;
+    return Math.min((overview.rcdTotal / monthlyTarget) * 100, 100);
+  }, [monthlyTarget, overview.rcdTotal]);
 
   const exportCsv = () => {
     const rows = filteredRows;
@@ -608,7 +1204,7 @@ function DashboardHome() {
       subtitle: `${overview.activeDays} active collection day${
         overview.activeDays === 1 ? "" : "s"
       }`,
-      icon: <AssessmentIcon sx={{ color: "#0f2747" }} />,
+      icon: <AssessmentRoundedIcon sx={{ color: "#0f2747" }} />,
       accent: "#0f2747",
       bg: "linear-gradient(135deg, #ffffff 0%, #eef3fb 100%)",
     },
@@ -616,7 +1212,7 @@ function DashboardHome() {
       title: "Real Property Tax",
       value: `PHP ${formatCurrency(overview.rpt)}`,
       subtitle: "Filtered RPT collection",
-      icon: <ReceiptIcon sx={{ color: "#0f6b62" }} />,
+      icon: <ReceiptLongRoundedIcon sx={{ color: "#0f6b62" }} />,
       accent: "#0f6b62",
       bg: "linear-gradient(135deg, #ffffff 0%, #eef9f7 100%)",
     },
@@ -624,7 +1220,7 @@ function DashboardHome() {
       title: "Cedula",
       value: `PHP ${formatCurrency(overview.ctc)}`,
       subtitle: "Filtered CTC collection",
-      icon: <AssignmentIndIcon sx={{ color: "#7a4b00" }} />,
+      icon: <AssignmentIndRoundedIcon sx={{ color: "#7a4b00" }} />,
       accent: "#a66700",
       bg: "linear-gradient(135deg, #ffffff 0%, #fff6e8 100%)",
     },
@@ -657,6 +1253,45 @@ function DashboardHome() {
           boxShadow: "0 8px 22px rgba(15,39,71,0.06)",
         }}
       >
+        <Stack
+          direction={{ xs: "column", md: "row" }}
+          justifyContent="space-between"
+          alignItems={{ xs: "flex-start", md: "center" }}
+          spacing={1.5}
+          sx={{ mb: 2 }}
+        >
+          <Stack direction="row" spacing={1} flexWrap="wrap">
+            <Chip
+              label={`Logged in as: ${authUser?.username || "Treasury Staff"}`}
+              sx={{
+                bgcolor: "#eef4fb",
+                border: "1px solid #d9e2ec",
+                color: "#102a43",
+                fontWeight: 700,
+              }}
+            />
+            <Chip
+              label={`Role: ${authUser?.role || "Staff"}`}
+              sx={{
+                bgcolor: "#f8fbff",
+                border: "1px solid #d9e2ec",
+                color: "#486581",
+                fontWeight: 700,
+              }}
+            />
+            <Chip
+              label={`Last login: ${lastLoginAt ? formatDate(lastLoginAt) : "Not recorded"}`}
+              sx={{
+                bgcolor: "#f8fbff",
+                border: "1px solid #d9e2ec",
+                color: "#486581",
+                fontWeight: 700,
+              }}
+            />
+          </Stack>
+
+        </Stack>
+
         <Grid container spacing={2} alignItems="stretch">
           <Grid item xs={12} lg={7}>
             <Box>
@@ -673,13 +1308,14 @@ function DashboardHome() {
                 variant="body2"
                 sx={{ color: "#627d98", mt: 1.2, maxWidth: 680 }}
               >
-                Review filtered totals, collection activity, and exception items
-                from the existing treasury reporting feed.
+                Review filtered totals, collection activity, exceptions,
+                notifications, and treasury follow-up items from the live
+                reporting feeds.
               </Typography>
 
               <Box sx={{ mt: 1.8, display: "flex", gap: 1, flexWrap: "wrap" }}>
                 <Chip
-                  icon={<CalendarMonthIcon />}
+                  icon={<CalendarMonthRoundedIcon />}
                   label={`${months[month - 1]} ${year}`}
                   size="small"
                   sx={{
@@ -707,6 +1343,35 @@ function DashboardHome() {
                     border: "1px solid #d9e2ec",
                   }}
                 />
+              </Box>
+
+              <Box sx={{ mt: 1.8, display: "flex", gap: 1, flexWrap: "wrap" }}>
+                {[
+                  { label: "Open RPT", path: "/my-app/real-property-tax" },
+                  { label: "Open GF", path: "/my-app/general-fund" },
+                  { label: "Open TF", path: "/my-app/trust-fund" },
+                  { label: "Open Cedula", path: "/my-app/community-tax-certificate" },
+                  { label: "Open Full Report", path: "/my-app/full-report" },
+                  { label: "Open Calendar", path: "/my-app/calendar" },
+                ].map((action) => (
+                  <Button
+                    key={action.path}
+                    variant="outlined"
+                    size="small"
+                    onClick={() => navigate(action.path)}
+                    sx={{
+                      color: "#334e68",
+                      borderColor: "#bcccdc",
+                      fontWeight: 700,
+                      "&:hover": {
+                        borderColor: "#829ab1",
+                        bgcolor: "#ffffff",
+                      },
+                    }}
+                  >
+                    {action.label}
+                  </Button>
+                ))}
               </Box>
             </Box>
           </Grid>
@@ -805,6 +1470,22 @@ function DashboardHome() {
                   }}
                 >
                   Export CSV
+                </Button>
+
+                <Button
+                  variant="outlined"
+                  startIcon={<PrintRoundedIcon />}
+                  onClick={() => window.print()}
+                  sx={{
+                    color: "#334e68",
+                    borderColor: "#bcccdc",
+                    "&:hover": {
+                      borderColor: "#829ab1",
+                      bgcolor: "#ffffff",
+                    },
+                  }}
+                >
+                  Print
                 </Button>
               </Box>
 
@@ -947,6 +1628,148 @@ function DashboardHome() {
           </Paper>
         </Grid>
 
+        <Grid item xs={12} md={4}>
+          <Paper
+            sx={{
+              p: 2.5,
+              borderRadius: 3,
+              border: "1px solid #d9e2ec",
+              boxShadow: "0 6px 18px rgba(15,39,71,0.05)",
+              height: "100%",
+            }}
+          >
+            <Typography variant="h6" sx={{ fontWeight: 800, mb: 0.5 }}>
+              Today's Collector Snapshot
+            </Typography>
+            <Typography variant="body2" color="text.secondary" sx={{ mb: 2 }}>
+              Receipt count and total collections per collector for today.
+            </Typography>
+
+            {collectorSnapshot.length === 0 ? (
+              <Typography variant="body2" color="text.secondary">
+                No collector activity recorded today.
+              </Typography>
+            ) : (
+              <Box sx={{ display: "grid", gap: 1.2 }}>
+                {collectorSnapshot.map((collector) => (
+                  <Box
+                    key={collector.collector}
+                    sx={{
+                      p: 1.4,
+                      borderRadius: 2,
+                      bgcolor: "#f8fbff",
+                      border: "1px solid #d9e2ec",
+                    }}
+                  >
+                    <Typography variant="subtitle2" sx={{ fontWeight: 800 }}>
+                      {collector.collector}
+                    </Typography>
+                    <Typography variant="body2" color="text.secondary" sx={{ mt: 0.5 }}>
+                      {collector.receiptCount} receipt{collector.receiptCount === 1 ? "" : "s"}
+                    </Typography>
+                    <Typography variant="body2" sx={{ mt: 0.6, fontWeight: 700 }}>
+                      PHP {formatCurrency(collector.total)}
+                    </Typography>
+                  </Box>
+                ))}
+              </Box>
+            )}
+          </Paper>
+        </Grid>
+
+        <Grid item xs={12} md={4}>
+          <Paper
+            sx={{
+              p: 2.5,
+              borderRadius: 3,
+              border: "1px solid #d9e2ec",
+              boxShadow: "0 6px 18px rgba(15,39,71,0.05)",
+              height: "100%",
+            }}
+          >
+            <Typography variant="h6" sx={{ fontWeight: 800, mb: 0.5 }}>
+              Top Barangay / Revenue Source
+            </Typography>
+            <Typography variant="body2" color="text.secondary" sx={{ mb: 2 }}>
+              Highest RPT collection barangays for the selected period.
+            </Typography>
+
+            {topBarangays.length === 0 ? (
+              <Typography variant="body2" color="text.secondary">
+                No barangay collection data found for this period.
+              </Typography>
+            ) : (
+              <Box sx={{ display: "grid", gap: 1.2 }}>
+                {topBarangays.map((row) => (
+                  <Box
+                    key={row.label}
+                    sx={{
+                      p: 1.4,
+                      borderRadius: 2,
+                      bgcolor: "#f8fbff",
+                      border: "1px solid #d9e2ec",
+                    }}
+                  >
+                    <Typography variant="subtitle2" sx={{ fontWeight: 800 }}>
+                      {row.label}
+                    </Typography>
+                    <Typography variant="body2" color="text.secondary" sx={{ mt: 0.5 }}>
+                      {row.receipts} receipt{row.receipts === 1 ? "" : "s"}
+                    </Typography>
+                    <Typography variant="body2" sx={{ mt: 0.6, fontWeight: 700 }}>
+                      PHP {formatCurrency(row.amount)}
+                    </Typography>
+                  </Box>
+                ))}
+              </Box>
+            )}
+          </Paper>
+        </Grid>
+
+        <Grid item xs={12} md={4}>
+          <Paper
+            sx={{
+              p: 2.5,
+              borderRadius: 3,
+              border: "1px solid #d9e2ec",
+              boxShadow: "0 6px 18px rgba(15,39,71,0.05)",
+              height: "100%",
+            }}
+          >
+            <Typography variant="h6" sx={{ fontWeight: 800, mb: 0.5 }}>
+              Monthly Progress vs Target
+            </Typography>
+            <Typography variant="body2" color="text.secondary" sx={{ mb: 2 }}>
+              Selected period collections compared with the configured target.
+            </Typography>
+
+            <Typography variant="body2" sx={{ color: "#486581" }}>
+              Current Collection
+            </Typography>
+            <Typography variant="h5" sx={{ fontWeight: 800, mt: 0.4 }}>
+              PHP {formatCurrency(overview.rcdTotal)}
+            </Typography>
+
+            <Typography variant="body2" sx={{ color: "#486581", mt: 1.8 }}>
+              Monthly Target
+            </Typography>
+            <Typography variant="subtitle1" sx={{ fontWeight: 800, mt: 0.4 }}>
+              {monthlyTarget ? `PHP ${formatCurrency(monthlyTarget)}` : "No target configured"}
+            </Typography>
+
+            <LinearProgress
+              variant={monthlyTarget ? "determinate" : "indeterminate"}
+              value={targetProgress}
+              sx={{ mt: 2, height: 10, borderRadius: 10, bgcolor: "#eef4fb" }}
+            />
+            <Typography variant="body2" color="text.secondary" sx={{ mt: 1 }}>
+              {monthlyTarget
+                ? `${formatCurrency(targetProgress)}% of target reached`
+                : "Set localStorage incomeTarget to enable fixed target tracking."}
+            </Typography>
+          </Paper>
+        </Grid>
+
         <Grid item xs={12} lg={7}>
           <Paper
             sx={{
@@ -958,21 +1781,21 @@ function DashboardHome() {
             }}
           >
             <Typography variant="h6" sx={{ fontWeight: 800, mb: 0.5 }}>
-              Recent Collection Activity
+              Recent Transactions Feed
             </Typography>
             <Typography variant="body2" color="text.secondary" sx={{ mb: 2 }}>
-              Latest reporting days from the selected month and year.
+              Latest RPT, Cedula, GF, and TF entries from the selected reporting period.
             </Typography>
 
-            {recentRows.length === 0 ? (
+            {recentTransactions.length === 0 ? (
               <Typography variant="body2" color="text.secondary">
-                No collection entries found for this reporting period.
+                No recent transactions found for this reporting period.
               </Typography>
             ) : (
               <Box sx={{ display: "grid", gap: 1.2 }}>
-                {recentRows.map((row) => (
+                {recentTransactions.map((row) => (
                   <Box
-                    key={row.date}
+                    key={row.id}
                     sx={{
                       p: 1.5,
                       borderRadius: 2,
@@ -986,7 +1809,7 @@ function DashboardHome() {
                   >
                     <Box>
                       <Typography variant="subtitle2" sx={{ fontWeight: 800 }}>
-                        {row.date}
+                        {formatDate(row.date)}
                       </Typography>
                       <Typography variant="body2" color="text.secondary">
                         RPT: PHP {formatCurrency(row.rpt)} • CTC: PHP{" "}
@@ -1020,10 +1843,10 @@ function DashboardHome() {
             }}
           >
             <Typography variant="h6" sx={{ fontWeight: 800, mb: 0.5 }}>
-              Operations Summary
+              Pending Exceptions and Alerts
             </Typography>
             <Typography variant="body2" color="text.secondary" sx={{ mb: 2 }}>
-              Key review items from the selected reporting period.
+              Due from balances, missing remarks, system notices, and upcoming deadlines.
             </Typography>
 
             <Box
@@ -1060,20 +1883,18 @@ function DashboardHome() {
                 variant="body2"
                 sx={{ fontWeight: 700, color: "#102a43" }}
               >
-                Best Collection Day
+                Notifications
               </Typography>
               <Typography variant="body2" color="text.secondary" sx={{ mt: 0.6 }}>
-                {overview.bestCollectionDay
-                  ? `${overview.bestCollectionDay.date} | PHP ${formatCurrency(
-                      overview.bestCollectionDay.rcdTotal
-                    )}`
-                  : "No recorded collections for this period"}
+                {notifications.length
+                  ? `${notifications.length} active notice(s) for follow-up`
+                  : "No active notifications"}
               </Typography>
             </Box>
 
-            {attentionItems.length === 0 ? (
+            {attentionItems.length === 0 && upcomingEvents.length === 0 && !fetchError ? (
               <Typography variant="body2" color="text.secondary">
-                No remarks or due-from alerts for this reporting period.
+                No remarks, due-from alerts, or upcoming schedule items for this reporting period.
               </Typography>
             ) : (
               <Box sx={{ display: "grid", gap: 1.2 }}>
@@ -1098,11 +1919,138 @@ function DashboardHome() {
                     </Typography>
                   </Box>
                 ))}
+                {upcomingEvents.slice(0, 2).map((event) => (
+                  <Box
+                    key={`upcoming-${event.id}`}
+                    sx={{
+                      p: 1.4,
+                      borderRadius: 2,
+                      bgcolor: "#eef7ff",
+                      border: "1px solid #cfe0f3",
+                    }}
+                  >
+                    <Typography variant="subtitle2" sx={{ fontWeight: 800 }}>
+                      {event.title}
+                    </Typography>
+                    <Typography variant="body2" color="text.secondary" sx={{ mt: 0.5 }}>
+                      {formatDate(event.start)} • {event.category || "Calendar"}
+                    </Typography>
+                  </Box>
+                ))}
+                {fetchError ? (
+                  <Box
+                    sx={{
+                      p: 1.4,
+                      borderRadius: 2,
+                      bgcolor: "#fff1f0",
+                      border: "1px solid #f0c3bf",
+                    }}
+                  >
+                    <Typography variant="subtitle2" sx={{ fontWeight: 800, color: "#b42318" }}>
+                      System Alert
+                    </Typography>
+                    <Typography variant="body2" sx={{ mt: 0.6, color: "#7a271a" }}>
+                      {fetchError}
+                    </Typography>
+                  </Box>
+                ) : null}
               </Box>
             )}
           </Paper>
         </Grid>
+
+        <Grid item xs={12} md={6}>
+          <Paper
+            sx={{
+              p: 2.5,
+              borderRadius: 3,
+              border: "1px solid #d9e2ec",
+              boxShadow: "0 6px 18px rgba(15,39,71,0.05)",
+              height: "100%",
+            }}
+          >
+            <Typography variant="h6" sx={{ fontWeight: 800, mb: 0.5 }}>
+              Upcoming Schedule / Deadline Widget
+            </Typography>
+            <Typography variant="body2" color="text.secondary" sx={{ mb: 2 }}>
+              Upcoming holidays, office reminders, and calendar-based treasury notices.
+            </Typography>
+
+            {upcomingEvents.length === 0 ? (
+              <Typography variant="body2" color="text.secondary">
+                No upcoming calendar events in the next 14 days.
+              </Typography>
+            ) : (
+              <Box sx={{ display: "grid", gap: 1.2 }}>
+                {upcomingEvents.map((event) => (
+                  <Box
+                    key={event.id}
+                    sx={{
+                      p: 1.4,
+                      borderRadius: 2,
+                      bgcolor: "#f8fbff",
+                      border: "1px solid #d9e2ec",
+                    }}
+                  >
+                    <Typography variant="subtitle2" sx={{ fontWeight: 800 }}>
+                      {event.title}
+                    </Typography>
+                    <Typography variant="body2" color="text.secondary" sx={{ mt: 0.5 }}>
+                      {formatDate(event.start)} • {event.category || "Calendar"}
+                    </Typography>
+                  </Box>
+                ))}
+              </Box>
+            )}
+          </Paper>
+        </Grid>
+
+        <Grid item xs={12} md={6}>
+          <Paper
+            sx={{
+              p: 2.5,
+              borderRadius: 3,
+              border: "1px solid #d9e2ec",
+              boxShadow: "0 6px 18px rgba(15,39,71,0.05)",
+              height: "100%",
+            }}
+          >
+            <Typography variant="h6" sx={{ fontWeight: 800, mb: 0.5 }}>
+              Module Health Cards
+            </Typography>
+            <Typography variant="body2" color="text.secondary" sx={{ mb: 2 }}>
+              Quick record counts and totals for the selected month and year.
+            </Typography>
+
+            <Grid container spacing={1.5}>
+              {moduleHealth.map((item) => (
+                <Grid item xs={12} sm={6} key={item.label}>
+                  <Paper
+                    sx={{
+                      p: 1.5,
+                      borderRadius: 2,
+                      bgcolor: "#f8fbff",
+                      border: "1px solid #d9e2ec",
+                      boxShadow: "none",
+                    }}
+                  >
+                    <Typography variant="body2" sx={{ color: "#486581", fontWeight: 700 }}>
+                      {item.label}
+                    </Typography>
+                    <Typography variant="h6" sx={{ mt: 0.5, fontWeight: 800 }}>
+                      {item.count}
+                    </Typography>
+                    <Typography variant="body2" color="text.secondary" sx={{ mt: 0.4 }}>
+                      PHP {formatCurrency(item.total)}
+                    </Typography>
+                  </Paper>
+                </Grid>
+              ))}
+            </Grid>
+          </Paper>
+        </Grid>
       </Grid>
+
     </Box>
   );
 }

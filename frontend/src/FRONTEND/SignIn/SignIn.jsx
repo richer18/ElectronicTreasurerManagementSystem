@@ -113,11 +113,21 @@ export default function SignIn() {
     };
 
     try {
-      await axios.post(`${process.env.REACT_APP_API_URL}login`, payload);
+      const response = await axios.post(
+        `${process.env.REACT_APP_API_URL}login`,
+        payload
+      );
       localStorage.setItem("isAuthenticated", "true");
+      if (response?.data?.user) {
+        localStorage.setItem("authUser", JSON.stringify(response.data.user));
+      } else {
+        localStorage.removeItem("authUser");
+      }
+      localStorage.setItem("lastLoginAt", new Date().toISOString());
       navigate("/my-app");
     } catch (error) {
       localStorage.removeItem("isAuthenticated");
+      localStorage.removeItem("authUser");
       setLoginError(error.response?.data?.message || "Invalid credentials. Please try again.");
       console.error(error);
     } finally {
