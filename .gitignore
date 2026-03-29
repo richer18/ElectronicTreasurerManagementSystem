@@ -2,7 +2,9 @@ my-app/
 treasurer_management_app.sql
 /backend/storage/logs/
 /backend/storage/*.log
-/run_file/
+/run_file/RUN__STOP_SERVER/
+/run_file/GITHUB_UPDATES/
+/run_file/RESET_NODE_MODULES/
 /.tools/
 /.python-packages/
 /.db-working-copy/
