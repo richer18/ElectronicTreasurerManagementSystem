@@ -285,6 +285,7 @@ Route::get('/viewDailyCollectionDetailsCedula', [CommunityTaxCertificateViewDail
 Route::get('/getCedulaComments/{date}', [CommunityTaxCertificateGetCedulaCommentsController::class, 'show']);
 Route::get('/commentCedulaCounts', [CommunityTaxCertificateCommentCedulaCountsController::class, 'index']);
 Route::get('/cedulaSummaryCollectionDataReport', [CommunityTaxCertificateSummaryCollectionDataReportController::class, 'index']);
+Route::get('/cedula/monthly', [CommunityTaxCertificateSummaryCollectionDataReportController::class, 'monthlyTrend']);
 Route::post('/saveCedulaData', [CommunityTaxCertificateSaveCedulaDataController::class, 'store']);
 Route::put('/updateCedulaData/{ctcno}', [CommunityTaxCertificateUpdateCedulaDataController::class, 'update']);
 

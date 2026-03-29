@@ -1605,7 +1605,7 @@ function DashboardHome() {
             >
               Tax Collection Trend
             </Typography>
-            <TaxCollected />
+            <TaxCollected year={year} />
           </Paper>
         </Grid>
         <Grid item xs={12} md={6}>
@@ -1624,7 +1624,7 @@ function DashboardHome() {
             >
               Cedula Collection Trend
             </Typography>
-            <CedulaCollected />
+            <CedulaCollected year={year} />
           </Paper>
         </Grid>
 

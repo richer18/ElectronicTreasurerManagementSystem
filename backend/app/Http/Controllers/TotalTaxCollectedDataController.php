@@ -7,35 +7,53 @@ use Illuminate\Support\Facades\DB;
 
 class TotalTaxCollectedDataController extends Controller
 {
-    public function monthlyData()
+    public function monthlyData(Request $request)
     {
         $months = range(1, 12);
-        $year = 2025;
+        $year = (int) $request->query('year', now()->year);
 
         $result = collect($months)->map(function ($month) use ($year) {
-            $cedula = DB::table('cedula')
+            $cedula = DB::table('communitytaxcertificate')
                 ->whereYear('DATEISSUED', $year)
                 ->whereMonth('DATEISSUED', $month)
                 ->sum('TOTALAMOUNTPAID');
 
-            $general = DB::table('general_fund_data')
-                ->whereYear('date', $year)
-                ->whereMonth('date', $month)
-                ->sum('total');
+            $general = DB::table('payment as p')
+                ->join('paymentdetail as pd', 'pd.PAYMENT_ID', '=', 'p.PAYMENT_ID')
+                ->whereYear('p.PAYMENTDATE', $year)
+                ->whereMonth('p.PAYMENTDATE', $month)
+                ->where('pd.FUNDTYPE_CT', 'GF')
+                ->where(function ($query) {
+                    $query->whereNull('p.VOID_BV')->orWhere('p.VOID_BV', 0);
+                })
+                ->whereNotIn('p.AFTYPE', ['CTC', 'AF56'])
+                ->where(function ($query) {
+                    $query->whereNull('pd.STATUS_CT')->orWhere('pd.STATUS_CT', '<>', 'CNL');
+                })
+                ->sum('pd.AMOUNTPAID');
 
-            $real = DB::table('real_property_tax_data')
-                ->whereYear('date', $year)
-                ->whereMonth('date', $month)
-                ->sum('total');
-
-            $trust = DB::table('trust_fund_data')
+            $real = DB::table('real_property_tax_payment')
                 ->whereYear('DATE', $year)
                 ->whereMonth('DATE', $month)
-                ->sum('TOTAL');
+                ->sum('BASIC_AND_SEF');
+
+            $trust = DB::table('payment as p')
+                ->join('paymentdetail as pd', 'pd.PAYMENT_ID', '=', 'p.PAYMENT_ID')
+                ->whereYear('p.PAYMENTDATE', $year)
+                ->whereMonth('p.PAYMENTDATE', $month)
+                ->where('pd.FUNDTYPE_CT', 'TF')
+                ->where(function ($query) {
+                    $query->whereNull('p.VOID_BV')->orWhere('p.VOID_BV', 0);
+                })
+                ->whereNotIn('p.AFTYPE', ['CTC', 'AF56'])
+                ->where(function ($query) {
+                    $query->whereNull('pd.STATUS_CT')->orWhere('pd.STATUS_CT', '<>', 'CNL');
+                })
+                ->sum('pd.AMOUNTPAID');
 
             return [
                 'month' => date('M', mktime(0, 0, 0, $month, 1)),
-                'value' => $cedula + $general + $real + $trust,
+                'value' => (float) round($cedula + $general + $real + $trust, 2),
             ];
         });
 

@@ -1,16 +1,10 @@
 import AccountBalanceIcon from "@mui/icons-material/AccountBalance";
-import {
-  Box,
-  Card,
-  Fade,
-  Skeleton,
-  Typography,
-  useMediaQuery,
-  useTheme,
-} from "@mui/material";
-import { SparkLineChart } from "@mui/x-charts";
-import { animated, useSpring } from "@react-spring/web";
-import { useEffect, useState } from "react";
+import CalendarMonthRoundedIcon from "@mui/icons-material/CalendarMonthRounded";
+import TrendingUpRoundedIcon from "@mui/icons-material/TrendingUpRounded";
+import { Box, Chip, Fade, Skeleton, Typography } from "@mui/material";
+import { LineChart } from "@mui/x-charts";
+import PropTypes from "prop-types";
+import { useEffect, useMemo, useState } from "react";
 import axiosInstance from "../../../../api/axiosInstance";
 
 const toNumber = (value) => {
@@ -18,245 +12,252 @@ const toNumber = (value) => {
   return Number.isFinite(parsed) ? parsed : 0;
 };
 
-function TaxCollected() {
-  const [sparkData, setSparkData] = useState([]);
-  const [total, setTotal] = useState(0);
+function TaxCollected({ year }) {
+  const [chartData, setChartData] = useState([]);
   const [loading, setLoading] = useState(true);
-  const theme = useTheme();
-  const isMobile = useMediaQuery(theme.breakpoints.down("sm"));
 
-  const { animatedTotal } = useSpring({
-    from: { animatedTotal: 0 },
-    to: { animatedTotal: total },
-    config: { tension: 100, friction: 24 },
-    reset: true,
-  });
-
-  const months = [
-    "Jan",
-    "Feb",
-    "Mar",
-    "Apr",
-    "May",
-    "Jun",
-    "Jul",
-    "Aug",
-    "Sep",
-    "Oct",
-    "Nov",
-    "Dec",
-  ];
+  const months = useMemo(
+    () => ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"],
+    []
+  );
 
   useEffect(() => {
+    setLoading(true);
     axiosInstance
-      .get("/tax/monthly")
+      .get("/tax/monthly", {
+        params: { year },
+      })
       .then((res) => {
-        const values = res.data.map((item) => toNumber(item?.value));
-        setSparkData(values);
-        setTotal(values.reduce((sum, val) => sum + val, 0));
+        const values = Array.isArray(res.data)
+          ? res.data.map((item) => toNumber(item?.value))
+          : [];
+        setChartData(values);
       })
       .catch((err) => console.error("API error:", err))
       .finally(() => setLoading(false));
-  }, []);
+  }, [year]);
+
+  const total = useMemo(
+    () => chartData.reduce((sum, value) => sum + toNumber(value), 0),
+    [chartData]
+  );
+
+  const average = useMemo(
+    () => (chartData.length ? total / chartData.length : 0),
+    [chartData, total]
+  );
+
+  const peak = useMemo(() => {
+    if (!chartData.length) return { month: "No data", value: 0 };
+    let bestIndex = 0;
+    let bestValue = chartData[0] ?? 0;
+
+    chartData.forEach((value, index) => {
+      if (value > bestValue) {
+        bestValue = value;
+        bestIndex = index;
+      }
+    });
+
+    return {
+      month: months[bestIndex] || "N/A",
+      value: bestValue,
+    };
+  }, [chartData, months]);
 
   return (
-    <Card
+    <Box
       sx={{
-        p: 0,
-        borderRadius: "20px",
-        backgroundColor: "#ffffff",
-        border: "1px solid #e5e8eb",
-        boxShadow: "0 6px 20px rgba(0,0,0,0.05)",
-        color: "#1b1b1b",
-        overflow: "hidden",
-        transition: "all 0.3s ease",
-        width: "100%",
-        "&:hover": {
-          transform: "translateY(-4px)",
-          boxShadow: "0 10px 25px rgba(0,0,0,0.08)",
-        },
+        p: { xs: 2, md: 2.5 },
+        borderRadius: 3,
+        border: "1px solid #d9e2ec",
+        bgcolor: "#ffffff",
+        boxShadow: "0 8px 22px rgba(15,39,71,0.05)",
       }}
     >
-      <Box sx={{ p: isMobile ? 2 : 3 }}>
-        <Box
-          sx={{
-            display: "flex",
-            alignItems: "center",
-            gap: 1.5,
-            mb: 2.5,
-          }}
-        >
+      <Box
+        sx={{
+          display: "flex",
+          justifyContent: "space-between",
+          alignItems: { xs: "flex-start", md: "center" },
+          flexDirection: { xs: "column", md: "row" },
+          gap: 1.5,
+          mb: 2,
+        }}
+      >
+        <Box sx={{ display: "flex", alignItems: "center", gap: 1.2 }}>
           <Box
             sx={{
-              p: 1,
-              borderRadius: "12px",
-              background: "linear-gradient(135deg, #1976d2 0%, #42a5f5 100%)",
-              display: "flex",
-              alignItems: "center",
-              justifyContent: "center",
+              width: 44,
+              height: 44,
+              borderRadius: 2,
+              display: "grid",
+              placeItems: "center",
+              background: "linear-gradient(135deg, #0f4c81 0%, #1976d2 100%)",
             }}
           >
-            <AccountBalanceIcon sx={{ fontSize: 26, color: "#fff" }} />
+            <AccountBalanceIcon sx={{ color: "#fff", fontSize: 22 }} />
           </Box>
-          <Typography
-            variant="h6"
-            sx={{
-              fontWeight: 700,
-              fontSize: isMobile ? "1rem" : "1.3rem",
-              color: "#1b1b1b",
-              letterSpacing: 0.3,
-            }}
-          >
-            Tax Collected
-          </Typography>
+          <Box>
+            <Typography variant="h6" sx={{ fontWeight: 800, color: "#102a43" }}>
+              Tax Collection Trend
+            </Typography>
+            <Typography variant="body2" sx={{ color: "#627d98" }}>
+              Combined collections across RPT, Cedula, General Fund, and Trust Fund
+            </Typography>
+          </Box>
         </Box>
 
-        <Box sx={{ mb: 3 }}>
-          {loading ? (
-            <>
-              <Skeleton
-                width="85%"
-                sx={{ mb: 1, bgcolor: "#f2f4f5", height: 40 }}
-              />
-              <Skeleton width="65%" sx={{ bgcolor: "#f2f4f5", height: 24 }} />
-            </>
-          ) : (
-            <Fade in={!loading} timeout={500}>
-              <Box>
-                <Box
-                  sx={{
-                    display: "flex",
-                    alignItems: "baseline",
-                    gap: 1,
-                    mb: 0.5,
-                  }}
-                >
-                  <Typography
-                    sx={{
-                      fontWeight: 900,
-                      fontSize: isMobile ? "2rem" : "2.8rem",
-                      color: "#1976d2",
-                    }}
-                  >
-                    PHP
-                  </Typography>
-                  <animated.div
-                    style={{
-                      fontSize: isMobile ? "2rem" : "2.8rem",
-                      fontWeight: 800,
-                      color: "#1b1b1b",
-                    }}
-                  >
-                    {animatedTotal.to((x) =>
-                      toNumber(x).toLocaleString("en-PH", {
-                        minimumFractionDigits: 2,
-                        maximumFractionDigits: 2,
-                      })
-                    )}
-                  </animated.div>
-                </Box>
-                <Typography
-                  sx={{
-                    opacity: 0.8,
-                    fontWeight: 500,
-                    fontSize: isMobile ? "0.9rem" : "1rem",
-                    color: "#555",
-                  }}
-                >
-                  Year-to-Date Collection • {new Date().getFullYear()}
-                </Typography>
-              </Box>
-            </Fade>
-          )}
-        </Box>
+        <Chip
+          icon={<CalendarMonthRoundedIcon />}
+          label={`Year ${year}`}
+          sx={{
+            bgcolor: "#eef4fb",
+            color: "#102a43",
+            fontWeight: 700,
+            border: "1px solid #d9e2ec",
+          }}
+        />
+      </Box>
 
+      <Box
+        sx={{
+          display: "grid",
+          gridTemplateColumns: { xs: "1fr", lg: "minmax(0, 2.2fr) minmax(240px, 0.8fr)" },
+          gap: 2,
+          alignItems: "stretch",
+        }}
+      >
         <Box
           sx={{
-            width: "100%",
-            height: 220,
-            mb: 2,
-            p: 1.5,
-            borderRadius: "16px",
-            backgroundColor: "#f9fafb",
-            border: "1px solid #e0e3e7",
+            p: 2,
+            borderRadius: 3,
+            border: "1px solid #d9e2ec",
+            bgcolor: "#fbfdff",
+            minHeight: 360,
+            display: "flex",
+            alignItems: "center",
           }}
         >
           {loading ? (
             <Skeleton
               variant="rectangular"
               width="100%"
-              height="100%"
-              sx={{
-                borderRadius: "16px",
-                bgcolor: "#f2f4f5",
-              }}
+              height={300}
+              sx={{ borderRadius: 2.5, bgcolor: "#eef2f6" }}
             />
           ) : (
-            <Fade in={!loading} timeout={600}>
-              <Box>
-                <SparkLineChart
-                  data={sparkData}
-                  width={isMobile ? 320 : 500}
-                  height={220}
-                  area
-                  showTooltip
-                  showHighlight
-                  xAxis={{
-                    scaleType: "point",
-                    data: months,
-                    valueFormatter: (v) => v,
+            <Fade in={!loading} timeout={350}>
+              <Box sx={{ width: "100%" }}>
+                <LineChart
+                  xAxis={[
+                    {
+                      scaleType: "point",
+                      data: months,
+                    },
+                  ]}
+                  series={[
+                    {
+                      data: chartData,
+                      label: "Tax Collection",
+                      color: "#1565c0",
+                      curve: "monotoneX",
+                      area: true,
+                      showMark: true,
+                      valueFormatter: (value) =>
+                        `PHP ${toNumber(value).toLocaleString("en-PH", {
+                          minimumFractionDigits: 2,
+                          maximumFractionDigits: 2,
+                        })}`,
+                    },
+                  ]}
+                  height={320}
+                  margin={{ top: 24, right: 24, bottom: 24, left: 64 }}
+                  grid={{ horizontal: true }}
+                  slotProps={{
+                    legend: { hidden: true },
                   }}
-                  highlightScope={{ highlighted: "item", faded: "global" }}
-                  color="#1976d2"
-                  areaGradient={{
-                    from: "rgba(25,118,210,0.25)",
-                    to: "rgba(25,118,210,0.05)",
-                  }}
-                  valueFormatter={(val) =>
-                    `PHP ${toNumber(val).toLocaleString("en-PH", {
-                      minimumFractionDigits: 2,
-                      maximumFractionDigits: 2,
-                    })}`
-                  }
-                  margin={{ top: 10, bottom: 20 }}
-                  disableClipping
                 />
               </Box>
             </Fade>
           )}
         </Box>
 
-        <Box
-          sx={{
-            display: "flex",
-            justifyContent: "space-between",
-            alignItems: "center",
-            pt: 2,
-            mt: 2,
-            borderTop: "1px solid #e5e8eb",
-          }}
-        >
-          <Typography
+        <Box sx={{ display: "grid", gap: 1.5 }}>
+          <Box
             sx={{
-              fontSize: "0.85rem",
-              fontWeight: 500,
-              color: "#555",
+              p: 2,
+              borderRadius: 3,
+              background: "linear-gradient(135deg, #0f4c81 0%, #1976d2 100%)",
+              color: "#ffffff",
             }}
           >
-            Monthly Trend
-          </Typography>
-          <Typography
+            <Typography sx={{ fontSize: 13, fontWeight: 700, opacity: 0.9 }}>
+              Total Collection
+            </Typography>
+            <Typography sx={{ mt: 1, fontSize: { xs: 28, md: 34 }, fontWeight: 900 }}>
+              PHP{" "}
+              {toNumber(total).toLocaleString("en-PH", {
+                minimumFractionDigits: 2,
+                maximumFractionDigits: 2,
+              })}
+            </Typography>
+            <Typography sx={{ mt: 0.8, fontSize: 13, opacity: 0.88 }}>
+              Aggregated tax inflow for {year}
+            </Typography>
+          </Box>
+
+          <Box
             sx={{
-              fontSize: "0.75rem",
-              color: "#888",
+              p: 2,
+              borderRadius: 3,
+              border: "1px solid #d9e2ec",
+              bgcolor: "#ffffff",
             }}
           >
-            {new Date().getFullYear()}
-          </Typography>
+            <Box sx={{ display: "flex", alignItems: "center", gap: 1, mb: 1 }}>
+              <TrendingUpRoundedIcon sx={{ color: "#1565c0", fontSize: 20 }} />
+              <Typography sx={{ fontWeight: 800, color: "#102a43" }}>
+                Peak Month
+              </Typography>
+            </Box>
+            <Typography sx={{ fontSize: 22, fontWeight: 800, color: "#102a43" }}>
+              {peak.month}
+            </Typography>
+            <Typography sx={{ mt: 0.4, color: "#486581", fontWeight: 600 }}>
+              PHP {toNumber(peak.value).toLocaleString("en-PH", {
+                minimumFractionDigits: 2,
+                maximumFractionDigits: 2,
+              })}
+            </Typography>
+          </Box>
+
+          <Box
+            sx={{
+              p: 2,
+              borderRadius: 3,
+              border: "1px solid #d9e2ec",
+              bgcolor: "#f8fbff",
+            }}
+          >
+            <Typography sx={{ fontWeight: 800, color: "#102a43", mb: 0.8 }}>
+              Monthly Average
+            </Typography>
+            <Typography sx={{ color: "#486581", fontWeight: 700 }}>
+              PHP {toNumber(average).toLocaleString("en-PH", {
+                minimumFractionDigits: 2,
+                maximumFractionDigits: 2,
+              })}
+            </Typography>
+          </Box>
         </Box>
       </Box>
-    </Card>
+    </Box>
   );
 }
+
+TaxCollected.propTypes = {
+  year: PropTypes.oneOfType([PropTypes.number, PropTypes.string]).isRequired,
+};
 
 export default TaxCollected;
