@@ -1,0 +1,4 @@
+
+Final insert count: 15541
+Duplicates skipped: 0
+MySQL import: success

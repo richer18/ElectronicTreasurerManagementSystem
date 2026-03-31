@@ -8,7 +8,7 @@ import PropTypes from 'prop-types';
 import GeneralFundReport from "../../../../../FRONTEND/components/ABSTRACT/GF/TableData/components/Table/TotalReport";
 
 // Changed component name here
-function GeneralFundDialogPopupTOTAL({ open, onClose }) {
+function GeneralFundDialogPopupTOTAL({ open, onClose, month, year }) {
   return (
     <Dialog open={open} onClose={onClose} maxWidth="md" fullWidth>
       <DialogTitle>
@@ -22,7 +22,7 @@ function GeneralFundDialogPopupTOTAL({ open, onClose }) {
         </div>
       </DialogTitle>
       <DialogContent>
-        <GeneralFundReport/>
+        <GeneralFundReport initialMonth={month} initialYear={year} />
       </DialogContent>
     </Dialog>
   );
@@ -30,8 +30,10 @@ function GeneralFundDialogPopupTOTAL({ open, onClose }) {
 
 // Update propTypes name
 GeneralFundDialogPopupTOTAL.propTypes = {
+  month: PropTypes.string,
   open: PropTypes.bool.isRequired,
   onClose: PropTypes.func.isRequired,
+  year: PropTypes.string,
 };
 
 // Update export name

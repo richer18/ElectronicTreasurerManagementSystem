@@ -10,6 +10,7 @@ import {
   DialogContent,
   DialogTitle,
   IconButton,
+  LinearProgress,
   Menu,
   MenuItem,
   Paper,
@@ -89,7 +90,7 @@ const years = [
 ];
 
 
- const formatDate = (dateInput) => {
+const formatDate = (dateInput) => {
     if (!dateInput) return 'Invalid Date';
     let date;
     if (typeof dateInput === 'string') {
@@ -103,21 +104,37 @@ const years = [
     return format(date, 'MMMM d, yyyy');
   };
 
-function DailyTable({ onDataFiltered, onBack }) {
+const formatAmount = (value) =>
+  Number(value || 0).toLocaleString("en-PH", {
+    minimumFractionDigits: 2,
+    maximumFractionDigits: 2,
+  });
+
+function DailyTable({ onDataFiltered, onBack, month, year }) {
   const [data, setData] = useState([]);
   const [currentRow, setCurrentRow] = useState(null);
   const [anchorEl, setAnchorEl] = useState(null);
-  const [selectedMonth, setSelectedMonth] = useState('');
-  const [selectedYear, setSelectedYear] = useState('');
+  const [selectedMonth, setSelectedMonth] = useState(month || '');
+  const [selectedYear, setSelectedYear] = useState(year || '');
   const [viewOpen, setViewOpen] = useState(false);
   const [viewData, setViewData] = useState([]);
   const [comments, setComments] = useState([]);
   const [commentCounts, setCommentCounts] = useState({});
   const [openCommentDialog, setOpenCommentDialog] = useState(false);
+  const [loading, setLoading] = useState(false);
+
+  useEffect(() => {
+    setSelectedMonth(month || '');
+  }, [month]);
+
+  useEffect(() => {
+    setSelectedYear(year || '');
+  }, [year]);
 
 
   useEffect(() => {
     const fetchData = async () => {
+      setLoading(true);
       try {
         const response = await axios.get("allDataGeneralFund", {
           params: { month: selectedMonth, year: selectedYear },
@@ -130,6 +147,8 @@ function DailyTable({ onDataFiltered, onBack }) {
         }
       } catch (error) {
         console.error("Error fetching data:", error);
+      } finally {
+        setLoading(false);
       }
     };
 
@@ -146,12 +165,13 @@ function DailyTable({ onDataFiltered, onBack }) {
   };
 
   const handleViewClick = () => {
-    if (!currentRow?.DATE) {
+    const selectedDate = currentRow?.raw_date || currentRow?.DATE;
+    if (!selectedDate) {
       console.error("Current row or date is not defined.");
       return;
     }
 
-    const formattedDate = dayjs(currentRow.DATE).format("YYYY-MM-DD");
+    const formattedDate = dayjs(selectedDate).format("YYYY-MM-DD");
     console.log(`Requesting data for date: ${formattedDate}`);
 
     axios
@@ -284,6 +304,7 @@ function DailyTable({ onDataFiltered, onBack }) {
               "& .MuiInputBase-root": { borderRadius: "8px" },
             }}
             onChange={handleMonthChange}
+            value={months.find((option) => option.value === selectedMonth) || null}
             renderInput={(params) => (
               <TextField
                 {...params}
@@ -321,6 +342,7 @@ function DailyTable({ onDataFiltered, onBack }) {
               "& .MuiInputBase-root": { borderRadius: "8px" },
             }}
             onChange={handleYearChange}
+            value={years.find((option) => option.value === selectedYear) || null}
             renderInput={(params) => (
               <TextField
                 {...params}
@@ -354,6 +376,22 @@ function DailyTable({ onDataFiltered, onBack }) {
 
 
       {/* Table display */}
+      <Dialog open={loading} maxWidth="xs" fullWidth>
+        <DialogTitle>Loading Daily Collections</DialogTitle>
+        <DialogContent>
+          <Typography variant="body2" sx={{ mb: 2 }}>
+            Please wait while the daily collections are being loaded.
+          </Typography>
+          <Typography variant="caption" sx={{ display: "block", mb: 1 }}>
+            Loading daily data...
+          </Typography>
+          <LinearProgress
+            variant="indeterminate"
+            sx={{ height: 10, borderRadius: 999 }}
+          />
+        </DialogContent>
+      </Dialog>
+
       <TableContainer
         component={Paper}
         sx={{
@@ -380,20 +418,20 @@ function DailyTable({ onDataFiltered, onBack }) {
         <TableBody>
   {data.map((row, index) => (
     <StyledTableRow key={row.id || row.DATE || index}>
-      <CenteredTableCell>{dayjs(row.DATE).format('MMM D, YYYY')}</CenteredTableCell>
-      <CenteredTableCell>{row['Tax on Business']}</CenteredTableCell>
-      <CenteredTableCell>{row['Regulatory Fees']}</CenteredTableCell>
-      <CenteredTableCell>{row['Receipts From Economic Enterprise']}</CenteredTableCell>
-      <CenteredTableCell>{row['Service/User Charges']}</CenteredTableCell>
-      <CenteredTableCell>{row['Overall Total']}</CenteredTableCell>
+      <CenteredTableCell>{dayjs(row.raw_date || row.DATE).format('MMM D, YYYY')}</CenteredTableCell>
+      <CenteredTableCell>{formatAmount(row['Tax on Business'])}</CenteredTableCell>
+      <CenteredTableCell>{formatAmount(row['Regulatory Fees'])}</CenteredTableCell>
+      <CenteredTableCell>{formatAmount(row['Receipts From Economic Enterprise'])}</CenteredTableCell>
+      <CenteredTableCell>{formatAmount(row['Service/User Charges'])}</CenteredTableCell>
+      <CenteredTableCell>{formatAmount(row['Overall Total'])}</CenteredTableCell>
       <CenteredTableCell>
       <Badge
-  badgeContent={commentCounts[dayjs(row.DATE).format("YYYY-MM-DD")]}
+  badgeContent={commentCounts[dayjs(row.raw_date || row.DATE).format("YYYY-MM-DD")]}
   color="error"
   overlap="circular"
-  invisible={!commentCounts[dayjs(row.DATE).format("YYYY-MM-DD")]}
+  invisible={!commentCounts[dayjs(row.raw_date || row.DATE).format("YYYY-MM-DD")]}
 >
-  <IconButton onClick={() => handleViewComments(dayjs(row.DATE).format("YYYY-MM-DD"))}>
+  <IconButton onClick={() => handleViewComments(dayjs(row.raw_date || row.DATE).format("YYYY-MM-DD"))}>
     <VisibilityIcon color="primary" />
   </IconButton>
 </Badge>
@@ -438,7 +476,7 @@ function DailyTable({ onDataFiltered, onBack }) {
                 <Typography fontWeight="bold">TOTAL</Typography>
               </RightAlignedTableCell>
               <RightAlignedTableCell colSpan={1}>
-                <Typography fontWeight="bold">₱{totalAmount.toFixed(2)}</Typography>
+                <Typography fontWeight="bold">PHP {formatAmount(totalAmount)}</Typography>
               </RightAlignedTableCell>
             </StyledTableRow>
 </TableBody>
@@ -464,7 +502,7 @@ function DailyTable({ onDataFiltered, onBack }) {
   }}
 >
   <Typography variant="h6" component="span">
-    Transaction Details - {dayjs(viewData?.[0]?.date).format("MMMM D, YYYY")}
+    Transaction Details - {dayjs(viewData?.[0]?.date || currentRow?.raw_date || currentRow?.DATE).format("MMMM D, YYYY")}
   </Typography>
   <IconButton onClick={handleViewClose} sx={{ color: "common.white" }}>
     <CloseIcon />
@@ -492,8 +530,10 @@ function DailyTable({ onDataFiltered, onBack }) {
 }
 
 DailyTable.propTypes = {
+  month: PropTypes.string,
   onDataFiltered: PropTypes.func,
   onBack: PropTypes.func.isRequired,
+  year: PropTypes.string,
 };
 
 export default DailyTable;

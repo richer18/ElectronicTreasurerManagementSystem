@@ -2,35 +2,32 @@
 
 namespace App\Http\Controllers;
 
+use App\Helpers\GeneralFundPaymentSummaryHelper;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
-use App\Helpers\QueryHelpers;
+use Illuminate\Support\Facades\Log;
 
 class GeneralFundDataReceiptsFromEconomicEnterprisesTotalController extends Controller
 {
     public function index(Request $request)
     {
         try {
-            $query = DB::table('general_fund_data');
+            $query = DB::table('general_fund_payment as gfp')
+                ->where('gfp.FUNDTYPE_CT', 'GF')
+                ->whereNotIn('gfp.AFTYPE', ['CTC', 'AF56']);
 
-            // Apply your reusable date filters
-            $query = QueryHelpers::addDateFilters($query, $request);
+            GeneralFundPaymentSummaryHelper::applyActiveFilter($query, 'gfp');
+            GeneralFundPaymentSummaryHelper::applyDateFilters($query, $request, 'gfp.PAYMENTDATE');
 
-            // SUM the relevant fields
-            $result = $query->selectRaw('
-                SUM(
-                    Slaughter_House_Fee +
-                    Stall_Fees +
-                    Water_Fees +
-                    Rental_of_Equipment
-                ) AS Receipts_From_Economic_Enterprises
-            ')->first();
+            $result = $query
+                ->selectRaw(GeneralFundPaymentSummaryHelper::mainBucketSelectRaw('gfp'))
+                ->first();
 
             return response()->json([
-                'receipts_from_economic_enterprises' => $result->Receipts_From_Economic_Enterprises ?? 0
+                'receipts_from_economic_enterprises' => $result->receipts_from_economic_enterprises ?? 0
             ]);
         } catch (\Exception $e) {
-            \Log::error('Error fetching Receipts from Economic Enterprises total: ' . $e->getMessage());
+            Log::error('Error fetching Receipts from Economic Enterprises total: ' . $e->getMessage());
             return response()->json(['error' => 'Error fetching data'], 500);
         }
     }

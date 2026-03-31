@@ -9,13 +9,13 @@ use Illuminate\Support\Facades\File;
 class ExportRealPropertyTaxAllDataToJson extends Command
 {
     protected $signature = 'export:rpt-json';
-    protected $description = 'Export real_property_tax_data table to a JSON file';
+    protected $description = 'Export real_property_tax_payment table to a JSON file';
 
     public function handle()
     {
-        $this->info('📦 Exporting real_property_tax_data to JSON...');
+        $this->info('📦 Exporting real_property_tax_payment to JSON...');
 
-        $data = DB::table('real_property_tax_data')->get();
+        $data = DB::table('real_property_tax_payment')->get();
 
         $jsonPath = storage_path('app/public/rpt_data.json');
         File::ensureDirectoryExists(dirname($jsonPath));

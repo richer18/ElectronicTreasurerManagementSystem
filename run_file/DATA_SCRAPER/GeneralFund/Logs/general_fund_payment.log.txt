@@ -1,0 +1,10 @@
+[2026-03-30 12:50:12] Connecting to Firebird: localhost:E:\ZAMBOANGUITA.FDB
+[2026-03-30 12:50:52] Exported 56186 rows to C:\xampp\htdocs\ElectronicTreasurerManagementSystem\run_file\DATA_SCRAPER\GeneralFund\SCRAPE_SAVE\general_fund_payment.sql
+[2026-03-30 12:51:31] Connecting to Firebird: localhost:E:\ZAMBOANGUITA.FDB
+[2026-03-30 12:51:32] Exported 5914 rows to C:\xampp\htdocs\ElectronicTreasurerManagementSystem\run_file\DATA_SCRAPER\GeneralFund\SCRAPE_SAVE\general_fund_payment.sql
+[2026-03-30 12:51:55] Connecting to Firebird: localhost:E:\ZAMBOANGUITA.FDB
+[2026-03-30 12:51:55] Exported 5914 rows to C:\xampp\htdocs\ElectronicTreasurerManagementSystem\run_file\DATA_SCRAPER\GeneralFund\SCRAPE_SAVE\general_fund_payment.sql
+[2026-03-30 16:03:17] Connecting to Firebird: localhost:E:\ZAMBOANGUITA.FDB
+[2026-03-30 16:03:38] Exported 15541 rows to C:\xampp\htdocs\ElectronicTreasurerManagementSystem\run_file\DATA_SCRAPER\GeneralFund\SCRAPE_SAVE\general_fund_payment.sql
+[2026-03-30 16:25:15] Connecting to Firebird: localhost:E:\ZAMBOANGUITA.FDB
+[2026-03-30 16:25:35] Exported 15541 rows to C:\xampp\htdocs\ElectronicTreasurerManagementSystem\run_file\DATA_SCRAPER\GeneralFund\SCRAPE_SAVE\general_fund_payment.sql

@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers;
 
+use App\Helpers\CommunityTaxCertificateQueryHelper;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 
@@ -16,11 +17,13 @@ class CommunityTaxCertificateViewDailyCollectionDetailsCedulaController extends 
         }
 
         try {
-            $rows = DB::table('communitytaxcertificate')
+            $rows = DB::table('community_tax_certificate_payment')
                 ->select([
+                    'id',
                     'DATEISSUED',
                     'CTCNO',
                     'LOCAL_TIN',
+                    'OWNERNAME',
                     'BASICTAXDUE',
                     'BUSTAXDUE',
                     'SALTAXDUE',
@@ -28,25 +31,27 @@ class CommunityTaxCertificateViewDailyCollectionDetailsCedulaController extends 
                     'INTEREST',
                     'TOTALAMOUNTPAID',
                     'USERID',
-                ])
+                ]);
+
+            CommunityTaxCertificateQueryHelper::applyActiveFilter($rows);
+
+            $rows = $rows
                 ->whereDate('DATEISSUED', $date)
                 ->orderBy('CTCNO')
                 ->get();
 
-            $tinMap = DB::table('taxpayer')
-                ->whereIn('LOCAL_TIN', $rows->pluck('LOCAL_TIN')->filter()->unique()->values())
-                ->pluck('OWNERNAME', 'LOCAL_TIN');
-
-            $results = $rows->map(function ($row) use ($tinMap) {
+            $results = $rows->map(function ($row) {
                 $taxDue = (float) ($row->BUSTAXDUE ?? 0)
                     + (float) ($row->SALTAXDUE ?? 0)
                     + (float) ($row->RPTAXDUE ?? 0);
 
                 return [
+                    'id' => $row->id,
                     'DATE' => $row->DATEISSUED,
                     'CTC NO' => $row->CTCNO,
                     'LOCAL' => $row->LOCAL_TIN,
-                    'NAME' => $tinMap[$row->LOCAL_TIN] ?? null,
+                    'NAME' => $row->OWNERNAME,
+                    'OWNERNAME' => $row->OWNERNAME,
                     'BASIC' => (float) ($row->BASICTAXDUE ?? 0),
                     'TAX_DUE' => $taxDue,
                     'INTEREST' => (float) ($row->INTEREST ?? 0),

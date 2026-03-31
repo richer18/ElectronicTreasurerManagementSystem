@@ -97,7 +97,7 @@ const formatDate = (dateInput) => {
   return format(date, "MMMM d, yyyy");
 };
 
-function DailyTable({ onDataFiltered, onBack }) {
+function DailyTable({ onDataFiltered, onBack, initialMonth, initialYear }) {
   const [controller] = useMaterialUIController();
   const { darkMode } = controller;
   const uiColors = useMemo(
@@ -110,8 +110,8 @@ function DailyTable({ onDataFiltered, onBack }) {
   );
   const [data, setData] = useState([]);
   const currentYear = new Date().getFullYear();
-  const [selectedMonth, setSelectedMonth] = useState("");
-  const [selectedYear, setSelectedYear] = useState("");
+  const [selectedMonth, setSelectedMonth] = useState(initialMonth || String(currentYear ? new Date().getMonth() + 1 : ""));
+  const [selectedYear, setSelectedYear] = useState(initialYear || String(currentYear));
   const [anchorEl, setAnchorEl] = useState(null);
   const [viewData, setViewData] = useState([]);
   const [viewOpen, setViewOpen] = useState(false);
@@ -195,12 +195,12 @@ function DailyTable({ onDataFiltered, onBack }) {
 
   // Handle month selection
   const handleMonthChange = (_, value) => {
-    setSelectedMonth(value ? value.value : 1);
+    setSelectedMonth(value ? String(value.value) : String(new Date().getMonth() + 1));
   };
 
   // Handle year selection
   const handleYearChange = (_, value) => {
-    setSelectedYear(value ? value.value : currentYear);
+    setSelectedYear(value ? String(value.value) : String(currentYear));
   };
 
   const handleClick = (event, row) => {
@@ -421,7 +421,10 @@ function DailyTable({ onDataFiltered, onBack }) {
                   "TOTAL",
                 ].map((field) => (
                   <CenteredTableCell key={field}>
-                    {Number(row[field]).toLocaleString()}
+                    {Number(row[field] || 0).toLocaleString("en-US", {
+                      minimumFractionDigits: 2,
+                      maximumFractionDigits: 2,
+                    })}
                   </CenteredTableCell>
                 ))}
 
@@ -491,7 +494,10 @@ function DailyTable({ onDataFiltered, onBack }) {
               </RightAlignedTableCell>
               <RightAlignedTableCell>
                 <Typography fontWeight="bold">
-                  {totalAmount.toFixed(2)}
+                  {totalAmount.toLocaleString("en-US", {
+                    minimumFractionDigits: 2,
+                    maximumFractionDigits: 2,
+                  })}
                 </Typography>
               </RightAlignedTableCell>
             </StyledTableRow>
@@ -552,7 +558,9 @@ function DailyTable({ onDataFiltered, onBack }) {
 }
 
 DailyTable.propTypes = {
-  onDataFiltered: PropTypes.func.isRequired,
+  initialMonth: PropTypes.oneOfType([PropTypes.string, PropTypes.number]),
+  initialYear: PropTypes.oneOfType([PropTypes.string, PropTypes.number]),
+  onDataFiltered: PropTypes.func,
   onBack: PropTypes.func.isRequired,
 };
 

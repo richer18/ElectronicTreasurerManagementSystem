@@ -13,7 +13,7 @@ class RealPropertyTaxDataOverAllTotalBasicAndSEFSharingController extends Contro
     public function index(Request $request)
     {
         try {
-            $landBasicQuery = DB::table(RealPropertyTaxQueryHelper::table())
+            $landBasicQuery = RealPropertyTaxQueryHelper::applyActiveFilter(DB::table(RealPropertyTaxQueryHelper::table()))
                 ->selectRaw('
                     SUM(
                         IFNULL(BASIC_CURRENT_YEAR, 0) - IFNULL(BASIC_DISCOUNTS, 0) +
@@ -32,7 +32,7 @@ class RealPropertyTaxDataOverAllTotalBasicAndSEFSharingController extends Contro
             );
             $landBasic = (array) $landBasicQuery->first();
 
-            $bldgBasicQuery = DB::table(RealPropertyTaxQueryHelper::table())
+            $bldgBasicQuery = RealPropertyTaxQueryHelper::applyActiveFilter(DB::table(RealPropertyTaxQueryHelper::table()))
                 ->selectRaw('
                     SUM(
                         IFNULL(BASIC_CURRENT_YEAR, 0) - IFNULL(BASIC_DISCOUNTS, 0) +
@@ -51,7 +51,7 @@ class RealPropertyTaxDataOverAllTotalBasicAndSEFSharingController extends Contro
             );
             $bldgBasic = (array) $bldgBasicQuery->first();
 
-            $landSEFQuery = DB::table(RealPropertyTaxQueryHelper::table())
+            $landSEFQuery = RealPropertyTaxQueryHelper::applyActiveFilter(DB::table(RealPropertyTaxQueryHelper::table()))
                 ->selectRaw('
                     SUM(
                         IFNULL(SEF_CURRENT_YEAR, 0) - IFNULL(SEF_DISCOUNTS, 0) +
@@ -70,7 +70,7 @@ class RealPropertyTaxDataOverAllTotalBasicAndSEFSharingController extends Contro
             );
             $landSEF = (array) $landSEFQuery->first();
 
-            $bldgSEFQuery = DB::table(RealPropertyTaxQueryHelper::table())
+            $bldgSEFQuery = RealPropertyTaxQueryHelper::applyActiveFilter(DB::table(RealPropertyTaxQueryHelper::table()))
                 ->selectRaw('
                     SUM(
                         IFNULL(SEF_CURRENT_YEAR, 0) - IFNULL(SEF_DISCOUNTS, 0) +

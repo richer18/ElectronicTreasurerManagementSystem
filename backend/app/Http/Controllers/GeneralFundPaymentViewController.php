@@ -9,16 +9,16 @@ class GeneralFundPaymentViewController extends Controller
     public function show(string $paymentId)
     {
         try {
-            $rows = DB::table('payment as p')
-                ->leftJoin('paymentdetail as pd', 'p.PAYMENT_ID', '=', 'pd.PAYMENT_ID')
-                ->leftJoin('t_otherpaymentrate as opr', 'pd.SOURCEID', '=', 'opr.OPRATE_ID')
-                ->where('p.PAYMENT_ID', $paymentId)
+            $rows = DB::table('general_fund_payment')
+                ->where('PAYMENT_ID', $paymentId)
                 ->select([
-                    'p.PAYMENTDATE as DATE',
-                    'p.PAIDBY as NAME',
-                    DB::raw("COALESCE(opr.DESCRIPTION, '') as DESCRIPTION"),
-                    DB::raw('COALESCE(pd.AMOUNTPAID, 0) as AMOUNT'),
+                    'PAYMENTDATE as DATE',
+                    'PAIDBY as NAME',
+                    DB::raw("COALESCE(RATE_DESCRIPTION, '') as DESCRIPTION"),
+                    DB::raw('COALESCE(AMOUNTPAID, 0) as AMOUNT'),
                 ])
+                ->orderByRaw('COALESCE(RECEIPTITEMORDER, 999999)')
+                ->orderBy('PAYMENTDETAIL_ID')
                 ->get();
 
             return response()->json($rows);

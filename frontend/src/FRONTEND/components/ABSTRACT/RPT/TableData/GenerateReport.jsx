@@ -85,7 +85,7 @@ function GenerateReport({ open, onClose }) {
   const [dateType, setDateType] = useState("dateRange");
   const [dateFrom, setDateFrom] = useState(getTodayDate);
   const [dateTo, setDateTo] = useState(getTodayDate);
-  const reportType = "real_property_tax_data";
+  const reportType = "RPT";
   const [cashier, setCashier] = useState("");
   const [data, setData] = useState([]);
   const [page, setPage] = useState(0);
@@ -95,7 +95,7 @@ function GenerateReport({ open, onClose }) {
 
   // ✅ Corrected Cashier Mapping
   const cashierOptionsByReport = {
-    real_property_tax_data: ["angelique", "flora", "ricardo"],
+    RPT: ["angelique", "flora", "ricardo"],
   };
 
   // Reset page when data changes

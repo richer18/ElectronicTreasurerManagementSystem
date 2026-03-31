@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers;
 
+use App\Helpers\TrustFundPaymentMirrorHelper;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Str;
@@ -99,6 +100,8 @@ class TrustFundPaymentCreateController extends Controller
                         'DATALASTEDITED' => $now,
                     ]);
                 }
+
+                TrustFundPaymentMirrorHelper::syncPayment($paymentId);
             });
 
             return response()->json([

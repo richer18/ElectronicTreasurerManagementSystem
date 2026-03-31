@@ -2,59 +2,50 @@
 
 namespace App\Http\Controllers;
 
+use App\Helpers\GeneralFundPaymentSummaryHelper;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Log;
-use App\Helpers\QueryHelpers;
 
 class GeneralFundDataTaxOnBusinessReportController extends Controller
 {
     public function index(Request $request)
     {
         try {
-            // Start with base query builder and apply date filters
-            $baseQuery = DB::table('general_fund_data');
-            $baseQuery = QueryHelpers::addDateFilters($baseQuery, $request, 'date');
-            $sqlBase = $baseQuery->toSql();
-            $bindings = $baseQuery->getBindings();
+            $row = DB::table('general_fund_payment as gfp')
+                ->where('gfp.FUNDTYPE_CT', 'GF')
+                ->whereNotIn('gfp.AFTYPE', ['CTC', 'AF56']);
 
-            // Build final union SQL using the baseQuery
-            $sql = "
-                SELECT 'Manufacturing' AS Taxes, SUM(Manufacturing) AS Total FROM ({$sqlBase}) AS t
-                UNION ALL
-                SELECT 'Distributor', SUM(Distributor) FROM ({$sqlBase}) AS t
-                UNION ALL
-                SELECT 'Retailing', SUM(Retailing) FROM ({$sqlBase}) AS t
-                UNION ALL
-                SELECT 'Financial', SUM(Financial) FROM ({$sqlBase}) AS t
-                UNION ALL
-                SELECT 'Other Business Tax', SUM(Other_Business_Tax) FROM ({$sqlBase}) AS t
-                UNION ALL
-                SELECT 'Fines Penalties', SUM(Fines_Penalties) FROM ({$sqlBase}) AS t
-                UNION ALL
-                SELECT 'Sand Gravel', SUM(Sand_Gravel) FROM ({$sqlBase}) AS t
-                UNION ALL
-                SELECT 'Overall Total', SUM(
-                    Manufacturing +
-                    Distributor +
-                    Retailing +
-                    Financial +
-                    Other_Business_Tax +
-                    Fines_Penalties +
-                    Sand_Gravel
-                ) FROM ({$sqlBase}) AS t
-            ";
+            GeneralFundPaymentSummaryHelper::applyActiveFilter($row, 'gfp');
+            GeneralFundPaymentSummaryHelper::applyDateFilters($row, $request, 'gfp.PAYMENTDATE');
 
-            // Since we're using the same base query multiple times, duplicate bindings
-            $bindings = array_merge(
-                $bindings, $bindings, $bindings, $bindings,
-                $bindings, $bindings, $bindings, $bindings
-            );
+            $row = $row
+                ->selectRaw(GeneralFundPaymentSummaryHelper::detailSelectRaw('gfp', 'gfp'))
+                ->first();
 
-            $results = DB::select($sql, $bindings);
-            return response()->json($results);
+            return response()->json([
+                ['Taxes' => 'Manufacturing', 'Total' => (float) ($row->Manufacturing ?? 0)],
+                ['Taxes' => 'Distributor', 'Total' => (float) ($row->Distributor ?? 0)],
+                ['Taxes' => 'Retailing', 'Total' => (float) ($row->Retailing ?? 0)],
+                ['Taxes' => 'Financial', 'Total' => (float) ($row->Financial ?? 0)],
+                ['Taxes' => 'Other Business Tax', 'Total' => (float) ($row->Other_Business_Tax ?? 0)],
+                ['Taxes' => 'Fines Penalties', 'Total' => (float) ($row->Fines_Penalties ?? 0)],
+                ['Taxes' => 'Sand Gravel', 'Total' => (float) ($row->Sand_Gravel ?? 0)],
+                [
+                    'Taxes' => 'Overall Total',
+                    'Total' => (float) (
+                        ($row->Manufacturing ?? 0) +
+                        ($row->Distributor ?? 0) +
+                        ($row->Retailing ?? 0) +
+                        ($row->Financial ?? 0) +
+                        ($row->Other_Business_Tax ?? 0) +
+                        ($row->Fines_Penalties ?? 0) +
+                        ($row->Sand_Gravel ?? 0)
+                    ),
+                ],
+            ]);
         } catch (\Exception $e) {
-            Log::error('❌ Error fetching tax-on-business report: ' . $e->getMessage());
+            Log::error('Error fetching tax-on-business report: ' . $e->getMessage());
             return response()->json(['error' => 'Database query failed'], 500);
         }
     }

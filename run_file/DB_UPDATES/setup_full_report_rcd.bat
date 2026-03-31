@@ -3,7 +3,11 @@ setlocal
 
 set "SCRIPT_DIR=%~dp0"
 set "SQL_FILE=%SCRIPT_DIR%setup_full_report_rcd.sql"
-set "MYSQL_EXE=D:\WINDOWS_INSTALLED\xampp\mysql\bin\mysql.exe"
+set "MYSQL_EXE=C:\xampp\mysql\bin\mysql.exe"
+
+if not exist "%MYSQL_EXE%" (
+  set "MYSQL_EXE=D:\WINDOWS_INSTALLED\xampp\mysql\bin\mysql.exe"
+)
 
 if not exist "%SQL_FILE%" (
   echo SQL file not found:

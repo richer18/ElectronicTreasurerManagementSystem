@@ -42,7 +42,7 @@ class CommunityTaxCertificateUpdateCedulaDataController extends Controller
 
         // Prevent duplicate CTCNO when updating
         if ($newCtcno !== $oldCtcno) {
-            $duplicate = DB::table('communitytaxcertificate')->where('CTCNO', $newCtcno)->exists();
+            $duplicate = DB::table('community_tax_certificate_payment')->where('CTCNO', $newCtcno)->exists();
             if ($duplicate) {
                 return response()->json([
                     'error' => 'Duplicate CTCNO exists. Update aborted.'
@@ -51,7 +51,7 @@ class CommunityTaxCertificateUpdateCedulaDataController extends Controller
         }
 
         try {
-            DB::table('communitytaxcertificate')
+            DB::table('community_tax_certificate_payment')
                 ->where('CTCNO', $oldCtcno)
                 ->update($validated);
 

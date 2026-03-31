@@ -13,7 +13,7 @@ class RealPropertyTaxDataLandSharingDataController extends Controller
     public function index(Request $request)
     {
         try {
-            $query = DB::table(RealPropertyTaxQueryHelper::table())
+            $query = RealPropertyTaxQueryHelper::applyActiveFilter(DB::table(RealPropertyTaxQueryHelper::table()))
                 ->whereIn(
                     RealPropertyTaxQueryHelper::classificationColumn(),
                     RealPropertyTaxQueryHelper::landStatuses()

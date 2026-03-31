@@ -13,7 +13,7 @@ class RealPropertyTaxDataOverAllTotalBasicAndSEFController extends Controller
     public function index(Request $request)
     {
         try {
-            $landBasic = DB::table(RealPropertyTaxQueryHelper::table())
+            $landBasic = RealPropertyTaxQueryHelper::applyActiveFilter(DB::table(RealPropertyTaxQueryHelper::table()))
                 ->selectRaw('
                     SUM(IFNULL(BASIC_CURRENT_YEAR, 0)) AS current,
                     SUM(IFNULL(BASIC_DISCOUNTS, 0)) AS discount,
@@ -32,7 +32,7 @@ class RealPropertyTaxDataOverAllTotalBasicAndSEFController extends Controller
             );
             $landBasic = (array) $landBasic->first();
 
-            $bldgBasic = DB::table(RealPropertyTaxQueryHelper::table())
+            $bldgBasic = RealPropertyTaxQueryHelper::applyActiveFilter(DB::table(RealPropertyTaxQueryHelper::table()))
                 ->selectRaw('
                     SUM(IFNULL(BASIC_CURRENT_YEAR, 0)) AS current,
                     SUM(IFNULL(BASIC_DISCOUNTS, 0)) AS discount,
@@ -51,7 +51,7 @@ class RealPropertyTaxDataOverAllTotalBasicAndSEFController extends Controller
             );
             $bldgBasic = (array) $bldgBasic->first();
 
-            $landSEF = DB::table(RealPropertyTaxQueryHelper::table())
+            $landSEF = RealPropertyTaxQueryHelper::applyActiveFilter(DB::table(RealPropertyTaxQueryHelper::table()))
                 ->selectRaw('
                     SUM(IFNULL(SEF_CURRENT_YEAR, 0)) - SUM(IFNULL(SEF_DISCOUNTS, 0)) AS current,
                     SUM(IFNULL(SEF_PRECEDING_YEAR, 0) + IFNULL(SEF_PRIOR_YEARS, 0)) AS prior,
@@ -68,7 +68,7 @@ class RealPropertyTaxDataOverAllTotalBasicAndSEFController extends Controller
             );
             $landSEF = (array) $landSEF->first();
 
-            $bldgSEF = DB::table(RealPropertyTaxQueryHelper::table())
+            $bldgSEF = RealPropertyTaxQueryHelper::applyActiveFilter(DB::table(RealPropertyTaxQueryHelper::table()))
                 ->selectRaw('
                     SUM(IFNULL(SEF_CURRENT_YEAR, 0)) - SUM(IFNULL(SEF_DISCOUNTS, 0)) AS current,
                     SUM(IFNULL(SEF_PRECEDING_YEAR, 0) + IFNULL(SEF_PRIOR_YEARS, 0)) AS prior,

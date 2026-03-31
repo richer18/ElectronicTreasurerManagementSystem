@@ -1,0 +1,6 @@
+[2026-03-30 16:18:19] Connecting to Firebird: localhost:E:\ZAMBOANGUITA.FDB
+[2026-03-30 16:18:23] Exported 6811 rows
+[2026-03-30 16:19:14] Connecting to Firebird: localhost:E:\ZAMBOANGUITA.FDB
+[2026-03-30 16:19:18] Exported 6811 rows
+[2026-03-30 16:22:38] Connecting to Firebird: localhost:E:\ZAMBOANGUITA.FDB
+[2026-03-30 16:22:42] Exported 6811 rows

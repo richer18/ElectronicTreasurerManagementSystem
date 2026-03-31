@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers;
 
+use App\Helpers\TrustFundPaymentSummaryHelper;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Log;
@@ -10,47 +11,19 @@ class TrustFundDataElectricalPermitFeesController extends Controller
 {
     public function __invoke(Request $request)
     {
-        $year = $request->query('year');
-        $month = $request->query('month');
-        $day = $request->query('day');
-
         try {
-            // Define base query
-            $filters = [];
-            $bindings = [];
+            $query = DB::table('trust_fund_payment');
+            $query = TrustFundPaymentSummaryHelper::applyActiveFilter($query);
+            $query = TrustFundPaymentSummaryHelper::applyDateFilters($query, $request);
 
-            if ($year) {
-                $filters[] = 'YEAR(`DATE`) = ?';
-                $bindings[] = $year;
-            }
+            $total = (float) ($query->sum('ELECTRICAL_FEE') ?? 0);
 
-            if ($month) {
-                $filters[] = 'MONTH(`DATE`) = ?';
-                $bindings[] = $month;
-            }
-
-            if ($day) {
-                $filters[] = 'DAY(`DATE`) = ?';
-                $bindings[] = $day;
-            }
-
-            $whereClause = '';
-            if ($filters) {
-                $whereClause = ' WHERE ' . implode(' AND ', $filters);
-            }
-
-            // SQL with filtering injected into each part
-            $sql = "
-                SELECT 'Electrical Fee' AS Taxes, SUM(ELECTRICAL_FEE) AS Total FROM trust_fund_data {$whereClause}
-                UNION ALL
-                SELECT 'Overall Total', SUM(ELECTRICAL_FEE) FROM trust_fund_data {$whereClause}
-            ";
-
-            $results = DB::select($sql, array_merge($bindings, $bindings));
-
-            return response()->json($results);
+            return response()->json([
+                ['Taxes' => 'Electrical Fee', 'Total' => round($total, 2)],
+                ['Taxes' => 'Overall Total', 'Total' => round($total, 2)],
+            ]);
         } catch (\Exception $e) {
-            Log::error("Failed to fetch electrical permit fee totals: " . $e->getMessage());
+            Log::error('Failed to fetch electrical permit fee totals: ' . $e->getMessage());
             return response()->json(['error' => 'Error retrieving electrical permit fee totals'], 500);
         }
     }

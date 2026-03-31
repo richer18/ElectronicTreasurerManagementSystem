@@ -2,37 +2,32 @@
 
 namespace App\Http\Controllers;
 
+use App\Helpers\GeneralFundPaymentSummaryHelper;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
-use App\Helpers\QueryHelpers;
+use Illuminate\Support\Facades\Log;
 
 class GeneralFundDataServiceUserChargesTotalController extends Controller
 {
     public function index(Request $request)
     {
         try {
-            $query = DB::table('general_fund_data');
+            $query = DB::table('general_fund_payment as gfp')
+                ->where('gfp.FUNDTYPE_CT', 'GF')
+                ->whereNotIn('gfp.AFTYPE', ['CTC', 'AF56']);
 
-            // Use your helper to add optional date filters
-            $query = QueryHelpers::addDateFilters($query, $request);
+            GeneralFundPaymentSummaryHelper::applyActiveFilter($query, 'gfp');
+            GeneralFundPaymentSummaryHelper::applyDateFilters($query, $request, 'gfp.PAYMENTDATE');
 
-            // Calculate the total of Service/User Charges
-            $result = $query->selectRaw('
-                SUM(
-                    Police_Report_Clearance +
-                    Secretaries_Fee +
-                    Med_Dent_Lab_Fees +
-                    Garbage_Fees +
-                    Cutting_Tree +
-                    Doc_Stamp
-                ) AS Service_User_Charges
-            ')->first();
+            $result = $query
+                ->selectRaw(GeneralFundPaymentSummaryHelper::mainBucketSelectRaw('gfp'))
+                ->first();
 
             return response()->json([
-                'service_user_charges' => $result->Service_User_Charges ?? 0
+                'service_user_charges' => $result->service_user_charges ?? 0
             ]);
         } catch (\Exception $e) {
-            \Log::error('Error fetching Service/User Charges total: ' . $e->getMessage());
+            Log::error('Error fetching Service/User Charges total: ' . $e->getMessage());
             return response()->json(['error' => 'Error fetching data'], 500);
         }
     }

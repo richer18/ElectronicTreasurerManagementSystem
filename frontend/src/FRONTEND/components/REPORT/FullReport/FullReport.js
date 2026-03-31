@@ -56,8 +56,8 @@ const months = [
 ];
 
 function FullReport() {
-  const [month, setMonth] = useState("1");
-  const [year, setYear] = useState("2025");
+  const [month, setMonth] = useState(() => String(new Date().getMonth() + 1));
+  const [year, setYear] = useState(() => String(new Date().getFullYear()));
   const [data, setData] = useState([]);
   const [editableRow, setEditableRow] = useState(null);
   const [updatedDueFrom, setUpdatedDueFrom] = useState({});
@@ -291,6 +291,10 @@ function FullReport() {
   );
   const totalDueFrom = filteredData.reduce(
     (sum, item) => sum + Number(item.dueFrom || 0),
+    0
+  );
+  const totalGfTf = filteredData.reduce(
+    (sum, item) => sum + Number(item.gfAndTf || 0),
     0
   );
   const totalCollections = totalRcd - totalDueFrom;
@@ -542,6 +546,7 @@ function FullReport() {
       ...rows.map((r) => r.map(escapeCsv).join(',')),
       "",
       [escapeCsv("RCD TOTAL"), escapeCsv(totalRcd.toFixed(2))].join(","),
+      [escapeCsv("GF + TF TOTAL"), escapeCsv(totalGfTf.toFixed(2))].join(","),
       [escapeCsv("LESS: DUE FROM"), escapeCsv(totalDueFrom.toFixed(2))].join(","),
       [
         escapeCsv("TOTAL COLLECTIONS"),
@@ -1447,6 +1452,50 @@ function FullReport() {
                 sx={{ fontWeight: 800, color: uiColors.teal }}
               >
                 ₱{totalRcd.toLocaleString("en-PH")}
+              </Typography>
+            </Card>
+
+            {/* GF + TF Total */}
+            <Card
+              sx={{
+                display: "none",
+                flex: 1,
+                p: 3,
+                borderRadius: 3,
+                boxShadow: "0 10px 24px rgba(15,39,71,0.08)",
+                border: `1px solid ${alpha(theme.palette.primary.main, 0.14)}`,
+                minWidth: 250,
+                position: "relative",
+                overflow: "hidden",
+                "&::before": {
+                  content: '""',
+                  position: "absolute",
+                  inset: 0,
+                  background:
+                    "linear-gradient(135deg, rgba(15,39,71,0.08), transparent 45%)",
+                },
+              }}
+            >
+              <Box sx={{ display: "flex", alignItems: "center", mb: 1 }}>
+                <ReceiptLongIcon sx={{ color: uiColors.navy, mr: 1 }} />
+                <Typography
+                  variant="subtitle2"
+                  sx={{ color: theme.palette.text.secondary, fontWeight: 700 }}
+                >
+                  COMPARISON TOTAL
+                </Typography>
+              </Box>
+              <Typography variant="h6" sx={{ fontWeight: 700, color: uiColors.navy }}>
+                GF + TF Total
+              </Typography>
+              <Typography
+                variant="h5"
+                sx={{ fontWeight: 800, color: uiColors.navy }}
+              >
+                â‚±{totalGfTf.toLocaleString("en-PH", {
+                  minimumFractionDigits: 2,
+                  maximumFractionDigits: 2,
+                })}
               </Typography>
             </Card>
 

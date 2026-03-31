@@ -16,6 +16,9 @@ class TrustFundDataTotalAllDataController extends Controller
                 ->join('T_OTHERPAYMENTRATE as opr', 'pd.SOURCEID', '=', 'opr.OPRATE_ID')
                 ->where('pd.FUNDTYPE_CT', 'TF')
                 ->whereRaw('COALESCE(p.VOID_BV, 0) = 0')
+                ->where(function ($query) {
+                    $query->whereNull('p.STATUS_CT')->orWhere('p.STATUS_CT', '<>', 'CNL');
+                })
                 ->whereIn('opr.ITAXTYPE_CT', ['PFB', 'EP', 'ZLC', 'IFL', 'IFD']);
 
             if ($request->filled('month')) {

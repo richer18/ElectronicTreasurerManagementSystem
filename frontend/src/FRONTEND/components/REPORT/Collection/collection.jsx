@@ -101,7 +101,15 @@ function centsToMoney(cents) {
 
 function Collection() {
   const [month, setMonth] = useState({ label: "January", value: "1" });
-  const [year, setYear] = useState({ label: "2025", value: "2025" });
+  const [year, setYear] = useState(() => {
+    const currentYear = new Date().getFullYear().toString();
+    return (
+      years.find((option) => option.value === currentYear) || {
+        label: "2025",
+        value: "2025",
+      }
+    );
+  });
 
   const getValue = (obj, key) => Number(obj?.[key]) || 0;
 
@@ -148,6 +156,7 @@ function Collection() {
     rentalOfEquipment: 0,
     docStamp: 0,
     policeReportClearance: 0,
+    secretaryfee: 0,
     medDentLabFees: 0,
     garbageFees: 0,
     cuttingTree: 0,
@@ -561,7 +570,12 @@ function Collection() {
   };
 
   const handleYearChange = (event, value) => {
-    setYear(value || { label: "2025", value: "2025" });
+    setYear(
+      value ||
+        years.find(
+          (option) => option.value === new Date().getFullYear().toString()
+        ) || { label: "2025", value: "2025" }
+    );
   };
 
   const totalOverAllAmountNational =
@@ -1069,9 +1083,8 @@ function Collection() {
       ["Slaughterhouse Fee", data.slaughterHouseFee || 0],
       ["Rent of Equipment", data.rentalOfEquipment || 0],
       ["Doc Stamp Tax", data.docStamp || 0],
-      ["Police Clearance", "0.00"],
       [
-        "Secretariat Fees",
+        "Secretary Fees",
         (data.secretaryfee || 0) + (data.policeReportClearance || 0),
       ],
       ["Med./Lab. Fees", data.medDentLabFees || 0],
@@ -3818,77 +3831,9 @@ function Collection() {
                   </TableRow>
 
                   <TableRow>
-                    {/*Police Clearance*/}
+                    {/*Secretary Fees*/}
                     <TableCell align="left" sx={{ border: "1px solid black" }}>
-                      Police Clearance
-                    </TableCell>
-                    <TableCell
-                      sx={{ border: "1px solid black" }}
-                      align="center"
-                    >
-                      0
-                    </TableCell>{" "}
-                    {/* TOTAL COLLECTIONS */}
-                    <TableCell
-                      sx={{ border: "1px solid black" }}
-                      align="center"
-                    ></TableCell>{" "}
-                    {/* NATIONAL */}
-                    <TableCell
-                      sx={{ border: "1px solid black" }}
-                      align="center"
-                    ></TableCell>{" "}
-                    {/* PROVINCIAL GENERAL FUND */}
-                    <TableCell
-                      sx={{ border: "1px solid black" }}
-                      align="center"
-                    ></TableCell>{" "}
-                    {/* PROVINCIAL SPECIAL EDUC. FUND */}
-                    <TableCell
-                      sx={{ border: "1px solid black" }}
-                      align="center"
-                    ></TableCell>{" "}
-                    {/* PROVINCIAL TOTAL */}
-                    <TableCell
-                      sx={{ border: "1px solid black" }}
-                      align="center"
-                    >
-                      0
-                    </TableCell>{" "}
-                    {/* MUNICIPAL GENERAL FUND */}
-                    <TableCell
-                      sx={{ border: "1px solid black" }}
-                      align="center"
-                    ></TableCell>{" "}
-                    {/* MUNICIPAL SPECIAL EDUC. FUND */}
-                    <TableCell
-                      sx={{ border: "1px solid black" }}
-                      align="center"
-                    ></TableCell>{" "}
-                    {/* MUNICIPAL TRUST FUND */}
-                    <TableCell
-                      sx={{ border: "1px solid black" }}
-                      align="center"
-                    >
-                      0
-                    </TableCell>{" "}
-                    {/* MUNICIPAL TOTAL */}
-                    <TableCell
-                      sx={{ border: "1px solid black" }}
-                      align="center"
-                    ></TableCell>{" "}
-                    {/* BARANGAY SHARE */}
-                    <TableCell
-                      sx={{ border: "1px solid black" }}
-                      align="center"
-                    ></TableCell>{" "}
-                    {/* FISHERIES */}
-                  </TableRow>
-
-                  <TableRow>
-                    {/*Secretaries Fees*/}
-                    <TableCell align="left" sx={{ border: "1px solid black" }}>
-                      Secretaries Fees
+                      Secretary Fees
                     </TableCell>
                     <TableCell
                       sx={{ border: "1px solid black" }}

@@ -2,15 +2,23 @@
 
 namespace App\Http\Controllers;
 
+use App\Helpers\RealPropertyTaxQueryHelper;
 use Illuminate\Http\JsonResponse;
+use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 
 class RealPropertyTaxController extends Controller
 {
-    public function allData(): JsonResponse
+    public function allData(Request $request): JsonResponse
     {
         try {
-            $results = DB::table('real_property_tax_payment')
+            $query = DB::table('real_property_tax_payment');
+
+            if (! $request->boolean('include_cancelled')) {
+                RealPropertyTaxQueryHelper::applyActiveFilter($query);
+            }
+
+            $results = $query
                 ->selectRaw("
                     ID as id,
                     DATE as date,

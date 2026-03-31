@@ -8,13 +8,16 @@ import {
   Box,
   Button,
   Card,
+  Checkbox,
   Chip,
   Dialog,
   DialogActions,
   DialogContent,
   DialogContentText,
   DialogTitle,
+  FormControlLabel,
   InputAdornment,
+  LinearProgress,
   Menu,
   MenuItem,
   Paper,
@@ -31,7 +34,6 @@ import {
   Typography,
 } from "@mui/material";
 import TablePagination from "@mui/material/TablePagination";
-import axios from "axios";
 import { saveAs } from "file-saver"; // npm install file-saver
 import React, { useEffect, useMemo, useState } from "react";
 import { BiSolidReport } from "react-icons/bi";
@@ -203,118 +205,80 @@ function GeneralFund() {
   const [data, setData] = useState([]);
   const [searchQuery, setSearchQuery] = useState("");
   const [pendingSearchQuery, setPendingSearchQuery] = useState("");
-  const [rows, setRows] = React.useState([]);
+  const [downloadDialogOpen, setDownloadDialogOpen] = useState(false);
+  const [downloadMonth, setDownloadMonth] = useState(null);
+  const [downloadYear, setDownloadYear] = useState(null);
+  const [downloadIncludeCancelled, setDownloadIncludeCancelled] = useState(false);
   const [snackbar, setSnackbar] = useState({
     open: false,
     message: "",
     severity: "info",
   });
 
-  const [reportDialog, setReportDialog] = useState({
-    open: false,
-    status: "idle", // 'idle' | 'loading' | 'success' | 'error'
-    progress: 0,
-  });
+  const [reportDialogOpen, setReportDialogOpen] = useState(false);
+  const [financialReportLoading, setFinancialReportLoading] = useState(false);
 
   const ChhandleCloseDialog = () => {
-    setReportDialog({ ...reportDialog, open: false });
+    setReportDialogOpen(false);
   };
 
   const handleGenerateReport = () => {
-    // Open dialog in loading state
-    setReportDialog({
-      open: true,
-      status: "loading",
-      progress: 0,
-    });
-
-    // Simulate report generation
-    const interval = setInterval(() => {
-      setReportDialog((prev) => {
-        const newProgress = prev.progress + 10;
-        if (newProgress >= 100) {
-          clearInterval(interval);
-          return { ...prev, status: "success", progress: 100 };
-        }
-        return { ...prev, progress: newProgress };
-      });
-    }, 300);
+    setReportDialogOpen(true);
   };
 
-  // Fetch main table data on mount
   useEffect(() => {
     const fetchData = async () => {
       try {
-        const response = await axiosInstance.get("generalFundDataAll");
+        const response = await axiosInstance.get("generalFundDataAll", {
+          params: {
+            month: month || undefined,
+            year: year || undefined,
+            search: searchQuery || undefined,
+          },
+        });
         setData(response.data);
         setFilteredData(response.data);
       } catch (error) {
         console.error("Error fetching data:", error);
+        setFilteredData([]);
       }
     };
 
     fetchData();
-  }, []);
+  }, [month, year, searchQuery]);
 
   useEffect(() => {
-    if (!Array.isArray(data)) {
-      setFilteredData([]);
-      return;
-    }
-
-    let newFiltered = data;
-    const normalize = (value) => String(value ?? "").toLowerCase();
-
-    // (a) Filter by searchQuery
-    if (searchQuery?.trim()) {
-      const q = searchQuery.trim().toLowerCase();
-      newFiltered = newFiltered.filter((row) => {
-        return (
-          normalize(row?.name).includes(q) ||
-          normalize(row?.receipt_no).includes(q) ||
-          normalize(row?.cashier).includes(q) ||
-          normalize(row?.type_receipt).includes(q) ||
-          normalize(row?.local_tin).includes(q) ||
-          normalize(row?.paygroup).includes(q)
-        );
-      });
-    }
-
-    // (b) Filter by month/year
-    if (month || year) {
-      newFiltered = newFiltered.filter((row) => {
-        const rowParts = getMonthYearFromDate(row.date);
-        if (!rowParts) return false;
-
-        const monthMatches = month ? rowParts.month === Number(month) : true;
-        const yearMatches = year ? rowParts.year === Number(year) : true;
-        return monthMatches && yearMatches;
-      });
-    }
-
-    setFilteredData(newFiltered);
-    setPage(0); // reset pagination when filters change
-  }, [data, searchQuery, month, year]);
+    setPage(0);
+  }, [filteredData.length]);
 
   // Fetch overall total
   useEffect(() => {
     const fetchAllData = async () => {
       try {
-        const response = await axiosInstance.get("TotalGeneralFunds");
+        const response = await axiosInstance.get("general-fund-dashboard-summary", {
+          params: {
+            month: month || undefined,
+            year: year || undefined,
+          },
+        });
 
         // ✅ Laravel returns: { overall_total: 12345.67 }
-        const totalListingsGFTOTAL = parseFloat(
-          response.data?.overall_total || 0
+        setAllTotal(parseFloat(response.data?.overall_total || 0));
+        setTaxOnBusinessTotal(parseFloat(response.data?.tax_on_business || 0));
+        setRegulatoryFeesTotal(parseFloat(response.data?.regulatory_fees || 0));
+        setServiceUserChargesTotal(
+          parseFloat(response.data?.service_user_charges || 0)
         );
-
-        setAllTotal(totalListingsGFTOTAL);
+        setReceiptsFromEconomicEnterprisesTotal(
+          parseFloat(response.data?.receipts_from_economic_enterprises || 0)
+        );
       } catch (error) {
         console.error("❌ Error fetching total general fund:", error);
       }
     };
 
     fetchAllData();
-  }, []);
+  }, [month, year]);
 
   const getFilteredDataByMonthYear = () => {
     if (!month || !year) return filteredData;
@@ -332,38 +296,11 @@ function GeneralFund() {
   // Fetch individual totals
   useEffect(() => {
     const fetchTotals = async () => {
-      try {
-        const endpoints = [
-          "TaxOnBusinessTotal",
-          "RegulatoryFeesTotal",
-          "ServiceUserChargesTotal",
-          "ReceiptsFromEconomicEnterprisesTotal",
-        ];
-
-        // Use default axios.all, but requests go through axiosInstance
-        const responses = await axios.all(
-          endpoints.map((endpoint) => axiosInstance.get(endpoint))
-        );
-
-        setTaxOnBusinessTotal(
-          parseFloat(responses[0].data.tax_on_business || 0)
-        );
-        setRegulatoryFeesTotal(
-          parseFloat(responses[1].data.regulatory_fees || 0)
-        );
-        setServiceUserChargesTotal(
-          parseFloat(responses[2].data.service_user_charges || 0)
-        );
-        setReceiptsFromEconomicEnterprisesTotal(
-          parseFloat(responses[3].data.receipts_from_economic_enterprises || 0)
-        );
-      } catch (error) {
-        console.error("Error fetching totals:", error);
-      }
+      return;
     };
 
     fetchTotals();
-  }, []);
+  }, [month, year]);
 
   // Search logic
 
@@ -463,6 +400,7 @@ function GeneralFund() {
 
   // Toggle sub-tables
   const toggleReportTable = () => {
+    setFinancialReportLoading(true);
     setShowReportTable(true);
     setShowMainTable(false);
     setShowDailyTable(false);
@@ -475,15 +413,32 @@ function GeneralFund() {
     setShowFilters(false);
   };
   const handleBack = () => {
+    setFinancialReportLoading(false);
     setShowReportTable(false);
     setShowDailyTable(false);
     setShowMainTable(true);
     setShowFilters(true);
   };
 
+  const handleFinancialReportLoadingChange = (loading) => {
+    if (loading) {
+      setFinancialReportLoading(true);
+      return;
+    }
+
+    setFinancialReportLoading(false);
+  };
+
   // “Download” logic
   const handleDownload = () => {
-    if (!month || !year) {
+    setDownloadMonth(month);
+    setDownloadYear(year);
+    setDownloadIncludeCancelled(false);
+    setDownloadDialogOpen(true);
+  };
+
+  const handleDownloadConfirm = async () => {
+    if (!downloadMonth || !downloadYear) {
       setSnackbar({
         open: true,
         message: "Please select both month and year before downloading.",
@@ -492,7 +447,28 @@ function GeneralFund() {
       return;
     }
 
-    const filteredExportData = getFilteredDataByMonthYear();
+    let filteredExportData = [];
+
+    try {
+      const response = await axiosInstance.get("generalFundDataAll", {
+        params: {
+          month: downloadMonth || undefined,
+          year: downloadYear || undefined,
+          search: searchQuery || undefined,
+          include_cancelled: downloadIncludeCancelled ? 1 : undefined,
+        },
+      });
+
+      filteredExportData = Array.isArray(response.data) ? response.data : [];
+    } catch (error) {
+      console.error("Error fetching downloadable general fund data:", error);
+      setSnackbar({
+        open: true,
+        message: "Failed to prepare the download.",
+        severity: "error",
+      });
+      return;
+    }
 
     if (filteredExportData.length === 0) {
       setSnackbar({
@@ -523,8 +499,9 @@ function GeneralFund() {
 
     const file = XLSX.write(workbook, { bookType: "xlsx", type: "array" });
     const blob = new Blob([file], { type: "application/octet-stream" });
-    const fileName = `GeneralFund_Report_${months.find((m) => m.value === month)?.label}_${year}.xlsx`;
+    const fileName = `GeneralFund_Report_${months.find((m) => m.value === downloadMonth)?.label}_${downloadYear}.xlsx`;
     saveAs(blob, fileName);
+    setDownloadDialogOpen(false);
   };
 
   const handleEditClick = () => {
@@ -548,7 +525,8 @@ function GeneralFund() {
 
       if (response.status === 200) {
         alert("Record deleted successfully");
-        setRows((prev) => prev.filter((row) => row.id !== selectedId));
+        setData((prev) => prev.filter((row) => row.id !== selectedId));
+        setFilteredData((prev) => prev.filter((row) => row.id !== selectedId));
       } else {
         alert(response.data?.error || "Failed to delete record");
       }
@@ -584,7 +562,6 @@ function GeneralFund() {
                 onChange={(e) => {
                   const value = e.target.value;
                   setPendingSearchQuery(value);
-                  setSearchQuery(value);
                 }}
                 onKeyDown={(e) => {
                   if (e.key === "Enter") {
@@ -981,9 +958,16 @@ function GeneralFund() {
       
       {/* Sub-tables */}
       {showDailyTable && (
-        <DailyTable onBack={handleBack} />
+        <DailyTable onBack={handleBack} month={month} year={year} />
       )}
-      {showReportTable && <ReportTable onBack={handleBack} />}
+      {showReportTable && (
+        <ReportTable
+          onBack={handleBack}
+          initialMonth={month}
+          initialYear={year}
+          onLoadingChange={handleFinancialReportLoadingChange}
+        />
+      )}
       {/* Main table */}
       {showMainTable && (
         <TableContainer
@@ -1133,7 +1117,7 @@ function GeneralFund() {
         <MenuItem
           onClick={(e) => {
             e.stopPropagation(); // Prevent event propagation
-            setSelectedId(rows.id);
+            setSelectedId(selectedRow?.id ?? null);
             setOpenDeleteDialog(true);
           }}
         >
@@ -1165,14 +1149,16 @@ function GeneralFund() {
         </Snackbar>
       </Box>
       {/* Totals popups */}
-      <GeneralFundDialogPopupTOB open={openTax} onClose={handleCloseTax} />
-      <GeneralFundDialogPopupRF open={openRf} onClose={handleCloseRF} />{" "}
+      <GeneralFundDialogPopupTOB open={openTax} onClose={handleCloseTax} month={month} year={year} />
+      <GeneralFundDialogPopupRF open={openRf} onClose={handleCloseRF} month={month} year={year} />{" "}
       {/* Fixed handler */}
-      <GeneralFundDialogPopupSUC open={openSUC} onClose={handleCloseSUC} />
-      <GeneralFundDialogPopupRFEE open={openRFEE} onClose={handleCloseRFEE} />
+      <GeneralFundDialogPopupSUC open={openSUC} onClose={handleCloseSUC} month={month} year={year} />
+      <GeneralFundDialogPopupRFEE open={openRFEE} onClose={handleCloseRFEE} month={month} year={year} />
       <GeneralFundDialogPopupTOTAL
         open={openTOTAL}
         onClose={handleCloseTOTAL}
+        month={month}
+        year={year}
       />
       {/* Daily table popup (if needed) */}
       <GeneralFundDialogPopupDAILY
@@ -1180,6 +1166,51 @@ function GeneralFund() {
         onClose={handleCloseDailyTable}
       />
       {/* Confirmation Dialog */}
+      <Dialog
+        open={downloadDialogOpen}
+        onClose={() => setDownloadDialogOpen(false)}
+        maxWidth="sm"
+        fullWidth
+      >
+        <DialogTitle>Download General Fund Report</DialogTitle>
+        <DialogContent>
+          <Box sx={{ display: "flex", gap: 2, mt: 1, flexWrap: "wrap" }}>
+            <Autocomplete
+              options={months}
+              value={months.find((option) => option.value === downloadMonth) ?? null}
+              onChange={(e, value) => setDownloadMonth(value?.value ?? null)}
+              getOptionLabel={(option) => option.label}
+              renderInput={(params) => <TextField {...params} label="Month" fullWidth />}
+              sx={{ minWidth: 220, flex: 1 }}
+            />
+            <Autocomplete
+              options={years}
+              value={years.find((option) => option.value === downloadYear) ?? null}
+              onChange={(e, value) => setDownloadYear(value?.value ?? null)}
+              getOptionLabel={(option) => option.label}
+              renderInput={(params) => <TextField {...params} label="Year" fullWidth />}
+              sx={{ minWidth: 220, flex: 1 }}
+            />
+          </Box>
+          <FormControlLabel
+            sx={{ mt: 2 }}
+            control={
+              <Checkbox
+                checked={downloadIncludeCancelled}
+                onChange={(e) => setDownloadIncludeCancelled(e.target.checked)}
+              />
+            }
+            label="Include cancelled payments"
+          />
+        </DialogContent>
+        <DialogActions>
+          <Button onClick={() => setDownloadDialogOpen(false)}>Cancel</Button>
+          <Button variant="contained" onClick={handleDownloadConfirm}>
+            Download
+          </Button>
+        </DialogActions>
+      </Dialog>
+
       <Dialog
         open={openDeleteDialog}
         onClose={() => setOpenDeleteDialog(false)}
@@ -1206,11 +1237,24 @@ function GeneralFund() {
           </Button>
         </DialogActions>
       </Dialog>
+      <Dialog open={financialReportLoading} maxWidth="xs" fullWidth>
+        <DialogTitle>Loading Financial Report</DialogTitle>
+        <DialogContent>
+          <Typography variant="body2" sx={{ mb: 2 }}>
+            Please wait while the General Fund report is being prepared.
+          </Typography>
+          <Typography variant="caption" sx={{ display: "block", mb: 1 }}>
+            Loading report data...
+          </Typography>
+          <LinearProgress
+            variant="indeterminate"
+            sx={{ height: 10, borderRadius: 999 }}
+          />
+        </DialogContent>
+      </Dialog>
       <GenerateReport
-        open={reportDialog.open}
+        open={reportDialogOpen}
         onClose={ChhandleCloseDialog}
-        status={reportDialog.status}
-        progress={reportDialog.progress}
       />
     </Box>
   );

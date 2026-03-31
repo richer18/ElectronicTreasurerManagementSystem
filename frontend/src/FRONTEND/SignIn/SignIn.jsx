@@ -26,9 +26,9 @@ import {
   Visibility,
   VisibilityOff,
 } from "@mui/icons-material";
-import axios from "axios";
 import { useNavigate } from "react-router-dom";
 import ForgotPassword from "./components/ForgotPassword";
+import { useAuth } from "../../auth/AuthContext";
 
 const lguTheme = createTheme({
   palette: {
@@ -67,6 +67,7 @@ export default function SignIn() {
   const [open, setOpen] = useState(false);
 
   const navigate = useNavigate();
+  const { login } = useAuth();
   const handleClickShowPassword = () => setShowPassword((prev) => !prev);
 
   const handleClose = () => {
@@ -110,24 +111,13 @@ export default function SignIn() {
     const payload = {
       username: String(formData.get("username") || "").trim(),
       password: String(formData.get("password") || ""),
+      remember: Boolean(formData.get("remember")),
     };
 
     try {
-      const response = await axios.post(
-        `${process.env.REACT_APP_API_URL}login`,
-        payload
-      );
-      localStorage.setItem("isAuthenticated", "true");
-      if (response?.data?.user) {
-        localStorage.setItem("authUser", JSON.stringify(response.data.user));
-      } else {
-        localStorage.removeItem("authUser");
-      }
-      localStorage.setItem("lastLoginAt", new Date().toISOString());
+      await login(payload);
       navigate("/my-app");
     } catch (error) {
-      localStorage.removeItem("isAuthenticated");
-      localStorage.removeItem("authUser");
       setLoginError(error.response?.data?.message || "Invalid credentials. Please try again.");
       console.error(error);
     } finally {

@@ -2,12 +2,15 @@
 
 namespace App\Http\Controllers;
 
-use App\Models\FormType;
+use Illuminate\Support\Facades\DB;
 
 class FormTypeController extends Controller
 {
     public function index()
     {
-        return FormType::all(); // return all form types as JSON
+        return DB::table('t_ortype')
+            ->selectRaw('CODE as id, CODE as code, DESCRIPTION as name, DESCRIPTION as description')
+            ->orderBy('DESCRIPTION')
+            ->get();
     }
 }

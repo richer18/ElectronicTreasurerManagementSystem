@@ -1,0 +1,46 @@
+SELECT
+    r.CTC_ID,
+    r.DATEISSUED,
+    r.CTCNO,
+    r.LOCAL_TIN,
+    tx.OWNERNAME,
+    r.BASICTAXDUE,
+    r.BUSTAXAMOUNT,
+    r.BUSTAXDUE,
+    r.SALTAXAMOUNT,
+    r.SALTAXDUE,
+    r.RPTAXAMOUNT,
+    r.RPTAXDUE,
+    r.INTEREST,
+    r.TOTALAMOUNTPAID,
+    r.TRANSDATE,
+    r.USERID,
+    r.CTCTYPE,
+    r.CTCYEAR,
+    r.INUSE_BV,
+    r.MUNICIPAL_ID,
+    (
+        SELECT FIRST 1 p.STATUS_CT
+        FROM PAYMENT p
+        JOIN PAYMENTDETAIL pd
+            ON pd.PAYMENT_ID = p.PAYMENT_ID
+        WHERE p.RECEIPTNO = r.CTCNO
+          AND pd.ITAXTYPE_CT = 'CTC'
+        ORDER BY p.PAYMENTDATE DESC
+    ) AS PAYMENT_STATUS_CT,
+    CASE
+        WHEN EXISTS (
+            SELECT 1
+            FROM PAYMENT p
+            JOIN PAYMENTDETAIL pd
+                ON pd.PAYMENT_ID = p.PAYMENT_ID
+            WHERE p.RECEIPTNO = r.CTCNO
+              AND pd.ITAXTYPE_CT = 'CTC'
+              AND p.STATUS_CT = 'CNL'
+        ) THEN 1
+        ELSE 0
+    END AS IS_CANCELLED
+FROM COMMUNITYTAXCERTIFICATE r
+LEFT JOIN TAXPAYER tx
+    ON tx.LOCAL_TIN = r.LOCAL_TIN
+WHERE 1 = 1

@@ -98,6 +98,7 @@ function AbstractTF({ data, mode, refreshData }) {
   const [progress, setProgress] = useState(0);
   const [total, setTotal] = useState(0);
   const [alertVariant, setAlertSeverity] = useState("info");
+  const [receiptTypeOptions, setReceiptTypeOptions] = useState([]);
 
   const handleFieldChange = (field, value) => {
     setFieldValues((prevValues) => ({
@@ -113,6 +114,20 @@ function AbstractTF({ data, mode, refreshData }) {
     );
     setTotal(totalSum);
   }, [fieldValues]);
+
+  useEffect(() => {
+    const fetchReceiptTypes = async () => {
+      try {
+        const response = await axiosInstance.get("form-types");
+        setReceiptTypeOptions(Array.isArray(response.data) ? response.data : []);
+      } catch (error) {
+        console.error("Error fetching receipt types:", error);
+        setReceiptTypeOptions([]);
+      }
+    };
+
+    fetchReceiptTypes();
+  }, []);
 
   const handleClearFields = useCallback(() => {
     setSelectedDate(null);
@@ -327,13 +342,19 @@ function AbstractTF({ data, mode, refreshData }) {
                 <FaIdCard style={{ marginRight: 8 }} />
                 Type of Receipt
               </Form.Label>
-              <Form.Control
-                type="text"
+              <Form.Select
                 value={typeReceipt}
                 onChange={(e) => setTypeReceipt(e.target.value)}
                 required
                 style={inputStyle}
-              />
+              >
+                <option value="">Select receipt type</option>
+                {receiptTypeOptions.map((option) => (
+                  <option key={option.code || option.id} value={option.code}>
+                    {option.description || option.name || option.code}
+                  </option>
+                ))}
+              </Form.Select>
             </Form.Group>
           </Col>
 

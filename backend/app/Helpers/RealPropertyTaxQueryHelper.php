@@ -2,6 +2,9 @@
 
 namespace App\Helpers;
 
+use Illuminate\Database\Query\Builder;
+use Illuminate\Support\Facades\Schema;
+
 class RealPropertyTaxQueryHelper
 {
     public static function table(): string
@@ -17,6 +20,29 @@ class RealPropertyTaxQueryHelper
     public static function classificationColumn(): string
     {
         return 'PROPERTY_CLASSIFICATION';
+    }
+
+    public static function applyActiveFilter(Builder $query, string $alias = ''): Builder
+    {
+        $qualifiedAlias = trim($alias) === '' ? self::table() : $alias;
+
+        if (Schema::hasColumn(self::table(), 'IS_CANCELLED')) {
+            return $query->where(function ($statusQuery) use ($qualifiedAlias) {
+                $statusQuery
+                    ->whereNull("{$qualifiedAlias}.IS_CANCELLED")
+                    ->orWhere("{$qualifiedAlias}.IS_CANCELLED", 0);
+            });
+        }
+
+        if (Schema::hasColumn(self::table(), 'PAYMENT_STATUS_CT')) {
+            return $query->where(function ($statusQuery) use ($qualifiedAlias) {
+                $statusQuery
+                    ->whereNull("{$qualifiedAlias}.PAYMENT_STATUS_CT")
+                    ->orWhere("{$qualifiedAlias}.PAYMENT_STATUS_CT", '<>', 'CNL');
+            });
+        }
+
+        return $query;
     }
 
     public static function landCategoryMap(): array

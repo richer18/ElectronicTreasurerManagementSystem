@@ -30,8 +30,9 @@ const getSerialNo = (form) => form?.serial_no ?? form?.Serial_No ?? "";
 const getRangeFrom = (form) => form?.receipt_range_from ?? form?.Receipt_Range_From ?? "";
 const getRangeTo = (form) => form?.receipt_range_to ?? form?.Receipt_Range_To ?? "";
 const getStock = (form) => form?.stock ?? form?.Stock ?? 50;
+const getMasterFormTypeLabel = (type) => type?.description ?? type?.name ?? "";
 
-function AssignAccountableForms({ onClose }) {
+function AssignAccountableForms({ onSaved, onCancel }) {
   const [formData, setFormData] = useState({
     Date: new Date().toISOString().split("T")[0],
     Collector: "",
@@ -42,15 +43,24 @@ function AssignAccountableForms({ onClose }) {
     Issued_receipt_qty: 50,
     Stock: 50,
     Status: "ISSUED",
+    assigned_by: "",
+    collector_received_by: "",
+    collector_signature_reference: "",
+    logbook_reference_no: "",
   });
 
   const [availableForms, setAvailableForms] = useState([]);
+  const [formTypes, setFormTypes] = useState([]);
 
   useEffect(() => {
-  axiosInstance.get('/available-forms')
-    .then(res => setAvailableForms(res.data))
-    .catch(err => console.error(err));
-}, []);
+    axiosInstance.get('/available-forms')
+      .then(res => setAvailableForms(Array.isArray(res.data) ? res.data : []))
+      .catch(err => console.error(err));
+
+    axiosInstance.get('/form-types')
+      .then(res => setFormTypes(Array.isArray(res.data) ? res.data : []))
+      .catch(err => console.error('Failed to fetch form types:', err));
+  }, []);
 
   const handleChange = (e) => {
     const { name, value } = e.target;
@@ -70,8 +80,6 @@ function AssignAccountableForms({ onClose }) {
 
   axiosInstance.post('/assign-forms', formData)
     .then(res => {
-      alert('Form assigned successfully!');
-
       // Update inventory: mark the assigned Purchase Accountable Form as USED
       axiosInstance.put(`/update-purchase-form/${formData.Serial_No}`, { Status: 'USED' })
         .then(() => {
@@ -79,8 +87,7 @@ function AssignAccountableForms({ onClose }) {
           axiosInstance.get('/available-forms')
             .then(res => setAvailableForms(res.data));
         });
-
-  
+      onSaved?.(res.data);
     })
     .catch(err => {
       console.error(err);
@@ -89,7 +96,10 @@ function AssignAccountableForms({ onClose }) {
     });
 };
 
-  const formTypes = Array.from(new Set(availableForms.map((f) => getFormType(f)).filter(Boolean)));
+  const availableTypeNames = new Set(
+    availableForms.map((f) => getFormType(f)).filter(Boolean)
+  );
+  const formTypeOptions = formTypes.filter((type) => availableTypeNames.has(getMasterFormTypeLabel(type)));
   const serialOptions = availableForms
     .filter((f) => getFormType(f) === formData.Form_Type)
     .sort(sortBySerialNo);
@@ -188,8 +198,13 @@ function AssignAccountableForms({ onClose }) {
   fullWidth
   required
 >
-  {formTypes.map((type) => (
-    <MenuItem key={type} value={type}>{type}</MenuItem>
+  {formTypeOptions.map((type) => (
+    <MenuItem
+      key={type.code ?? type.id ?? getMasterFormTypeLabel(type)}
+      value={getMasterFormTypeLabel(type)}
+    >
+      {getMasterFormTypeLabel(type)}
+    </MenuItem>
   ))}
 </TextField>
 
@@ -224,6 +239,49 @@ function AssignAccountableForms({ onClose }) {
     );
   })}
 </TextField>
+        </Box>
+
+        <Divider sx={{ my: 3 }} />
+
+        <Typography variant="subtitle2" sx={{ fontWeight: 700, mb: 1.5, color: "text.secondary" }}>
+          Logbook Compliance
+        </Typography>
+
+        <Box
+          sx={{
+            display: "grid",
+            gridTemplateColumns: { xs: "1fr", md: "1fr 1fr" },
+            gap: 2,
+          }}
+        >
+          <TextField
+            label="Assigned By"
+            name="assigned_by"
+            value={formData.assigned_by}
+            onChange={handleChange}
+            fullWidth
+          />
+          <TextField
+            label="Collector Received By"
+            name="collector_received_by"
+            value={formData.collector_received_by}
+            onChange={handleChange}
+            fullWidth
+          />
+          <TextField
+            label="Collector Signature Reference"
+            name="collector_signature_reference"
+            value={formData.collector_signature_reference}
+            onChange={handleChange}
+            fullWidth
+          />
+          <TextField
+            label="Logbook Reference No."
+            name="logbook_reference_no"
+            value={formData.logbook_reference_no}
+            onChange={handleChange}
+            fullWidth
+          />
         </Box>
 
         <Divider sx={{ my: 3 }} />
@@ -266,7 +324,12 @@ function AssignAccountableForms({ onClose }) {
           />
         </Box>
 
-        <Box sx={{ display: "flex", justifyContent: "flex-end", pt: 3 }}>
+        <Box sx={{ display: "flex", justifyContent: "flex-end", gap: 1.5, pt: 3 }}>
+          {onCancel && (
+            <Button variant="outlined" onClick={onCancel}>
+              Back
+            </Button>
+          )}
           <Button type="submit" variant="contained" size="large" sx={{ px: 4, fontWeight: 700 }}>
             Assign Form
           </Button>

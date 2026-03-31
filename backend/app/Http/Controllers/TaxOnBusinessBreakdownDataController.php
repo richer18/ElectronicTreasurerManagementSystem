@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers;
 
+use App\Helpers\GeneralFundPaymentSummaryHelper;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Log;
@@ -16,26 +17,23 @@ class TaxOnBusinessBreakdownDataController extends Controller
 
             $monthList = $months ? array_map('intval', explode(',', $months)) : [];
 
-            $query = DB::table('general_fund_data')
-                ->select(
-                    DB::raw('SUM(Manufacturing) as Manufacturing'),
-                    DB::raw('SUM(Distributor) as Distributor'),
-                    DB::raw('SUM(Retailing) as Retailing'),
-                    DB::raw('SUM(Financial) as Financial'),
-                    DB::raw('SUM(Other_Business_Tax) as Other_Business_Tax'),
-                    DB::raw('SUM(Sand_Gravel) as Sand_Gravel'),
-                    DB::raw('SUM(Fines_Penalties) as Fines_Penalties')
-                );
+            $query = DB::table('general_fund_payment as gfp')
+                ->where('gfp.FUNDTYPE_CT', 'GF')
+                ->whereNotIn('gfp.AFTYPE', ['CTC', 'AF56']);
+
+            GeneralFundPaymentSummaryHelper::applyActiveFilter($query, 'gfp');
 
             if ($year) {
-                $query->whereYear('date', $year);
+                $query->whereYear('gfp.PAYMENTDATE', $year);
             }
 
             if (!empty($monthList)) {
-                $query->whereIn(DB::raw('MONTH(date)'), $monthList);
+                $query->whereIn(DB::raw('MONTH(gfp.PAYMENTDATE)'), $monthList);
             }
 
-            $result = $query->first();
+            $result = $query
+                ->selectRaw(GeneralFundPaymentSummaryHelper::detailSelectRaw('gfp', 'gfp'))
+                ->first();
 
             return response()->json($result);
         } catch (\Exception $e) {

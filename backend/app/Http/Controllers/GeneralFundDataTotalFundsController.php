@@ -2,42 +2,30 @@
 
 namespace App\Http\Controllers;
 
+use App\Helpers\GeneralFundPaymentSummaryHelper;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Log;
 
 class GeneralFundDataTotalFundsController extends Controller
 {
     public function index(Request $request)
     {
         try {
-            $gfPaymentIds = DB::table('paymentdetail')
-                ->where('FUNDTYPE_CT', 'GF')
-                ->distinct()
-                ->pluck('PAYMENT_ID');
+            $query = DB::table('general_fund_payment as gfp')
+                ->where('gfp.FUNDTYPE_CT', 'GF')
+                ->whereNotIn('gfp.AFTYPE', ['CTC', 'AF56']);
 
-            $query = DB::table('payment')
-                ->whereIn('PAYMENT_ID', $gfPaymentIds)
-                ->whereNotIn('AFTYPE', ['CTC', 'AF56']);
+            GeneralFundPaymentSummaryHelper::applyActiveFilter($query, 'gfp');
+            GeneralFundPaymentSummaryHelper::applyDateFilters($query, $request, 'gfp.PAYMENTDATE');
 
-            if ($request->filled('month')) {
-                $query->whereMonth('PAYMENTDATE', $request->month);
-            }
-
-            if ($request->filled('year')) {
-                $query->whereYear('PAYMENTDATE', $request->year);
-            }
-
-            if ($request->filled('day')) {
-                $query->whereDay('PAYMENTDATE', $request->day);
-            }
-
-            $total = $query->sum('AMOUNT');
+            $total = $query->sum('gfp.AMOUNTPAID');
 
             return response()->json([
                 'overall_total' => $total,
             ]);
         } catch (\Exception $e) {
-            \Log::error('Error fetching total general funds: ' . $e->getMessage());
+            Log::error('Error fetching total general funds: ' . $e->getMessage());
             return response()->json(['error' => 'Error fetching data'], 500);
         }
     }

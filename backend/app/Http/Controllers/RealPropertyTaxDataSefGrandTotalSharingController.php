@@ -13,7 +13,7 @@ class RealPropertyTaxDataSefGrandTotalSharingController extends Controller
     public function index(Request $request)
     {
         try {
-            $landQuery = DB::table(RealPropertyTaxQueryHelper::table())
+            $landQuery = RealPropertyTaxQueryHelper::applyActiveFilter(DB::table(RealPropertyTaxQueryHelper::table()))
                 ->selectRaw('
                     SUM(IFNULL(SEF_CURRENT_YEAR, 0) - IFNULL(SEF_DISCOUNTS, 0)) AS current,
                     SUM(IFNULL(SEF_PRECEDING_YEAR, 0) + IFNULL(SEF_PRIOR_YEARS, 0)) AS prior,
@@ -24,7 +24,7 @@ class RealPropertyTaxDataSefGrandTotalSharingController extends Controller
                     RealPropertyTaxQueryHelper::landStatuses()
                 );
 
-            $buildingQuery = DB::table(RealPropertyTaxQueryHelper::table())
+            $buildingQuery = RealPropertyTaxQueryHelper::applyActiveFilter(DB::table(RealPropertyTaxQueryHelper::table()))
                 ->selectRaw('
                     SUM(IFNULL(SEF_CURRENT_YEAR, 0) - IFNULL(SEF_DISCOUNTS, 0)) AS current,
                     SUM(IFNULL(SEF_PRECEDING_YEAR, 0) + IFNULL(SEF_PRIOR_YEARS, 0)) AS prior,

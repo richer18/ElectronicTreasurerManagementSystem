@@ -4,6 +4,8 @@ import { Col, Container, Row, Table } from "react-bootstrap";
 const text10 = { fontSize: "10px" };
 const text9 = { fontSize: "9px" };
 const text8 = { fontSize: "8px" };
+const thinBorder = "0.5px solid #222";
+const thinCellBorder = { border: thinBorder };
 
 /**
  * RcdPrintTable Component
@@ -35,6 +37,7 @@ function RcdPrintTable({ payload, onClose }) {
   const collections = payload.collections || [];
   const totalCollections = Number(payload.totalCollections || 0);
   const autoAccountability = payload.autoAccountability || [];
+  const accountableOfficerName = "Amabella S. Ramos";
 
   const handleLocalPrint = () => {
     const printContents = printRef.current?.querySelector("#printableArea")?.outerHTML;
@@ -128,8 +131,11 @@ function RcdPrintTable({ payload, onClose }) {
               .font-monospace { font-family: monospace !important; }
               .decoration-double { text-decoration-style: double; text-decoration-line: underline; }
               .leading-normal { line-height: 1.5; }
-              table { border-color: black !important; }
-              th, td { border-color: black !important; }
+              table { border-color: #222 !important; border-width: 0.5px !important; }
+              th, td { border-color: #222 !important; border-width: 0.5px !important; }
+              .table-bordered > :not(caption) > * > * {
+                border-width: 0.5px !important;
+              }
             `}
           </style>
 
@@ -168,43 +174,43 @@ function RcdPrintTable({ payload, onClose }) {
           </Row>
 
           {/* Part A */}
-          <div className="border border-black mb-0">
-            <div className="border-bottom border-black px-2 py-1 fw-bold bg-light" style={{ fontSize: "11px" }}>
+          <div className="mb-0" style={{ border: thinBorder }}>
+            <div className="px-2 py-1 fw-bold bg-light" style={{ fontSize: "11px", borderBottom: thinBorder }}>
               A. COLLECTIONS
             </div>
-            <div className="border-bottom border-black px-4 py-1 fw-medium fst-italic" style={text10}>
+            <div className="px-4 py-1 fw-medium fst-italic" style={{ ...text10, borderBottom: thinBorder }}>
               1. For Collectors
             </div>
-            <Table bordered responsive={false} className="mb-0" style={{ ...text10, tableLayout: "fixed" }}>
+            <Table responsive={false} className="mb-0" style={{ ...text10, tableLayout: "fixed" }}>
               <thead>
                 <tr className="text-center align-middle">
-                  <th style={{ width: "28%" }} className="fw-normal">Type (Form No.)</th>
-                  <th colSpan={2} className="fw-normal">Official Receipt/Serial No.</th>
-                  <th style={{ width: "24%" }} className="fw-normal">Amount</th>
+                  <th style={{ ...thinCellBorder, width: "28%" }} className="fw-normal">Type (Form No.)</th>
+                  <th colSpan={2} style={thinCellBorder} className="fw-normal">Official Receipt/Serial No.</th>
+                  <th style={{ ...thinCellBorder, width: "24%" }} className="fw-normal">Amount</th>
                 </tr>
                 <tr className="text-center" style={text9}>
-                  <th></th>
-                  <th className="fw-normal" style={{ width: "18%" }}>From</th>
-                  <th className="fw-normal" style={{ width: "18%" }}>To</th>
-                  <th></th>
+                  <th style={thinCellBorder}></th>
+                  <th className="fw-normal" style={{ ...thinCellBorder, width: "18%" }}>From</th>
+                  <th className="fw-normal" style={{ ...thinCellBorder, width: "18%" }}>To</th>
+                  <th style={thinCellBorder}></th>
                 </tr>
               </thead>
               <tbody>
                 {collections.length > 0 ? collections.map((item, i) => (
                   <tr key={i}>
-                    <td className="px-2 text-uppercase text-truncate" style={text9}>{item.type}</td>
-                    <td className="text-center font-monospace">{item.from}</td>
-                    <td className="text-center font-monospace">{item.to}</td>
-                    <td className="text-end px-2 fw-bold">
+                    <td className="px-2 text-uppercase text-truncate" style={{ ...thinCellBorder, ...text9 }}>{item.type}</td>
+                    <td className="text-center font-monospace" style={thinCellBorder}>{item.from}</td>
+                    <td className="text-center font-monospace" style={thinCellBorder}>{item.to}</td>
+                    <td className="text-end px-2 fw-bold" style={thinCellBorder}>
                       {Number(item.amount).toLocaleString(undefined, { minimumFractionDigits: 2 })}
                     </td>
                   </tr>
                 ) ) : (
-                  <tr><td colSpan={4} className="text-center text-muted fst-italic py-2">No collections recorded</td></tr>
+                  <tr><td colSpan={4} className="text-center text-muted fst-italic py-2" style={thinCellBorder}>No collections recorded</td></tr>
                 )}
                 <tr className="fw-bold">
-                  <td colSpan={3} className="text-end px-3 py-2" style={text10}>TOTAL COLLECTIONS (PHP)</td>
-                  <td className="text-end px-2 py-2 text-decoration-underline decoration-double">
+                  <td colSpan={3} className="text-end px-3 py-2" style={{ ...thinCellBorder, ...text10 }}>TOTAL COLLECTIONS (PHP)</td>
+                  <td className="text-end px-2 py-2 text-decoration-underline decoration-double" style={thinCellBorder}>
                     {totalCollections.toLocaleString(undefined, { minimumFractionDigits: 2 })}
                   </td>
                 </tr>
@@ -212,79 +218,79 @@ function RcdPrintTable({ payload, onClose }) {
             </Table>
           </div>
 
-          <div className="border border-black border-top-0">
-            <div className="border-bottom border-black px-4 py-1 fw-medium fst-italic" style={text10}>
+          <div style={{ borderLeft: thinBorder, borderRight: thinBorder, borderBottom: thinBorder }}>
+            <div className="px-4 py-1 fw-medium fst-italic" style={{ ...text10, borderBottom: thinBorder }}>
               2. For Liquidating Officers/Treasurer
             </div>
-            <Table bordered responsive={false} className="mb-0" style={{ ...text10, tableLayout: "fixed" }}>
+            <Table responsive={false} className="mb-0" style={{ ...text10, tableLayout: "fixed" }}>
               <tbody>
                 <tr className="text-center fw-normal" style={text9}>
-                  <td style={{ width: "45%" }}>Name of Accountable Officer</td>
-                  <td style={{ width: "20%" }}>Report No.</td>
-                  <td style={{ width: "35%" }}>Amount</td>
+                  <td style={{ ...thinCellBorder, width: "45%" }}>Name of Accountable Officer</td>
+                  <td style={{ ...thinCellBorder, width: "20%" }}>Report No.</td>
+                  <td style={{ ...thinCellBorder, width: "35%" }}>Amount</td>
                 </tr>
                 <tr>
-                  <td className="fw-bold text-uppercase text-center py-2" style={text9}>{header.liquidatingOfficer || " "}</td>
-                  <td></td>
-                  <td className="text-end px-2 fw-bold">
-                    {totalCollections.toLocaleString(undefined, { minimumFractionDigits: 2 })}
+                  <td className="fw-bold text-uppercase text-center py-2" style={{ ...thinCellBorder, ...text9 }}>{accountableOfficerName}</td>
+                  <td style={thinCellBorder}></td>
+                  <td className="text-end px-2 fw-bold" style={thinCellBorder}>
+                    {Number(0).toLocaleString(undefined, { minimumFractionDigits: 2 })}
                   </td>
                 </tr>
               </tbody>
             </Table>
-            <Table bordered responsive={false} className="mb-0" style={{ ...text10, tableLayout: "fixed" }}>
+            <Table responsive={false} className="mb-0" style={{ ...text10, tableLayout: "fixed" }}>
               <tbody>
                 <tr className="text-center fw-normal" style={text9}>
-                  <td style={{ width: "45%" }}>Accountable Officer/Bank</td>
-                  <td style={{ width: "20%" }}>Reference</td>
-                  <td style={{ width: "35%" }}></td>
+                  <td style={{ ...thinCellBorder, width: "45%" }}>Accountable Officer/Bank</td>
+                  <td style={{ ...thinCellBorder, width: "20%" }}>Reference</td>
+                  <td style={{ ...thinCellBorder, width: "35%" }}></td>
                 </tr>
                 <tr>
-                  <td className="fw-bold text-uppercase text-center py-2" style={text9}>{header.bank || header.treasurer}</td>
-                  <td className="fst-italic text-center">{header.reference || "OR's"}</td>
-                  <td></td>
+                  <td className="fw-bold text-uppercase text-center py-2" style={{ ...thinCellBorder, ...text9 }}>{header.bank || header.treasurer}</td>
+                  <td className="fst-italic text-center" style={thinCellBorder}>{header.reference || "OR's"}</td>
+                  <td style={thinCellBorder}></td>
                 </tr>
               </tbody>
             </Table>
           </div>
 
           {/* Part C */}
-          <div className="border border-black border-top-0">
-            <div className="border-bottom border-black px-2 py-1 fw-bold bg-light" style={{ fontSize: "11px" }}>
+          <div style={{ borderLeft: thinBorder, borderRight: thinBorder, borderBottom: thinBorder }}>
+            <div className="px-2 py-1 fw-bold bg-light" style={{ fontSize: "11px", borderBottom: thinBorder }}>
               C. ACCOUNTABILITY OF ACCOUNTABLE FORMS
             </div>
-            <Table bordered responsive={false} className="mb-0 text-center" style={{ ...text8, tableLayout: "fixed", lineHeight: 1.1 }}>
+            <Table responsive={false} className="mb-0 text-center" style={{ ...text8, tableLayout: "fixed", lineHeight: 1.1 }}>
               <thead>
                 <tr className="text-uppercase align-middle">
-                  <th rowSpan={2} style={{ width: "16%" }}>Name of Form</th>
-                  <th colSpan={3} style={{ width: "21%" }}>Beg. Balance</th>
-                  <th colSpan={3} style={{ width: "21%" }}>Receipt</th>
-                  <th colSpan={3} style={{ width: "21%" }}>Issued</th>
-                  <th colSpan={3} style={{ width: "21%" }}>Ending Balance</th>
+                  <th rowSpan={2} style={{ ...thinCellBorder, width: "16%" }}>Name of Form</th>
+                  <th colSpan={3} style={{ ...thinCellBorder, width: "21%" }}>Beg. Balance</th>
+                  <th colSpan={3} style={{ ...thinCellBorder, width: "21%" }}>Receipt</th>
+                  <th colSpan={3} style={{ ...thinCellBorder, width: "21%" }}>Issued</th>
+                  <th colSpan={3} style={{ ...thinCellBorder, width: "21%" }}>Ending Balance</th>
                 </tr>
                 <tr style={{ fontSize: "7px" }}>
-                  <th>QTY</th><th>From</th><th>To</th>
-                  <th>QTY</th><th>From</th><th>To</th>
-                  <th>QTY</th><th>From</th><th>To</th>
-                  <th>QTY</th><th>From</th><th>To</th>
+                  <th style={thinCellBorder}>QTY</th><th style={thinCellBorder}>From</th><th style={thinCellBorder}>To</th>
+                  <th style={thinCellBorder}>QTY</th><th style={thinCellBorder}>From</th><th style={thinCellBorder}>To</th>
+                  <th style={thinCellBorder}>QTY</th><th style={thinCellBorder}>From</th><th style={thinCellBorder}>To</th>
+                  <th style={thinCellBorder}>QTY</th><th style={thinCellBorder}>From</th><th style={thinCellBorder}>To</th>
                 </tr>
               </thead>
               <tbody>
                 {autoAccountability.map((item, idx) => (
                   <tr key={idx}>
-                    <td className="text-start px-1 text-uppercase fw-medium text-truncate">{item.name}</td>
-                    <td className="text-secondary fst-italic">{item.begQty || 0}</td>
-                    <td className="text-secondary font-monospace">{item.begFrom || "-"}</td>
-                    <td className="text-secondary font-monospace">{item.begTo || "-"}</td>
-                    <td className="fw-bold">{item.recQty || 0}</td>
-                    <td className="font-monospace">{item.recFrom || "-"}</td>
-                    <td className="font-monospace">{item.recTo || "-"}</td>
-                    <td className="fw-bold text-danger">{item.issuedQty || 0}</td>
-                    <td className="font-monospace text-danger">{item.issuedFrom || "-"}</td>
-                    <td className="font-monospace text-danger">{item.issuedTo || "-"}</td>
-                    <td className="fw-bold bg-light">{item.endQty || 0}</td>
-                    <td className="font-monospace bg-light">{item.endFrom || "-"}</td>
-                    <td className="font-monospace bg-light">{item.endTo || "-"}</td>
+                    <td className="text-start px-1 text-uppercase fw-medium text-truncate" style={thinCellBorder}>{item.name}</td>
+                    <td className="text-secondary fst-italic" style={thinCellBorder}>{item.begQty || 0}</td>
+                    <td className="text-secondary font-monospace" style={thinCellBorder}>{item.begFrom || "-"}</td>
+                    <td className="text-secondary font-monospace" style={thinCellBorder}>{item.begTo || "-"}</td>
+                    <td className="fw-bold" style={thinCellBorder}>{item.recQty || 0}</td>
+                    <td className="font-monospace" style={thinCellBorder}>{item.recFrom || "-"}</td>
+                    <td className="font-monospace" style={thinCellBorder}>{item.recTo || "-"}</td>
+                    <td className="fw-bold text-danger" style={thinCellBorder}>{item.issuedQty || 0}</td>
+                    <td className="font-monospace text-danger" style={thinCellBorder}>{item.issuedFrom || "-"}</td>
+                    <td className="font-monospace text-danger" style={thinCellBorder}>{item.issuedTo || "-"}</td>
+                    <td className="fw-bold bg-light" style={thinCellBorder}>{item.endQty || 0}</td>
+                    <td className="font-monospace bg-light" style={thinCellBorder}>{item.endFrom || "-"}</td>
+                    <td className="font-monospace bg-light" style={thinCellBorder}>{item.endTo || "-"}</td>
                   </tr>
                 ))}
               </tbody>
@@ -292,8 +298,8 @@ function RcdPrintTable({ payload, onClose }) {
           </div>
 
            {/* Summary Section */}
-          <div className="border border-black border-top-0 mb-3">
-            <div className="border-bottom border-black px-2 py-1 fw-bold text-uppercase bg-light" style={{ fontSize: "11px" }}>
+          <div className="mb-3" style={{ borderLeft: thinBorder, borderRight: thinBorder, borderBottom: thinBorder }}>
+            <div className="px-2 py-1 fw-bold text-uppercase bg-light" style={{ fontSize: "11px", borderBottom: thinBorder }}>
               Summary of Collections and Remittances
             </div>
             <Row className="g-0" style={text10}>
@@ -306,18 +312,18 @@ function RcdPrintTable({ payload, onClose }) {
                    <p className="fw-bolder" style={{ fontSize: '11px', marginLeft: 'auto', marginRight: 'auto' }}>TOTAL</p>
                 </div>
               </Col>
-              <Col xs={5} className="p-3 border-start border-black d-flex flex-column" style={{ lineHeight: '1.8' }}>
+              <Col xs={5} className="p-3 d-flex flex-column" style={{ lineHeight: '1.8', borderLeft: thinBorder }}>
                 {/* 4 Rows of Underlines */}
-                <div className="border-bottom border-black w-100" style={{ height: '1.8em' }}></div>
+                <div className="w-100" style={{ height: '1.8em', borderBottom: thinBorder }}></div>
                 
-                <div className="border-bottom border-black w-100 d-flex justify-content-between fw-bold" style={{ height: '1.8em' }}>
+                <div className="w-100 d-flex justify-content-between fw-bold" style={{ height: '1.8em', borderBottom: thinBorder }}>
                   <span className="ps-2">PHP</span>
                   <span className="pe-2">{totalCollections.toLocaleString(undefined, { minimumFractionDigits: 2 })}</span>
                 </div>
                 
-                <div className="border-bottom border-black w-100" style={{ height: '1.8em' }}></div>
+                <div className="w-100" style={{ height: '1.8em', borderBottom: thinBorder }}></div>
                 
-                <div className="border-bottom border-black w-100" style={{ height: '1.8em' }}></div>
+                <div className="w-100" style={{ height: '1.8em', borderBottom: thinBorder }}></div>
 
                 
 
@@ -327,8 +333,8 @@ function RcdPrintTable({ payload, onClose }) {
 
 
           {/* Signatures */}
-          <Row className="border border-black g-0" style={{ minHeight: 180 }}>
-            <Col xs={6} className="border-end border-black p-3 d-flex flex-column justify-content-between bg-white">
+          <Row className="g-0" style={{ minHeight: 180, border: thinBorder }}>
+            <Col xs={6} className="p-3 d-flex flex-column justify-content-between bg-white" style={{ borderRight: thinBorder }}>
               <div>
                 <p className="fw-bold text-uppercase mb-2" style={{ fontSize: '11px' }}>CERTIFICATION</p>
                 <p className="ps-2" style={{ fontSize: '14px', lineHeight: '1.4' }}>

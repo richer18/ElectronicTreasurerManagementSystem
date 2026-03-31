@@ -7,7 +7,7 @@ import Tooltip from '@mui/material/Tooltip';
 import PropTypes from 'prop-types';
 import GeneralFundReport from "../../../../../FRONTEND/components/ABSTRACT/GF/TableData/components/Table/RegulatoryFees";
 
-function GeneralFundDialogPopup({ open, onClose }) {
+function GeneralFundDialogPopup({ open, onClose, month, year }) {
   return (
     <Dialog open={open} onClose={onClose} maxWidth="md" fullWidth>
       <DialogTitle>
@@ -21,15 +21,17 @@ function GeneralFundDialogPopup({ open, onClose }) {
         </div>
       </DialogTitle>
       <DialogContent>
-        <GeneralFundReport/>
+        <GeneralFundReport initialMonth={month} initialYear={year} />
       </DialogContent>
     </Dialog>
   );
 }
 
 GeneralFundDialogPopup.propTypes = {
+  month: PropTypes.string,
   open: PropTypes.bool.isRequired,
   onClose: PropTypes.func.isRequired,
+  year: PropTypes.string,
 };
 
 export default GeneralFundDialogPopup;

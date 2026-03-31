@@ -65,6 +65,8 @@ function TrustFundPaymentForm() {
   const [progress, setProgress] = useState(0);
   const [rateOptions, setRateOptions] = useState([]);
   const [rateLoading, setRateLoading] = useState(false);
+  const [receiptTypeOptions, setReceiptTypeOptions] = useState([]);
+  const [receiptTypeLoading, setReceiptTypeLoading] = useState(false);
 
   const rateById = useMemo(() => {
     const map = new Map();
@@ -89,6 +91,23 @@ function TrustFundPaymentForm() {
     };
 
     fetchRates();
+  }, []);
+
+  useEffect(() => {
+    const fetchReceiptTypes = async () => {
+      try {
+        setReceiptTypeLoading(true);
+        const response = await axiosInstance.get("form-types");
+        setReceiptTypeOptions(Array.isArray(response.data) ? response.data : []);
+      } catch (error) {
+        console.error("Error fetching receipt type options:", error);
+        setReceiptTypeOptions([]);
+      } finally {
+        setReceiptTypeLoading(false);
+      }
+    };
+
+    fetchReceiptTypes();
   }, []);
 
   useEffect(() => {
@@ -282,7 +301,22 @@ function TrustFundPaymentForm() {
                 <FaIdCard style={{ marginRight: 8 }} />
                 Type of Receipt
               </Form.Label>
-              <Form.Control type="text" value={typeReceipt} onChange={(e) => setTypeReceipt(e.target.value)} required style={inputStyle} />
+              <Form.Select
+                value={typeReceipt}
+                onChange={(e) => setTypeReceipt(e.target.value)}
+                required
+                style={inputStyle}
+                disabled={receiptTypeLoading}
+              >
+                <option value="">
+                  {receiptTypeLoading ? "Loading receipt types..." : "Select receipt type"}
+                </option>
+                {receiptTypeOptions.map((option) => (
+                  <option key={option.code ?? option.id} value={option.code ?? option.id}>
+                    {option.description || option.name || option.code || option.id}
+                  </option>
+                ))}
+              </Form.Select>
             </Form.Group>
           </Col>
 

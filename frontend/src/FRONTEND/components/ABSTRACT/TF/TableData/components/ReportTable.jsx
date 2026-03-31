@@ -16,7 +16,7 @@ import {
 } from "@mui/material";
 import ExcelJS from "exceljs";
 import PropTypes from "prop-types";
-import React, { useEffect, useState } from "react";
+import React, { useEffect, useMemo, useState } from "react";
 import axiosInstance from "../../../../../../api/axiosInstance";
 
 const months = [
@@ -39,32 +39,47 @@ const years = Array.from({ length: 100 }, (_, i) => ({
   value: String(2050 - i),
 }));
 
-// Helper function to format currency
-const formatCurrency = (value) => {
-  return value > 0
-    ? `₱${value.toLocaleString(undefined, { minimumFractionDigits: 2 })}`
-    : "₱0.00"; // Changed to display '₱0.00' instead of empty string
-};
+const formatCurrency = (value) =>
+  `PHP ${Number(value || 0).toLocaleString("en-US", {
+    minimumFractionDigits: 2,
+    maximumFractionDigits: 2,
+  })}`;
 
-function ReportTable({ onBack }) {
-  const [month, setMonth] = useState(months[0]);
-  const [year, setYear] = useState(() => {
-    const currentYear = new Date().getFullYear().toString();
-    return years.find((option) => option.value === currentYear) || years[0];
-  });
+const createEmptyData = () => ({
+  building_local_80: 0,
+  building_trust_15: 0,
+  building_national_5: 0,
+  electricalfee: 0,
+  zoningfee: 0,
+  livestock_local_80: 0,
+  livestock_national_20: 0,
+  diving_local_40: 0,
+  diving_brgy_30: 0,
+  diving_fishers_30: 0,
+  total: 0,
+});
 
-  const [data, setData] = useState({
-    building_local_80: 0,
-    building_trust_15: 0,
-    building_national_5: 0,
-    electricalfee: 0,
-    zoningfee: 0,
-    livestock_local_80: 0,
-    livestock_national_20: 0,
-    diving_local_40: 0,
-    diving_brgy_30: 0,
-    diving_fishers_30: 0,
-  });
+function ReportTable({ onBack, initialMonth, initialYear }) {
+  const currentYear = new Date().getFullYear().toString();
+  const [month, setMonth] = useState(
+    months.find((option) => option.value === String(initialMonth || new Date().getMonth() + 1)) || months[0]
+  );
+  const [year, setYear] = useState(
+    years.find((option) => option.value === String(initialYear || currentYear)) || years[0]
+  );
+  const [data, setData] = useState(createEmptyData());
+
+  useEffect(() => {
+    if (initialMonth) {
+      setMonth(months.find((option) => option.value === String(initialMonth)) || months[0]);
+    }
+  }, [initialMonth]);
+
+  useEffect(() => {
+    if (initialYear) {
+      setYear(years.find((option) => option.value === String(initialYear)) || years[0]);
+    }
+  }, [initialYear]);
 
   useEffect(() => {
     if (!month || !year) {
@@ -80,84 +95,102 @@ function ReportTable({ onBack }) {
           },
         });
 
-        const rows = Array.isArray(response.data) ? response.data : [];
+        const row = Array.isArray(response.data) && response.data.length > 0 ? response.data[0] : null;
 
-        if (rows.length > 0) {
-          const filteredData = rows.reduce(
-            (acc, row) => ({
-              building_local_80:
-                acc.building_local_80 + (parseFloat(row.LOCAL_80_PERCENT) || 0),
-              building_trust_15:
-                acc.building_trust_15 +
-                (parseFloat(row.TRUST_FUND_15_PERCENT) || 0),
-              building_national_5:
-                acc.building_national_5 +
-                (parseFloat(row.NATIONAL_5_PERCENT) || 0),
-
-              electricalfee:
-                acc.electricalfee + (parseFloat(row.ELECTRICAL_FEE) || 0),
-              zoningfee: acc.zoningfee + (parseFloat(row.ZONING_FEE) || 0),
-
-              livestock_local_80:
-                acc.livestock_local_80 +
-                (parseFloat(row.LOCAL_80_PERCENT_LIVESTOCK) || 0),
-              livestock_national_20:
-                acc.livestock_national_20 +
-                (parseFloat(row.NATIONAL_20_PERCENT) || 0),
-
-              diving_local_40:
-                acc.diving_local_40 +
-                (parseFloat(row.LOCAL_40_PERCENT_DIVE_FEE) || 0),
-              diving_brgy_30:
-                acc.diving_brgy_30 + (parseFloat(row.BRGY_30_PERCENT) || 0),
-              diving_fishers_30:
-                acc.diving_fishers_30 +
-                (parseFloat(row.FISHERS_30_PERCENT) || 0),
-            }),
-            {
-              building_local_80: 0,
-              building_trust_15: 0,
-              building_national_5: 0,
-              electricalfee: 0,
-              zoningfee: 0,
-              livestock_local_80: 0,
-              livestock_national_20: 0,
-              diving_local_40: 0,
-              diving_brgy_30: 0,
-              diving_fishers_30: 0,
-            }
-          );
-
-          setData(filteredData);
-        } else {
-          console.warn("No data available for selected month and year");
-          setData({
-            building_local_80: 0,
-            building_trust_15: 0,
-            building_national_5: 0,
-            electricalfee: 0,
-            zoningfee: 0,
-            livestock_local_80: 0,
-            livestock_national_20: 0,
-            diving_local_40: 0,
-            diving_brgy_30: 0,
-            diving_fishers_30: 0,
-          });
+        if (!row) {
+          setData(createEmptyData());
+          return;
         }
+
+        setData({
+          building_local_80: parseFloat(row.LOCAL_80_PERCENT) || 0,
+          building_trust_15: parseFloat(row.TRUST_FUND_15_PERCENT) || 0,
+          building_national_5: parseFloat(row.NATIONAL_5_PERCENT) || 0,
+          electricalfee: parseFloat(row.ELECTRICAL_FEE) || 0,
+          zoningfee: parseFloat(row.ZONING_FEE) || 0,
+          livestock_local_80: parseFloat(row.LOCAL_80_PERCENT_LIVESTOCK) || 0,
+          livestock_national_20: parseFloat(row.NATIONAL_20_PERCENT) || 0,
+          diving_local_40: parseFloat(row.LOCAL_40_PERCENT_DIVE_FEE) || 0,
+          diving_brgy_30: parseFloat(row.BRGY_30_PERCENT) || 0,
+          diving_fishers_30: parseFloat(row.FISHERS_30_PERCENT) || 0,
+          total: parseFloat(row.TOTAL) || 0,
+        });
       } catch (error) {
-        console.error("Error fetching data:", error);
+        console.error("Error fetching trust fund report data:", error.response?.data || error.message);
+        setData(createEmptyData());
       }
     };
 
     fetchData();
   }, [month, year]);
 
+  const totals = useMemo(() => {
+    const national = (data.building_national_5 || 0) + (data.livestock_national_20 || 0);
+    const municipalGeneral =
+      (data.building_local_80 || 0) +
+      (data.electricalfee || 0) +
+      (data.zoningfee || 0) +
+      (data.livestock_local_80 || 0) +
+      (data.diving_local_40 || 0);
+    const municipalTrust = data.building_trust_15 || 0;
+
+    return {
+      totalCollection: data.total || 0,
+      national,
+      municipalGeneral,
+      municipalTrust,
+      municipalTotal: municipalGeneral + municipalTrust,
+      barangay: data.diving_brgy_30 || 0,
+      fisheries: data.diving_fishers_30 || 0,
+    };
+  }, [data]);
+
+  const reportRows = useMemo(
+    () => [
+      {
+        label: "Building Permit Fee",
+        totalCollection: (data.building_local_80 || 0) + (data.building_trust_15 || 0) + (data.building_national_5 || 0),
+        national: data.building_national_5 || 0,
+        municipalGeneral: data.building_local_80 || 0,
+        municipalTrust: data.building_trust_15 || 0,
+        municipalTotal: (data.building_local_80 || 0) + (data.building_trust_15 || 0),
+      },
+      {
+        label: "Electrical Permit Fee",
+        totalCollection: data.electricalfee || 0,
+        municipalGeneral: data.electricalfee || 0,
+        municipalTotal: data.electricalfee || 0,
+      },
+      {
+        label: "Zoning Fee",
+        totalCollection: data.zoningfee || 0,
+        municipalGeneral: data.zoningfee || 0,
+        municipalTotal: data.zoningfee || 0,
+      },
+      {
+        label: "Livestock",
+        totalCollection: (data.livestock_local_80 || 0) + (data.livestock_national_20 || 0),
+        national: data.livestock_national_20 || 0,
+        municipalGeneral: data.livestock_local_80 || 0,
+        municipalTotal: data.livestock_local_80 || 0,
+      },
+      {
+        label: "Diving Fee",
+        totalCollection: (data.diving_local_40 || 0) + (data.diving_brgy_30 || 0) + (data.diving_fishers_30 || 0),
+        municipalGeneral: data.diving_local_40 || 0,
+        municipalTotal: data.diving_local_40 || 0,
+        barangay: data.diving_brgy_30 || 0,
+        fisheries: data.diving_fishers_30 || 0,
+      },
+    ],
+    [data]
+  );
+
   const handleMonthChange = (event, value) => {
     setMonth(value || months[0]);
   };
 
   const handleYearChange = (event, value) => {
-    const currentYear = new Date().getFullYear().toString();
     setYear(value || years.find((option) => option.value === currentYear) || years[0]);
   };
 
@@ -175,79 +208,19 @@ function ReportTable({ onBack }) {
         <head>
           <title>SOC_TrustFundReport_${month.label}_${year.label}</title>
           <style>
-            @page {
-              size: legal landscape;
-              margin: 12mm;
-            }
-            body {
-              font-family: "Arial", sans-serif;
-              font-size: 12px;
-              margin: 0;
-              padding: 0 4mm;
-              color: #000;
-              background: #fff;
-            }
-            .print-wrap {
-              width: 100%;
-            }
-            table {
-              border-collapse: collapse;
-              width: 100%;
-              table-layout: fixed;
-              font-size: 11px;
-            }
-            th, td {
-              border: 1px solid black;
-              padding: 8px 6px;
-              text-align: center;
-              vertical-align: middle;
-              word-wrap: break-word;
-            }
-            thead {
-              display: table-header-group;
-            }
-            tr {
-              page-break-inside: avoid;
-            }
-            h2, h4, p {
-              margin: 0 0 6px 0;
-              text-align: center;
-              width: 100%;
-            }
-            h2 {
-              font-size: 20px;
-              letter-spacing: 0.4px;
-            }
-            h4 {
-              font-size: 14px;
-              font-weight: 700;
-            }
-            .print-subtitle {
-              font-size: 13px;
-              font-weight: 700;
-              margin-bottom: 14px;
-              text-align: center;
-              width: 100%;
-            }
-            .print-box {
-              margin-top: 10px;
-            }
-            .print-box .MuiPaper-root {
-              box-shadow: none !important;
-            }
-            th {
-              background: #f3f3f3;
-              font-weight: 700;
-            }
-            td:first-child,
-            th:first-child {
-              text-align: left;
-              padding-left: 10px;
-            }
+            @page { size: legal landscape; margin: 12mm; }
+            body { font-family: Arial, sans-serif; font-size: 12px; margin: 0; padding: 0 4mm; color: #000; background: #fff; }
+            table { border-collapse: collapse; width: 100%; table-layout: fixed; font-size: 11px; }
+            th, td { border: 1px solid black; padding: 8px 6px; text-align: center; vertical-align: middle; word-wrap: break-word; }
+            thead { display: table-header-group; }
+            tr { page-break-inside: avoid; }
+            h2, h4, p { margin: 0 0 6px 0; text-align: center; width: 100%; }
+            th { background: #f3f3f3; font-weight: 700; }
+            td:first-child, th:first-child { text-align: left; padding-left: 10px; }
           </style>
         </head>
         <body>
-          <div class="print-wrap">${printContents}</div>
+          <div>${printContents}</div>
         </body>
       </html>
     `);
@@ -262,14 +235,12 @@ function ReportTable({ onBack }) {
     const workbook = new ExcelJS.Workbook();
     const worksheet = workbook.addWorksheet("Summary of Collection Trust Fund");
 
-    // HEADER
     worksheet.addRow(["SUMMARY OF COLLECTIONS"]);
     worksheet.addRow(["ZAMBOANGUITA, NEGROS ORIENTAL"]);
     worksheet.addRow(["LGU"]);
     worksheet.addRow([`Month of ${month.label} ${year.label}`]);
     worksheet.addRow([]);
 
-    // COLUMN HEADERS
     worksheet.addRow([
       "SOURCES OF COLLECTIONS",
       "TOTAL COLLECTIONS",
@@ -300,129 +271,44 @@ function ReportTable({ onBack }) {
       "",
     ]);
 
-    // CURRENCY FORMATTER
-    const formatCurrency = (val) =>
-      `₱${Number(val || 0).toLocaleString("en-US", {
+    const excelCurrency = (value) =>
+      Number(value || 0).toLocaleString("en-US", {
         minimumFractionDigits: 2,
         maximumFractionDigits: 2,
-      })}`;
+      });
 
-    // DATA ROWS FROM DATABASE STATE
-    const rows = [
-      [
-        "Building Permit Fee",
-        formatCurrency(
-          data.building_local_80 +
-            data.building_trust_15 +
-            data.building_national_5
-        ),
-        formatCurrency(data.building_national_5),
+    reportRows.forEach((row) => {
+      worksheet.addRow([
+        row.label,
+        excelCurrency(row.totalCollection),
+        row.national ? excelCurrency(row.national) : "",
         "",
         "",
         "",
-        formatCurrency(data.building_local_80),
+        row.municipalGeneral ? excelCurrency(row.municipalGeneral) : "",
         "",
-        formatCurrency(data.building_trust_15),
-        formatCurrency(data.building_local_80 + data.building_trust_15),
-        "",
-        "",
-      ],
-      [
-        "Electrical Permit Fee",
-        formatCurrency(data.electricalfee),
-        "",
-        "",
-        "",
-        "",
-        formatCurrency(data.electricalfee),
-        "",
-        "",
-        formatCurrency(data.electricalfee),
-        "",
-        "",
-      ],
-      [
-        "Zoning Fee",
-        formatCurrency(data.zoningfee),
-        "",
-        "",
-        "",
-        "",
-        formatCurrency(data.zoningfee),
-        "",
-        "",
-        formatCurrency(data.zoningfee),
-        "",
-        "",
-      ],
-      [
-        "Livestock",
-        formatCurrency(data.livestock_local_80 + data.livestock_national_20),
-        formatCurrency(data.livestock_national_20),
-        "",
-        "",
-        "",
-        formatCurrency(data.livestock_local_80),
-        "",
-        "",
-        formatCurrency(data.livestock_local_80),
-        "",
-        "",
-      ],
-      [
-        "Diving Fee",
-        formatCurrency(
-          data.diving_local_40 + data.diving_brgy_30 + data.diving_fishers_30
-        ),
-        "",
-        "",
-        "",
-        "",
-        formatCurrency(data.diving_local_40),
-        "",
-        "",
-        formatCurrency(data.diving_local_40),
-        formatCurrency(data.diving_brgy_30),
-        formatCurrency(data.diving_fishers_30),
-      ],
-    ];
+        row.municipalTrust ? excelCurrency(row.municipalTrust) : "",
+        row.municipalTotal ? excelCurrency(row.municipalTotal) : "",
+        row.barangay ? excelCurrency(row.barangay) : "",
+        row.fisheries ? excelCurrency(row.fisheries) : "",
+      ]);
+    });
 
-    rows.forEach((row) => worksheet.addRow(row));
-
-    // TOTALS
-    const totalCollection = Object.values(data).reduce(
-      (sum, val) => sum + (val || 0),
-      0
-    );
     worksheet.addRow([
       "TOTAL",
-      formatCurrency(totalCollection),
-      formatCurrency(data.building_national_5 + data.livestock_national_20),
+      excelCurrency(totals.totalCollection),
+      excelCurrency(totals.national),
       "",
       "",
       "",
-      formatCurrency(
-        data.building_local_80 +
-          data.electricalfee +
-          data.zoningfee +
-          data.livestock_local_80 +
-          data.diving_local_40
-      ),
+      excelCurrency(totals.municipalGeneral),
       "",
-      formatCurrency(data.building_trust_15),
-      formatCurrency(
-        data.building_local_80 +
-          data.electricalfee +
-          data.zoningfee +
-          data.livestock_local_80 +
-          data.diving_local_40 +
-          data.building_trust_15
-      ),
-      formatCurrency(data.diving_brgy_30),
-      formatCurrency(data.diving_fishers_30),
+      excelCurrency(totals.municipalTrust),
+      excelCurrency(totals.municipalTotal),
+      excelCurrency(totals.barangay),
+      excelCurrency(totals.fisheries),
     ]);
 
-    // MERGE HEADER CELLS
     worksheet.mergeCells("A1:L1");
     worksheet.mergeCells("A2:L2");
     worksheet.mergeCells("A3:L3");
@@ -430,8 +316,7 @@ function ReportTable({ onBack }) {
     worksheet.mergeCells("D6:F6");
     worksheet.mergeCells("G6:J6");
 
-    // STYLING
-    for (let i = 1; i <= 4; i++) {
+    for (let i = 1; i <= 4; i += 1) {
       worksheet.getRow(i).font = { bold: true };
       worksheet.getRow(i).alignment = { horizontal: "center" };
     }
@@ -440,31 +325,27 @@ function ReportTable({ onBack }) {
       cell.font = { bold: true };
       cell.alignment = { horizontal: "center" };
     });
-
     worksheet.getRow(7).eachCell((cell) => {
       cell.font = { bold: true };
       cell.alignment = { horizontal: "center" };
     });
 
-    // COLUMN WIDTHS
     worksheet.columns = Array(12).fill({ width: 18 });
 
-    // EXPORT FILE
     const buffer = await workbook.xlsx.writeBuffer();
     const blob = new Blob([buffer], {
       type: "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
     });
     const url = URL.createObjectURL(blob);
-    const a = document.createElement("a");
-    a.href = url;
-    a.download = `Summary_of_Collections_TrustFund_${month.label}_${year.label}.xlsx`;
-    a.click();
+    const link = document.createElement("a");
+    link.href = url;
+    link.download = `Summary_of_Collections_TrustFund_${month.label}_${year.label}.xlsx`;
+    link.click();
     URL.revokeObjectURL(url);
   };
 
   return (
     <Box sx={{ p: 2, backgroundColor: "#f8f9fa" }}>
-      {/* Header Section */}
       <Box
         sx={{
           display: "flex",
@@ -503,649 +384,105 @@ function ReportTable({ onBack }) {
         <Box display="flex" gap={2} flexWrap="wrap">
           <Autocomplete
             disablePortal
-            id="month-selector"
             options={months}
-            isOptionEqualToValue={(option, value) =>
-              option.value === value?.value
-            }
-            sx={{
-              width: { xs: "100%", sm: 180 },
-              "& .MuiInputBase-root": { borderRadius: "8px" },
-            }}
+            isOptionEqualToValue={(option, value) => option.value === value?.value}
+            sx={{ width: { xs: "100%", sm: 180 }, "& .MuiInputBase-root": { borderRadius: "8px" } }}
             onChange={handleMonthChange}
             value={month}
-            renderInput={(params) => (
-              <TextField
-                {...params}
-                label="Select Month"
-                variant="outlined"
-                sx={{
-                  "& .MuiInputBase-input": {
-                    color: (theme) => theme.palette.text.primary,
-                  },
-                  "& .MuiInputLabel-root": {
-                    color: (theme) => theme.palette.text.secondary,
-                  },
-                  "& .MuiInputLabel-root.Mui-focused": {
-                    color: (theme) => theme.palette.text.primary,
-                  },
-                  "& .MuiOutlinedInput-notchedOutline": {
-                    borderColor: (theme) => theme.palette.divider,
-                  },
-                  "& .MuiOutlinedInput-root:hover .MuiOutlinedInput-notchedOutline": {
-                    borderColor: (theme) => theme.palette.text.secondary,
-                  },
-                  "& .MuiOutlinedInput-root.Mui-focused .MuiOutlinedInput-notchedOutline": {
-                    borderColor: (theme) => theme.palette.text.primary,
-                  },
-                }}
-              />
-            )}
+            renderInput={(params) => <TextField {...params} label="Select Month" variant="outlined" />}
           />
           <Autocomplete
             disablePortal
-            id="year-selector"
             options={years}
-            isOptionEqualToValue={(option, value) =>
-              option.value === value?.value
-            }
-            sx={{
-              width: { xs: "100%", sm: 180 },
-              "& .MuiInputBase-root": { borderRadius: "8px" },
-            }}
+            isOptionEqualToValue={(option, value) => option.value === value?.value}
+            sx={{ width: { xs: "100%", sm: 180 }, "& .MuiInputBase-root": { borderRadius: "8px" } }}
             onChange={handleYearChange}
             value={year}
-            renderInput={(params) => (
-              <TextField
-                {...params}
-                label="Select Year"
-                variant="outlined"
-                sx={{
-                  "& .MuiInputBase-input": {
-                    color: (theme) => theme.palette.text.primary,
-                  },
-                  "& .MuiInputLabel-root": {
-                    color: (theme) => theme.palette.text.secondary,
-                  },
-                  "& .MuiInputLabel-root.Mui-focused": {
-                    color: (theme) => theme.palette.text.primary,
-                  },
-                  "& .MuiOutlinedInput-notchedOutline": {
-                    borderColor: (theme) => theme.palette.divider,
-                  },
-                  "& .MuiOutlinedInput-root:hover .MuiOutlinedInput-notchedOutline": {
-                    borderColor: (theme) => theme.palette.text.secondary,
-                  },
-                  "& .MuiOutlinedInput-root.Mui-focused .MuiOutlinedInput-notchedOutline": {
-                    borderColor: (theme) => theme.palette.text.primary,
-                  },
-                }}
-              />
-            )}
+            renderInput={(params) => <TextField {...params} label="Select Year" variant="outlined" />}
           />
         </Box>
       </Box>
 
       <div id="printableArea">
-        <Box>
-          <Box>
-            {/* Title Section */}
-            <Box
-              mb={4}
-              sx={{
-                width: "100%",
-                textAlign: "center",
-              }}
-            >
-              <h2 style={{ margin: 0, textAlign: "center" }}>
-                SUMMARY OF COLLECTIONS
-              </h2>
-              <h4 style={{ margin: "6px 0 0", textAlign: "center" }}>
-                ZAMBOANGUITA, NEGROS ORIENTAL
-              </h4>
-              <p style={{ margin: "6px 0 0", textAlign: "center" }}>LGU</p>
-              <p style={{ margin: "6px 0 0", textAlign: "center" }}>
-                Month of {month.label} {year.label}
-              </p>
-            </Box>
-
-            <TableContainer component={Paper}>
-              <Table sx={{ border: "1px solid black" }}>
-                <TableHead>
-                  <TableRow>
-                    <TableCell
-                      rowSpan={2}
-                      align="center"
-                      sx={{ border: "1px solid black", fontWeight: "bold" }}
-                    >
-                      SOURCES OF COLLECTIONS
-                    </TableCell>
-                    <TableCell
-                      rowSpan={2}
-                      align="center"
-                      sx={{ border: "1px solid black", fontWeight: "bold" }}
-                    >
-                      TOTAL COLLECTIONS
-                    </TableCell>
-                    <TableCell
-                      rowSpan={2}
-                      align="center"
-                      sx={{ border: "1px solid black", fontWeight: "bold" }}
-                    >
-                      NATIONAL
-                    </TableCell>
-                    <TableCell
-                      colSpan={3}
-                      align="center"
-                      sx={{ border: "1px solid black", fontWeight: "bold" }}
-                    >
-                      PROVINCIAL
-                    </TableCell>
-                    <TableCell
-                      colSpan={4}
-                      align="center"
-                      sx={{ border: "1px solid black", fontWeight: "bold" }}
-                    >
-                      MUNICIPAL
-                    </TableCell>
-                    <TableCell
-                      rowSpan={2}
-                      align="center"
-                      sx={{ border: "1px solid black", fontWeight: "bold" }}
-                    >
-                      BARANGAY SHARE
-                    </TableCell>
-                    <TableCell
-                      rowSpan={2}
-                      align="center"
-                      sx={{ border: "1px solid black", fontWeight: "bold" }}
-                    >
-                      FISHERIES
-                    </TableCell>
-                  </TableRow>
-                  {/* Second Row */}
-                  <TableRow>
-                    <TableCell
-                      align="center"
-                      sx={{ border: "1px solid black", fontWeight: "bold" }}
-                    >
-                      GENERAL FUND
-                    </TableCell>
-                    <TableCell
-                      align="center"
-                      sx={{ border: "1px solid black", fontWeight: "bold" }}
-                    >
-                      SPECIAL EDUC. FUND
-                    </TableCell>
-                    <TableCell
-                      align="center"
-                      sx={{ border: "1px solid black", fontWeight: "bold" }}
-                    >
-                      TOTAL
-                    </TableCell>
-                    <TableCell
-                      align="center"
-                      sx={{ border: "1px solid black", fontWeight: "bold" }}
-                    >
-                      GENERAL FUND
-                    </TableCell>
-                    <TableCell
-                      align="center"
-                      sx={{ border: "1px solid black", fontWeight: "bold" }}
-                    >
-                      SPECIAL EDUC. FUND
-                    </TableCell>
-                    <TableCell
-                      align="center"
-                      sx={{ border: "1px solid black", fontWeight: "bold" }}
-                    >
-                      TRUST FUND
-                    </TableCell>
-                    <TableCell
-                      align="center"
-                      sx={{ border: "1px solid black", fontWeight: "bold" }}
-                    >
-                      TOTAL
-                    </TableCell>
-                  </TableRow>
-                </TableHead>
-                <TableBody>
-                  {/* Building Permit Fee */}
-                  <TableRow>
-                    <TableCell align="left" sx={{ border: "1px solid black" }}>
-                      Building Permit Fee
-                    </TableCell>
-                    {/* TOTAL COLLECTIONS */}
-                    <TableCell
-                      sx={{ border: "1px solid black" }}
-                      align="center"
-                    >
-                      {formatCurrency(
-                        (data.building_national_5 || 0) +
-                          (data.building_local_80 || 0) +
-                          (data.building_trust_15 || 0)
-                      )}
-                    </TableCell>
-                    {/* NATIONAL */}
-                    <TableCell
-                      sx={{ border: "1px solid black" }}
-                      align="center"
-                    >
-                      {formatCurrency(data.building_national_5 || 0)}
-                    </TableCell>
-                    {/* PROVINCIAL GENERAL FUND */}
-                    <TableCell
-                      sx={{ border: "1px solid black" }}
-                      align="center"
-                    ></TableCell>
-                    {/* PROVINCIAL SPECIAL EDUC. FUND */}
-                    <TableCell
-                      sx={{ border: "1px solid black" }}
-                      align="center"
-                    ></TableCell>
-                    {/* PROVINCIAL TOTAL */}
-                    <TableCell
-                      sx={{ border: "1px solid black" }}
-                      align="center"
-                    ></TableCell>
-                    {/* MUNICIPAL GENERAL FUND */}
-                    <TableCell
-                      sx={{ border: "1px solid black" }}
-                      align="center"
-                    >
-                      {formatCurrency(data.building_local_80 || 0)}
-                    </TableCell>
-                    {/* MUNICIPAL SPECIAL EDUC. FUND */}
-                    <TableCell
-                      sx={{ border: "1px solid black" }}
-                      align="center"
-                    ></TableCell>
-                    {/* MUNICIPAL TRUST FUND */}
-                    <TableCell
-                      sx={{ border: "1px solid black" }}
-                      align="center"
-                    >
-                      {formatCurrency(data.building_trust_15 || 0)}
-                    </TableCell>
-                    {/* MUNICIPAL TOTAL */}
-                    <TableCell
-                      sx={{ border: "1px solid black" }}
-                      align="center"
-                    >
-                      {formatCurrency(
-                        (data.building_local_80 || 0) +
-                          (data.building_trust_15 || 0)
-                      )}
-                    </TableCell>
-                    {/* BARANGAY SHARE */}
-                    <TableCell
-                      sx={{ border: "1px solid black" }}
-                      align="center"
-                    ></TableCell>
-                    {/* FISHERIES */}
-                    <TableCell
-                      sx={{ border: "1px solid black" }}
-                      align="center"
-                    ></TableCell>
-                  </TableRow>
-                  {/* Electrical Permit Fee */}
-                  <TableRow>
-                    <TableCell align="left" sx={{ border: "1px solid black" }}>
-                      Electrical Permit Fee
-                    </TableCell>
-                    <TableCell
-                      sx={{ border: "1px solid black" }}
-                      align="center"
-                    >
-                      {formatCurrency(data.electricalfee || 0)}
-                    </TableCell>
-                    {/* TOTAL COLLECTIONS */}
-                    <TableCell
-                      sx={{ border: "1px solid black" }}
-                      align="center"
-                    ></TableCell>
-                    {/* NATIONAL */}
-                    <TableCell
-                      sx={{ border: "1px solid black" }}
-                      align="center"
-                    ></TableCell>
-                    {/* PROVINCIAL GENERAL FUND */}
-                    <TableCell
-                      sx={{ border: "1px solid black" }}
-                      align="center"
-                    ></TableCell>
-                    {/* PROVINCIAL SPECIAL EDUC. FUND */}
-                    <TableCell
-                      sx={{ border: "1px solid black" }}
-                      align="center"
-                    ></TableCell>
-                    {/* PROVINCIAL TOTAL */}
-                    <TableCell
-                      sx={{ border: "1px solid black" }}
-                      align="center"
-                    >
-                      {formatCurrency(data.electricalfee || 0)}
-                    </TableCell>
-                    {/* MUNICIPAL GENERAL FUND */}
-                    <TableCell
-                      sx={{ border: "1px solid black" }}
-                      align="center"
-                    ></TableCell>
-                    {/* MUNICIPAL SPECIAL EDUC. FUND */}
-                    <TableCell
-                      sx={{ border: "1px solid black" }}
-                      align="center"
-                    ></TableCell>
-                    {/* MUNICIPAL TRUST FUND */}
-                    <TableCell
-                      sx={{ border: "1px solid black" }}
-                      align="center"
-                    >
-                      {formatCurrency(data.electricalfee || 0)}
-                    </TableCell>
-                    {/* MUNICIPAL TOTAL */}
-                    <TableCell
-                      sx={{ border: "1px solid black" }}
-                      align="center"
-                    ></TableCell>
-                    {/* BARANGAY SHARE */}
-                    <TableCell
-                      sx={{ border: "1px solid black" }}
-                      align="center"
-                    ></TableCell>
-                    {/* FISHERIES */}
-                  </TableRow>
-                  {/* Zoning Fee */}
-                  <TableRow>
-                    <TableCell align="left" sx={{ border: "1px solid black" }}>
-                      Zoning Fee
-                    </TableCell>
-                    <TableCell
-                      sx={{ border: "1px solid black" }}
-                      align="center"
-                    >
-                      {formatCurrency(data.zoningfee || 0)}
-                    </TableCell>
-                    <TableCell
-                      sx={{ border: "1px solid black" }}
-                      align="center"
-                    ></TableCell>
-                    <TableCell
-                      sx={{ border: "1px solid black" }}
-                      align="center"
-                    ></TableCell>
-                    <TableCell
-                      sx={{ border: "1px solid black" }}
-                      align="center"
-                    ></TableCell>
-                    <TableCell
-                      sx={{ border: "1px solid black" }}
-                      align="center"
-                    ></TableCell>
-                    <TableCell
-                      sx={{ border: "1px solid black" }}
-                      align="center"
-                    >
-                      {formatCurrency(data.zoningfee || 0)}
-                    </TableCell>
-                    <TableCell
-                      sx={{ border: "1px solid black" }}
-                      align="center"
-                    ></TableCell>
-                    <TableCell
-                      sx={{ border: "1px solid black" }}
-                      align="center"
-                    ></TableCell>
-                    <TableCell
-                      sx={{ border: "1px solid black" }}
-                      align="center"
-                    >
-                      {formatCurrency(data.zoningfee || 0)}
-                    </TableCell>
-                    <TableCell
-                      sx={{ border: "1px solid black" }}
-                      align="center"
-                    ></TableCell>
-                    <TableCell
-                      sx={{ border: "1px solid black" }}
-                      align="center"
-                    ></TableCell>
-                  </TableRow>
-
-                  {/* Livestock */}
-                  <TableRow>
-                    <TableCell align="left" sx={{ border: "1px solid black" }}>
-                      Livestock
-                    </TableCell>
-                    <TableCell
-                      sx={{ border: "1px solid black" }}
-                      align="center"
-                    >
-                      {formatCurrency(
-                        (data.livestock_national_20 || 0) +
-                          (data.livestock_local_80 || 0)
-                      )}
-                    </TableCell>
-                    <TableCell
-                      sx={{ border: "1px solid black" }}
-                      align="center"
-                    >
-                      {formatCurrency(data.livestock_national_20 || 0)}
-                    </TableCell>
-                    <TableCell
-                      sx={{ border: "1px solid black" }}
-                      align="center"
-                    ></TableCell>
-                    <TableCell
-                      sx={{ border: "1px solid black" }}
-                      align="center"
-                    ></TableCell>
-                    <TableCell
-                      sx={{ border: "1px solid black" }}
-                      align="center"
-                    ></TableCell>
-                    <TableCell
-                      sx={{ border: "1px solid black" }}
-                      align="center"
-                    >
-                      {formatCurrency(data.livestock_local_80 || 0)}
-                    </TableCell>
-                    <TableCell
-                      sx={{ border: "1px solid black" }}
-                      align="center"
-                    ></TableCell>
-                    <TableCell
-                      sx={{ border: "1px solid black" }}
-                      align="center"
-                    ></TableCell>
-                    <TableCell
-                      sx={{ border: "1px solid black" }}
-                      align="center"
-                    >
-                      {formatCurrency(data.livestock_local_80 || 0)}
-                    </TableCell>
-                    <TableCell
-                      sx={{ border: "1px solid black" }}
-                      align="center"
-                    ></TableCell>
-                    <TableCell
-                      sx={{ border: "1px solid black" }}
-                      align="center"
-                    ></TableCell>
-                  </TableRow>
-
-                  {/* Diving Fee */}
-                  <TableRow>
-                    <TableCell align="left" sx={{ border: "1px solid black" }}>
-                      Diving Fee
-                    </TableCell>
-                    <TableCell
-                      sx={{ border: "1px solid black" }}
-                      align="center"
-                    >
-                      {formatCurrency(
-                        (data.diving_local_40 || 0) +
-                          (data.diving_brgy_30 || 0) +
-                          (data.diving_fishers_30 || 0)
-                      )}
-                    </TableCell>
-                    <TableCell
-                      sx={{ border: "1px solid black" }}
-                      align="center"
-                    ></TableCell>
-                    <TableCell
-                      sx={{ border: "1px solid black" }}
-                      align="center"
-                    ></TableCell>
-                    <TableCell
-                      sx={{ border: "1px solid black" }}
-                      align="center"
-                    ></TableCell>
-                    <TableCell
-                      sx={{ border: "1px solid black" }}
-                      align="center"
-                    ></TableCell>
-                    <TableCell
-                      sx={{ border: "1px solid black" }}
-                      align="center"
-                    >
-                      {formatCurrency(data.diving_local_40 || 0)}
-                    </TableCell>
-                    <TableCell
-                      sx={{ border: "1px solid black" }}
-                      align="center"
-                    ></TableCell>
-                    <TableCell
-                      sx={{ border: "1px solid black" }}
-                      align="center"
-                    ></TableCell>
-                    <TableCell
-                      sx={{ border: "1px solid black" }}
-                      align="center"
-                    >
-                      {formatCurrency(data.diving_local_40 || 0)}
-                    </TableCell>
-                    <TableCell
-                      sx={{ border: "1px solid black" }}
-                      align="center"
-                    >
-                      {formatCurrency(data.diving_brgy_30 || 0)}
-                    </TableCell>
-                    <TableCell
-                      sx={{ border: "1px solid black" }}
-                      align="center"
-                    >
-                      {formatCurrency(data.diving_fishers_30 || 0)}
-                    </TableCell>
-                  </TableRow>
-
-                  {/* OVERALL TOTAL */}
-                  <TableRow>
-                    <TableCell align="left" sx={{ border: "1px solid black" }}>
-                      TOTAL
-                    </TableCell>
-                    <TableCell
-                      sx={{ border: "1px solid black" }}
-                      align="center"
-                    >
-                      {formatCurrency(
-                        (data.building_local_80 || 0) +
-                          (data.building_trust_15 || 0) +
-                          (data.building_national_5 || 0) +
-                          (data.electricalfee || 0) +
-                          (data.zoningfee || 0) +
-                          (data.livestock_local_80 || 0) +
-                          (data.livestock_national_20 || 0) +
-                          (data.diving_local_40 || 0) +
-                          (data.diving_brgy_30 || 0) +
-                          (data.diving_fishers_30 || 0)
-                      )}
-                    </TableCell>
-                    {/* TOTAL COLLECTIONS */}
-                    <TableCell
-                      sx={{ border: "1px solid black" }}
-                      align="center"
-                    >
-                      {formatCurrency(
-                        (data.building_national_5 || 0) +
-                          (data.livestock_national_20 || 0)
-                      )}
-                    </TableCell>
-                    {/* TOTAL NATIONAL */}
-                    <TableCell
-                      sx={{ border: "1px solid black" }}
-                      align="center"
-                    ></TableCell>
-                    {/* TOTAL PROVINCIAL GENERAL FUND */}
-                    <TableCell
-                      sx={{ border: "1px solid black" }}
-                      align="center"
-                    ></TableCell>
-                    {/* TOTAL PROVINCIAL SPECIAL EDUC. FUND */}
-                    <TableCell
-                      sx={{ border: "1px solid black" }}
-                      align="center"
-                    ></TableCell>
-                    {/* TOTAL PROVINCIAL TOTAL */}
-                    <TableCell
-                      sx={{ border: "1px solid black" }}
-                      align="center"
-                    >
-                      {formatCurrency(
-                        (data.building_local_80 || 0) +
-                          (data.electricalfee || 0) +
-                          (data.zoningfee || 0) +
-                          (data.livestock_local_80 || 0) +
-                          (data.diving_local_40 || 0)
-                      )}
-                    </TableCell>
-                    {/* TOTAL MUNICIPAL GENERAL FUND */}
-                    <TableCell
-                      sx={{ border: "1px solid black" }}
-                      align="center"
-                    ></TableCell>
-                    {/* TOTAL MUNICIPAL SPECIAL EDUC. FUND */}
-                    <TableCell
-                      sx={{ border: "1px solid black" }}
-                      align="center"
-                    >
-                      {formatCurrency(data.building_trust_15 || 0)}
-                    </TableCell>
-                    {/* TOTAL MUNICIPAL TRUST FUND */}
-                    <TableCell
-                      sx={{ border: "1px solid black" }}
-                      align="center"
-                    >
-                      {formatCurrency(
-                        (data.building_local_80 || 0) +
-                          (data.building_trust_15 || 0) +
-                          (data.electricalfee || 0) +
-                          (data.zoningfee || 0) +
-                          (data.livestock_local_80 || 0) +
-                          (data.diving_local_40 || 0)
-                      )}
-                    </TableCell>
-                    {/* TOTAL MUNICIPAL TOTAL */}
-                    <TableCell
-                      sx={{ border: "1px solid black" }}
-                      align="center"
-                    >
-                      {formatCurrency(data.diving_brgy_30 || 0)}
-                    </TableCell>
-                    {/* TOTAL BARANGAY SHARE */}
-                    <TableCell
-                      sx={{ border: "1px solid black" }}
-                      align="center"
-                    >
-                      {formatCurrency(data.diving_fishers_30)}
-                    </TableCell>
-                    {/* TOTAL FISHERIES */}
-                  </TableRow>
-                </TableBody>
-              </Table>
-            </TableContainer>
-          </Box>
+        <Box mb={4} sx={{ width: "100%", textAlign: "center" }}>
+          <h2 style={{ margin: 0, textAlign: "center" }}>SUMMARY OF COLLECTIONS</h2>
+          <h4 style={{ margin: "6px 0 0", textAlign: "center" }}>ZAMBOANGUITA, NEGROS ORIENTAL</h4>
+          <p style={{ margin: "6px 0 0", textAlign: "center" }}>LGU</p>
+          <p style={{ margin: "6px 0 0", textAlign: "center" }}>
+            Month of {month.label} {year.label}
+          </p>
         </Box>
+
+        <TableContainer component={Paper}>
+          <Table sx={{ border: "1px solid black" }}>
+            <TableHead>
+              <TableRow>
+                <TableCell rowSpan={2} align="center" sx={{ border: "1px solid black", fontWeight: "bold" }}>
+                  SOURCES OF COLLECTIONS
+                </TableCell>
+                <TableCell rowSpan={2} align="center" sx={{ border: "1px solid black", fontWeight: "bold" }}>
+                  TOTAL COLLECTIONS
+                </TableCell>
+                <TableCell rowSpan={2} align="center" sx={{ border: "1px solid black", fontWeight: "bold" }}>
+                  NATIONAL
+                </TableCell>
+                <TableCell colSpan={3} align="center" sx={{ border: "1px solid black", fontWeight: "bold" }}>
+                  PROVINCIAL
+                </TableCell>
+                <TableCell colSpan={4} align="center" sx={{ border: "1px solid black", fontWeight: "bold" }}>
+                  MUNICIPAL
+                </TableCell>
+                <TableCell rowSpan={2} align="center" sx={{ border: "1px solid black", fontWeight: "bold" }}>
+                  BARANGAY SHARE
+                </TableCell>
+                <TableCell rowSpan={2} align="center" sx={{ border: "1px solid black", fontWeight: "bold" }}>
+                  FISHERIES
+                </TableCell>
+              </TableRow>
+              <TableRow>
+                <TableCell align="center" sx={{ border: "1px solid black", fontWeight: "bold" }}>GENERAL FUND</TableCell>
+                <TableCell align="center" sx={{ border: "1px solid black", fontWeight: "bold" }}>SPECIAL EDUC. FUND</TableCell>
+                <TableCell align="center" sx={{ border: "1px solid black", fontWeight: "bold" }}>TOTAL</TableCell>
+                <TableCell align="center" sx={{ border: "1px solid black", fontWeight: "bold" }}>GENERAL FUND</TableCell>
+                <TableCell align="center" sx={{ border: "1px solid black", fontWeight: "bold" }}>SPECIAL EDUC. FUND</TableCell>
+                <TableCell align="center" sx={{ border: "1px solid black", fontWeight: "bold" }}>TRUST FUND</TableCell>
+                <TableCell align="center" sx={{ border: "1px solid black", fontWeight: "bold" }}>TOTAL</TableCell>
+              </TableRow>
+            </TableHead>
+            <TableBody>
+              {reportRows.map((row) => (
+                <TableRow key={row.label}>
+                  <TableCell align="left" sx={{ border: "1px solid black" }}>{row.label}</TableCell>
+                  <TableCell align="center" sx={{ border: "1px solid black" }}>{formatCurrency(row.totalCollection)}</TableCell>
+                  <TableCell align="center" sx={{ border: "1px solid black" }}>{row.national ? formatCurrency(row.national) : ""}</TableCell>
+                  <TableCell align="center" sx={{ border: "1px solid black" }} />
+                  <TableCell align="center" sx={{ border: "1px solid black" }} />
+                  <TableCell align="center" sx={{ border: "1px solid black" }} />
+                  <TableCell align="center" sx={{ border: "1px solid black" }}>{row.municipalGeneral ? formatCurrency(row.municipalGeneral) : ""}</TableCell>
+                  <TableCell align="center" sx={{ border: "1px solid black" }} />
+                  <TableCell align="center" sx={{ border: "1px solid black" }}>{row.municipalTrust ? formatCurrency(row.municipalTrust) : ""}</TableCell>
+                  <TableCell align="center" sx={{ border: "1px solid black" }}>{row.municipalTotal ? formatCurrency(row.municipalTotal) : ""}</TableCell>
+                  <TableCell align="center" sx={{ border: "1px solid black" }}>{row.barangay ? formatCurrency(row.barangay) : ""}</TableCell>
+                  <TableCell align="center" sx={{ border: "1px solid black" }}>{row.fisheries ? formatCurrency(row.fisheries) : ""}</TableCell>
+                </TableRow>
+              ))}
+              <TableRow>
+                <TableCell align="left" sx={{ border: "1px solid black", fontWeight: "bold" }}>TOTAL</TableCell>
+                <TableCell align="center" sx={{ border: "1px solid black", fontWeight: "bold" }}>{formatCurrency(totals.totalCollection)}</TableCell>
+                <TableCell align="center" sx={{ border: "1px solid black", fontWeight: "bold" }}>{formatCurrency(totals.national)}</TableCell>
+                <TableCell align="center" sx={{ border: "1px solid black" }} />
+                <TableCell align="center" sx={{ border: "1px solid black" }} />
+                <TableCell align="center" sx={{ border: "1px solid black" }} />
+                <TableCell align="center" sx={{ border: "1px solid black", fontWeight: "bold" }}>{formatCurrency(totals.municipalGeneral)}</TableCell>
+                <TableCell align="center" sx={{ border: "1px solid black" }} />
+                <TableCell align="center" sx={{ border: "1px solid black", fontWeight: "bold" }}>{formatCurrency(totals.municipalTrust)}</TableCell>
+                <TableCell align="center" sx={{ border: "1px solid black", fontWeight: "bold" }}>{formatCurrency(totals.municipalTotal)}</TableCell>
+                <TableCell align="center" sx={{ border: "1px solid black", fontWeight: "bold" }}>{formatCurrency(totals.barangay)}</TableCell>
+                <TableCell align="center" sx={{ border: "1px solid black", fontWeight: "bold" }}>{formatCurrency(totals.fisheries)}</TableCell>
+              </TableRow>
+            </TableBody>
+          </Table>
+        </TableContainer>
       </div>
 
       <Box
@@ -1164,7 +501,6 @@ function ReportTable({ onBack }) {
           flexWrap: "wrap",
         }}
       >
-        {/* Print PDF Button */}
         <Button
           variant="contained"
           onClick={handlePrint}
@@ -1188,7 +524,6 @@ function ReportTable({ onBack }) {
           Print PDF
         </Button>
 
-        {/* Download Excel Button */}
         <Button
           variant="outlined"
           onClick={handleDownloadExcel}
@@ -1217,6 +552,8 @@ function ReportTable({ onBack }) {
 }
 
 ReportTable.propTypes = {
+  initialMonth: PropTypes.oneOfType([PropTypes.string, PropTypes.number]),
+  initialYear: PropTypes.oneOfType([PropTypes.string, PropTypes.number]),
   onBack: PropTypes.func.isRequired,
 };
 

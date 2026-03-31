@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers;
 
+use App\Helpers\CommunityTaxCertificateQueryHelper;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 
@@ -12,7 +13,9 @@ class CommunityTaxCertificateSummaryCollectionDataReportController extends Contr
         $month = (int) $request->query('month', now()->month);
         $year = (int) $request->query('year', now()->year);
 
-        $totalAmountPaid = DB::table('communitytaxcertificate')
+        $totalAmountPaid = DB::table('community_tax_certificate_payment');
+        CommunityTaxCertificateQueryHelper::applyActiveFilter($totalAmountPaid);
+        $totalAmountPaid = $totalAmountPaid
             ->whereYear('DATEISSUED', $year)
             ->whereMonth('DATEISSUED', $month)
             ->sum('TOTALAMOUNTPAID');
@@ -29,7 +32,9 @@ class CommunityTaxCertificateSummaryCollectionDataReportController extends Contr
         $year = (int) $request->query('year', now()->year);
 
         $rows = collect(range(1, 12))->map(function ($month) use ($year) {
-            $collected = DB::table('communitytaxcertificate')
+            $collected = DB::table('community_tax_certificate_payment');
+            CommunityTaxCertificateQueryHelper::applyActiveFilter($collected);
+            $collected = $collected
                 ->whereYear('DATEISSUED', $year)
                 ->whereMonth('DATEISSUED', $month)
                 ->sum('TOTALAMOUNTPAID');

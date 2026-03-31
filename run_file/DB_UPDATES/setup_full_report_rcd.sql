@@ -38,35 +38,29 @@ refresh_block: BEGIN
 
     SELECT COALESCE(ROUND(SUM(c.TOTALAMOUNTPAID), 2), 0.00)
       INTO v_ctc
-      FROM communitytaxcertificate c
-     WHERE c.DATEISSUED = p_report_date;
+      FROM community_tax_certificate_payment c
+     WHERE c.DATEISSUED = p_report_date
+       AND COALESCE(c.IS_CANCELLED, 0) = 0;
 
     SELECT COALESCE(ROUND(SUM(r.BASIC_AND_SEF), 2), 0.00)
       INTO v_rpt
       FROM real_property_tax_payment r
-     WHERE r.DATE = p_report_date;
+     WHERE r.DATE = p_report_date
+       AND COALESCE(r.IS_CANCELLED, 0) = 0;
 
-    SELECT COALESCE(ROUND(SUM(pd.AMOUNTPAID), 2), 0.00)
+    SELECT COALESCE(ROUND(SUM(gf.AMOUNTPAID), 2), 0.00)
       INTO v_gf
-      FROM payment p
-      JOIN paymentdetail pd
-        ON pd.PAYMENT_ID = p.PAYMENT_ID
-     WHERE p.PAYMENTDATE = p_report_date
-       AND COALESCE(p.VOID_BV, 0) = 0
-       AND p.AFTYPE NOT IN ('CTC', 'AF56')
-       AND pd.FUNDTYPE_CT = 'GF'
-       AND COALESCE(pd.STATUS_CT, '') <> 'CNL';
+      FROM general_fund_payment gf
+     WHERE DATE(gf.PAYMENTDATE) = p_report_date
+       AND COALESCE(gf.VOID_BV, 0) = 0
+       AND COALESCE(gf.PAYMENT_STATUS_CT, 'SAV') <> 'CNL'
+       AND COALESCE(gf.PAYMENTDETAIL_STATUS_CT, 'SAV') <> 'CNL';
 
-    SELECT COALESCE(ROUND(SUM(pd.AMOUNTPAID), 2), 0.00)
+    SELECT COALESCE(ROUND(SUM(tf.TOTAL), 2), 0.00)
       INTO v_tf
-      FROM payment p
-      JOIN paymentdetail pd
-        ON pd.PAYMENT_ID = p.PAYMENT_ID
-     WHERE p.PAYMENTDATE = p_report_date
-       AND COALESCE(p.VOID_BV, 0) = 0
-       AND p.AFTYPE NOT IN ('CTC', 'AF56')
-       AND pd.FUNDTYPE_CT = 'TF'
-       AND COALESCE(pd.STATUS_CT, '') <> 'CNL';
+      FROM trust_fund_payment tf
+     WHERE tf.DATE = p_report_date
+       AND COALESCE(tf.IS_CANCELLED, 0) = 0;
 
     INSERT INTO full_report_rcd (`date`, ctc, rpt, GF, TF, gfAndTf, created_at, updated_at)
     VALUES (
@@ -117,7 +111,7 @@ END $$
 
 DROP TRIGGER IF EXISTS trg_full_report_ctc_ai $$
 CREATE TRIGGER trg_full_report_ctc_ai
-AFTER INSERT ON communitytaxcertificate
+AFTER INSERT ON community_tax_certificate_payment
 FOR EACH ROW
 BEGIN
     CALL refresh_full_report_rcd_for_date(NEW.DATEISSUED);
@@ -125,7 +119,7 @@ END $$
 
 DROP TRIGGER IF EXISTS trg_full_report_ctc_au $$
 CREATE TRIGGER trg_full_report_ctc_au
-AFTER UPDATE ON communitytaxcertificate
+AFTER UPDATE ON community_tax_certificate_payment
 FOR EACH ROW
 BEGIN
     CALL refresh_full_report_rcd_for_date(OLD.DATEISSUED);
@@ -136,94 +130,64 @@ END $$
 
 DROP TRIGGER IF EXISTS trg_full_report_ctc_ad $$
 CREATE TRIGGER trg_full_report_ctc_ad
-AFTER DELETE ON communitytaxcertificate
+AFTER DELETE ON community_tax_certificate_payment
 FOR EACH ROW
 BEGIN
     CALL refresh_full_report_rcd_for_date(OLD.DATEISSUED);
 END $$
 
-DROP TRIGGER IF EXISTS trg_full_report_payment_ai $$
-CREATE TRIGGER trg_full_report_payment_ai
-AFTER INSERT ON payment
+DROP TRIGGER IF EXISTS trg_full_report_gf_ai $$
+CREATE TRIGGER trg_full_report_gf_ai
+AFTER INSERT ON general_fund_payment
 FOR EACH ROW
 BEGIN
-    CALL refresh_full_report_rcd_for_date(NEW.PAYMENTDATE);
+    CALL refresh_full_report_rcd_for_date(DATE(NEW.PAYMENTDATE));
 END $$
 
-DROP TRIGGER IF EXISTS trg_full_report_payment_au $$
-CREATE TRIGGER trg_full_report_payment_au
-AFTER UPDATE ON payment
+DROP TRIGGER IF EXISTS trg_full_report_gf_au $$
+CREATE TRIGGER trg_full_report_gf_au
+AFTER UPDATE ON general_fund_payment
 FOR EACH ROW
 BEGIN
-    CALL refresh_full_report_rcd_for_date(OLD.PAYMENTDATE);
-    IF NOT (OLD.PAYMENTDATE <=> NEW.PAYMENTDATE) THEN
-        CALL refresh_full_report_rcd_for_date(NEW.PAYMENTDATE);
+    CALL refresh_full_report_rcd_for_date(DATE(OLD.PAYMENTDATE));
+    IF NOT (DATE(OLD.PAYMENTDATE) <=> DATE(NEW.PAYMENTDATE)) THEN
+        CALL refresh_full_report_rcd_for_date(DATE(NEW.PAYMENTDATE));
     END IF;
 END $$
 
-DROP TRIGGER IF EXISTS trg_full_report_payment_ad $$
-CREATE TRIGGER trg_full_report_payment_ad
-AFTER DELETE ON payment
+DROP TRIGGER IF EXISTS trg_full_report_gf_ad $$
+CREATE TRIGGER trg_full_report_gf_ad
+AFTER DELETE ON general_fund_payment
 FOR EACH ROW
 BEGIN
-    CALL refresh_full_report_rcd_for_date(OLD.PAYMENTDATE);
+    CALL refresh_full_report_rcd_for_date(DATE(OLD.PAYMENTDATE));
 END $$
 
-DROP TRIGGER IF EXISTS trg_full_report_paymentdetail_ai $$
-CREATE TRIGGER trg_full_report_paymentdetail_ai
-AFTER INSERT ON paymentdetail
+DROP TRIGGER IF EXISTS trg_full_report_tf_ai $$
+CREATE TRIGGER trg_full_report_tf_ai
+AFTER INSERT ON trust_fund_payment
 FOR EACH ROW
 BEGIN
-    DECLARE v_payment_date DATE;
-    SELECT p.PAYMENTDATE
-      INTO v_payment_date
-      FROM payment p
-     WHERE p.PAYMENT_ID = NEW.PAYMENT_ID
-     LIMIT 1;
-
-    CALL refresh_full_report_rcd_for_date(v_payment_date);
+    CALL refresh_full_report_rcd_for_date(NEW.DATE);
 END $$
 
-DROP TRIGGER IF EXISTS trg_full_report_paymentdetail_au $$
-CREATE TRIGGER trg_full_report_paymentdetail_au
-AFTER UPDATE ON paymentdetail
+DROP TRIGGER IF EXISTS trg_full_report_tf_au $$
+CREATE TRIGGER trg_full_report_tf_au
+AFTER UPDATE ON trust_fund_payment
 FOR EACH ROW
 BEGIN
-    DECLARE v_old_payment_date DATE;
-    DECLARE v_new_payment_date DATE;
-
-    SELECT p.PAYMENTDATE
-      INTO v_old_payment_date
-      FROM payment p
-     WHERE p.PAYMENT_ID = OLD.PAYMENT_ID
-     LIMIT 1;
-
-    SELECT p.PAYMENTDATE
-      INTO v_new_payment_date
-      FROM payment p
-     WHERE p.PAYMENT_ID = NEW.PAYMENT_ID
-     LIMIT 1;
-
-    CALL refresh_full_report_rcd_for_date(v_old_payment_date);
-
-    IF NOT (v_old_payment_date <=> v_new_payment_date) THEN
-        CALL refresh_full_report_rcd_for_date(v_new_payment_date);
+    CALL refresh_full_report_rcd_for_date(OLD.DATE);
+    IF NOT (OLD.DATE <=> NEW.DATE) THEN
+        CALL refresh_full_report_rcd_for_date(NEW.DATE);
     END IF;
 END $$
 
-DROP TRIGGER IF EXISTS trg_full_report_paymentdetail_ad $$
-CREATE TRIGGER trg_full_report_paymentdetail_ad
-AFTER DELETE ON paymentdetail
+DROP TRIGGER IF EXISTS trg_full_report_tf_ad $$
+CREATE TRIGGER trg_full_report_tf_ad
+AFTER DELETE ON trust_fund_payment
 FOR EACH ROW
 BEGIN
-    DECLARE v_payment_date DATE;
-    SELECT p.PAYMENTDATE
-      INTO v_payment_date
-      FROM payment p
-     WHERE p.PAYMENT_ID = OLD.PAYMENT_ID
-     LIMIT 1;
-
-    CALL refresh_full_report_rcd_for_date(v_payment_date);
+    CALL refresh_full_report_rcd_for_date(OLD.DATE);
 END $$
 
 DELIMITER ;
@@ -235,12 +199,14 @@ FROM (
       FROM real_property_tax_payment
     UNION
     SELECT DISTINCT DATEISSUED AS report_date
-      FROM communitytaxcertificate
+      FROM community_tax_certificate_payment
     UNION
-    SELECT DISTINCT PAYMENTDATE AS report_date
-      FROM payment
-     WHERE COALESCE(VOID_BV, 0) = 0
-       AND AFTYPE NOT IN ('CTC', 'AF56')
+    SELECT DISTINCT DATE(PAYMENTDATE) AS report_date
+      FROM general_fund_payment
+     WHERE PAYMENTDATE IS NOT NULL
+    UNION
+    SELECT DISTINCT DATE AS report_date
+      FROM trust_fund_payment
 ) AS src
 WHERE src.report_date IS NOT NULL
 ON DUPLICATE KEY UPDATE `date` = VALUES(`date`);
@@ -249,59 +215,45 @@ UPDATE full_report_rcd fr
 SET
     fr.ctc = COALESCE((
         SELECT ROUND(SUM(c.TOTALAMOUNTPAID), 2)
-        FROM communitytaxcertificate c
+        FROM community_tax_certificate_payment c
         WHERE c.DATEISSUED = fr.`date`
+          AND COALESCE(c.IS_CANCELLED, 0) = 0
     ), 0.00),
     fr.rpt = COALESCE((
         SELECT ROUND(SUM(r.BASIC_AND_SEF), 2)
         FROM real_property_tax_payment r
         WHERE r.DATE = fr.`date`
+          AND COALESCE(r.IS_CANCELLED, 0) = 0
     ), 0.00),
     fr.GF = COALESCE((
-        SELECT ROUND(SUM(pd.AMOUNTPAID), 2)
-        FROM payment p
-        JOIN paymentdetail pd
-          ON pd.PAYMENT_ID = p.PAYMENT_ID
-        WHERE p.PAYMENTDATE = fr.`date`
-          AND COALESCE(p.VOID_BV, 0) = 0
-          AND p.AFTYPE NOT IN ('CTC', 'AF56')
-          AND pd.FUNDTYPE_CT = 'GF'
-          AND COALESCE(pd.STATUS_CT, '') <> 'CNL'
+        SELECT ROUND(SUM(gf.AMOUNTPAID), 2)
+        FROM general_fund_payment gf
+        WHERE DATE(gf.PAYMENTDATE) = fr.`date`
+          AND COALESCE(gf.VOID_BV, 0) = 0
+          AND COALESCE(gf.PAYMENT_STATUS_CT, 'SAV') <> 'CNL'
+          AND COALESCE(gf.PAYMENTDETAIL_STATUS_CT, 'SAV') <> 'CNL'
     ), 0.00),
     fr.TF = COALESCE((
-        SELECT ROUND(SUM(pd.AMOUNTPAID), 2)
-        FROM payment p
-        JOIN paymentdetail pd
-          ON pd.PAYMENT_ID = p.PAYMENT_ID
-        WHERE p.PAYMENTDATE = fr.`date`
-          AND COALESCE(p.VOID_BV, 0) = 0
-          AND p.AFTYPE NOT IN ('CTC', 'AF56')
-          AND pd.FUNDTYPE_CT = 'TF'
-          AND COALESCE(pd.STATUS_CT, '') <> 'CNL'
+        SELECT ROUND(SUM(tf.TOTAL), 2)
+        FROM trust_fund_payment tf
+        WHERE tf.DATE = fr.`date`
+          AND COALESCE(tf.IS_CANCELLED, 0) = 0
     ), 0.00),
     fr.gfAndTf = ROUND(
         COALESCE((
-            SELECT SUM(pd.AMOUNTPAID)
-            FROM payment p
-            JOIN paymentdetail pd
-              ON pd.PAYMENT_ID = p.PAYMENT_ID
-            WHERE p.PAYMENTDATE = fr.`date`
-              AND COALESCE(p.VOID_BV, 0) = 0
-              AND p.AFTYPE NOT IN ('CTC', 'AF56')
-              AND pd.FUNDTYPE_CT = 'GF'
-              AND COALESCE(pd.STATUS_CT, '') <> 'CNL'
+            SELECT SUM(gf.AMOUNTPAID)
+            FROM general_fund_payment gf
+            WHERE DATE(gf.PAYMENTDATE) = fr.`date`
+              AND COALESCE(gf.VOID_BV, 0) = 0
+              AND COALESCE(gf.PAYMENT_STATUS_CT, 'SAV') <> 'CNL'
+              AND COALESCE(gf.PAYMENTDETAIL_STATUS_CT, 'SAV') <> 'CNL'
         ), 0.00)
         +
         COALESCE((
-            SELECT SUM(pd.AMOUNTPAID)
-            FROM payment p
-            JOIN paymentdetail pd
-              ON pd.PAYMENT_ID = p.PAYMENT_ID
-            WHERE p.PAYMENTDATE = fr.`date`
-              AND COALESCE(p.VOID_BV, 0) = 0
-              AND p.AFTYPE NOT IN ('CTC', 'AF56')
-              AND pd.FUNDTYPE_CT = 'TF'
-              AND COALESCE(pd.STATUS_CT, '') <> 'CNL'
+            SELECT SUM(tf.TOTAL)
+            FROM trust_fund_payment tf
+            WHERE tf.DATE = fr.`date`
+              AND COALESCE(tf.IS_CANCELLED, 0) = 0
         ), 0.00),
         2
     ),

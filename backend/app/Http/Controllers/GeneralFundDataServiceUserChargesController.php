@@ -2,54 +2,43 @@
 
 namespace App\Http\Controllers;
 
+use App\Helpers\GeneralFundPaymentSummaryHelper;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Log;
-use App\Helpers\QueryHelpers;
 
 class GeneralFundDataServiceUserChargesController extends Controller
 {
     public function index(Request $request)
     {
         try {
-            // Base query builder with date filters
-            $query = DB::table('general_fund_data');
-            $query = QueryHelpers::addDateFilters($query, $request, 'date');
+            $row = DB::table('general_fund_payment as gfp')
+                ->where('gfp.FUNDTYPE_CT', 'GF')
+                ->whereNotIn('gfp.AFTYPE', ['CTC', 'AF56']);
 
-            // Convert builder to subquery SQL string
-            $baseSql = $query->toSql();
-            $bindings = $query->getBindings();
+            GeneralFundPaymentSummaryHelper::applyActiveFilter($row, 'gfp');
+            GeneralFundPaymentSummaryHelper::applyDateFilters($row, $request, 'gfp.PAYMENTDATE');
 
-            // UNION ALL structure to replicate JS logic
-            $sql = "
-                SELECT 'Police Report/Clearance' AS Taxes, SUM(0) AS Total FROM ({$baseSql}) AS t
-                UNION ALL
-                SELECT 'Secretary Fee', SUM(Secretaries_Fee + Police_Report_Clearance) AS Total FROM ({$baseSql}) AS t
-                UNION ALL
-                SELECT 'Med./Dent. & Lab. Fees', SUM(Med_Dent_Lab_Fees) AS Total FROM ({$baseSql}) AS t
-                UNION ALL
-                SELECT 'Garbage Fees', SUM(Garbage_Fees) AS Total FROM ({$baseSql}) AS t
-                UNION ALL
-                SELECT 'Cutting Tree', SUM(Cutting_Tree) AS Total FROM ({$baseSql}) AS t
-                UNION ALL
-                SELECT 'Documentary Stamp', SUM(Doc_Stamp) AS Total FROM ({$baseSql}) AS t
-                UNION ALL
-                SELECT 'Overall Total', SUM(
-                    Secretaries_Fee +
-                    Police_Report_Clearance +
-                    Med_Dent_Lab_Fees +
-                    Garbage_Fees +
-                    Cutting_Tree +
-                    Doc_Stamp
-                ) AS Total FROM ({$baseSql}) AS t
-            ";
+            $row = $row
+                ->selectRaw(GeneralFundPaymentSummaryHelper::detailSelectRaw('gfp', 'gfp'))
+                ->first();
 
-            // Run the UNION ALL query with bindings
-            $results = DB::select($sql, array_merge($bindings, $bindings, $bindings, $bindings, $bindings, $bindings, $bindings));
+            $secretaryFees = (float) (($row->Secretaries_Fee ?? 0) + ($row->Police_Report_Clearance ?? 0));
+            $items = [
+                ['Taxes' => 'Police Report/Clearance', 'Total' => 0.0],
+                ['Taxes' => 'Secretary Fee', 'Total' => $secretaryFees],
+                ['Taxes' => 'Med./Dent. & Lab. Fees', 'Total' => (float) ($row->Med_Dent_Lab_Fees ?? 0)],
+                ['Taxes' => 'Garbage Fees', 'Total' => (float) ($row->Garbage_Fees ?? 0)],
+                ['Taxes' => 'Cutting Tree', 'Total' => (float) ($row->Cutting_Tree ?? 0)],
+                ['Taxes' => 'Documentary Stamp', 'Total' => (float) ($row->Doc_Stamp ?? 0)],
+            ];
 
-            return response()->json($results);
+            $overall = array_reduce($items, fn ($sum, $item) => $sum + $item['Total'], 0.0);
+            $items[] = ['Taxes' => 'Overall Total', 'Total' => $overall];
+
+            return response()->json($items);
         } catch (\Exception $e) {
-            Log::error("❌ Error fetching service/user charges: " . $e->getMessage());
+            Log::error('Error fetching service/user charges: ' . $e->getMessage());
             return response()->json(['error' => 'Server error fetching service/user charges'], 500);
         }
     }

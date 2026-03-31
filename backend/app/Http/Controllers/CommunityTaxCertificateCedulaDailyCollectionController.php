@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers;
 
+use App\Helpers\CommunityTaxCertificateQueryHelper;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 use App\Helpers\QueryHelpers;
@@ -10,7 +11,7 @@ class CommunityTaxCertificateCedulaDailyCollectionController extends Controller
 {
     public function index(Request $request)
     {
-        $query = DB::table('communitytaxcertificate')
+        $query = DB::table('community_tax_certificate_payment')
             ->selectRaw("
                 DATE(DATEISSUED) AS issued_date,
                 DATE_FORMAT(DATEISSUED, '%b %d, %Y') AS DATE,
@@ -24,6 +25,7 @@ class CommunityTaxCertificateCedulaDailyCollectionController extends Controller
                 SUM(COALESCE(TOTALAMOUNTPAID, 0)) AS TOTAL
             ");
 
+        CommunityTaxCertificateQueryHelper::applyActiveFilter($query);
         QueryHelpers::addDateFilters($query, $request, 'DATEISSUED');
 
         $results = $query

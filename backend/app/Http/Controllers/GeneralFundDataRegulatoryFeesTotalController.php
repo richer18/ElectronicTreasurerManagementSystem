@@ -2,49 +2,32 @@
 
 namespace App\Http\Controllers;
 
+use App\Helpers\GeneralFundPaymentSummaryHelper;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
-use App\Helpers\QueryHelpers;
+use Illuminate\Support\Facades\Log;
 
 class GeneralFundDataRegulatoryFeesTotalController extends Controller
 {
     public function index(Request $request)
     {
         try {
-            $query = DB::table('general_fund_data');
+            $query = DB::table('general_fund_payment as gfp')
+                ->where('gfp.FUNDTYPE_CT', 'GF')
+                ->whereNotIn('gfp.AFTYPE', ['CTC', 'AF56']);
 
-            // Apply your reusable date filters
-            $query = QueryHelpers::addDateFilters($query, $request);
+            GeneralFundPaymentSummaryHelper::applyActiveFilter($query, 'gfp');
+            GeneralFundPaymentSummaryHelper::applyDateFilters($query, $request, 'gfp.PAYMENTDATE');
 
-            // Perform SUM of 18 columns
-            $result = $query->selectRaw('
-                SUM(
-                    Mayors_Permit +
-                    Weighs_Measure +
-                    Tricycle_Operators +
-                    Occupation_Tax +
-                    Cert_of_Ownership +
-                    Cert_of_Transfer +
-                    Cockpit_Prov_Share +
-                    Cockpit_Local_Share +
-                    Docking_Mooring_Fee +
-                    Sultadas +
-                    Miscellaneous_Fee +
-                    Reg_of_Birth +
-                    Marriage_Fees +
-                    Burial_Fees +
-                    Correction_of_Entry +
-                    Fishing_Permit_Fee +
-                    Sale_of_Agri_Prod +
-                    Sale_of_Acct_Form
-                ) AS Regulatory_Fees
-            ')->first();
+            $result = $query
+                ->selectRaw(GeneralFundPaymentSummaryHelper::mainBucketSelectRaw('gfp'))
+                ->first();
 
             return response()->json([
-                'regulatory_fees' => $result->Regulatory_Fees ?? 0
+                'regulatory_fees' => $result->regulatory_fees ?? 0
             ]);
         } catch (\Exception $e) {
-            \Log::error('Error fetching Regulatory Fees total: ' . $e->getMessage());
+            Log::error('Error fetching Regulatory Fees total: ' . $e->getMessage());
             return response()->json(['error' => 'Error fetching data'], 500);
         }
     }

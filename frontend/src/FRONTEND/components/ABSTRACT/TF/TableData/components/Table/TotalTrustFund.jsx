@@ -1,207 +1,71 @@
-import { Autocomplete, Box, Button, Grid, Paper, Table, TableBody, TableCell, TableContainer, TableHead, TableRow, TextField } from '@mui/material';
-import { useEffect, useState } from 'react';
+import { Alert, Box, CircularProgress, Paper, Table, TableBody, TableCell, TableContainer, TableHead, TableRow } from "@mui/material";
+import PropTypes from "prop-types";
+import { useEffect, useState } from "react";
 import axiosInstance from "../../../../../../../api/axiosInstance";
 
-const months = [
-    { label: 'January', value: '1' },
-    { label: 'February', value: '2' },
-    { label: 'March', value: '3' },
-    { label: 'April', value: '4' },
-    { label: 'May', value: '5' },
-    { label: 'June', value: '6' },
-    { label: 'July', value: '7' },
-    { label: 'August', value: '8' },
-    { label: 'September', value: '9' },
-    { label: 'October', value: '10' },
-    { label: 'November', value: '11' },
-    { label: 'December', value: '12' },
-];
-
-const days = Array.from({ length: 31 }, (_, i) => ({
-    label: String(i + 1),
-    value: i + 1,
-}));
-
-const years = Array.from({ length: 100 }, (_, i) => ({
-    label: String(2050 - i),
-    value: 2050 - i,
-}));
-
-
-
-function TotalTrustFund() {
-    const [month, setMonth] = useState(null);
-  const [day, setDay] = useState(null);
-  const [year, setYear] = useState(null);
-  const [availableDays, setAvailableDays] = useState(days);
-  const [taxData, setTaxData] = useState([]);
-
-  const handleMonthChange = (event, newValue) => setMonth(newValue);
-    const handleDayChange = (event, newValue) => setDay(newValue);
-    const handleYearChange = (event, newValue) => setYear(newValue);
-
-
-    useEffect(() => {
-      const fetchData = async () => {
-        try {
-          const response = await axiosInstance.get(
-            "trust-fund-total-fees-reports",
-            {
-              params: {
-                month: month?.value,
-                day: day?.value,
-                year: year?.value,
-              },
-            }
-          );
-          setTaxData(response.data);
-        } catch (error) {
-          console.error(
-            "Error fetching tax data:",
-            error.response?.data || error.message
-          );
-        }
-      };
-
-      fetchData();
-    }, [month, day, year]);
+function TotalTrustFund({ month, year }) {
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState("");
+  const [summary, setSummary] = useState(null);
 
   useEffect(() => {
-    if (month && year) {
-        const daysInMonth = new Date(year.value, month.value, 0).getDate();
-        setAvailableDays(
-        Array.from({ length: daysInMonth }, (_, i) => ({
-            label: String(i + 1),
-            value: i + 1,
-        }))
-    );
-    }
-}, [month, year]);
+    const fetchSummary = async () => {
+      try {
+        setLoading(true);
+        setError("");
+        const response = await axiosInstance.get("trust-fund-dashboard-summary", {
+          params: { month: month || undefined, year: year || undefined },
+        });
+        setSummary(response.data || {});
+      } catch (fetchError) {
+        setError(fetchError.response?.data?.error || "Failed to load trust fund summary.");
+      } finally {
+        setLoading(false);
+      }
+    };
 
+    fetchSummary();
+  }, [month, year]);
 
-const handleDownload = () => {
-    // Convert table data to CSV
-    const csvData = [];
-    csvData.push(['Taxes', 'Total']); // Headers
-    
-    taxData.forEach(row => {
-        csvData.push([row.Taxes, row.Total]);
-    });
+  if (loading) return <Box sx={{ display: "flex", justifyContent: "center", py: 4 }}><CircularProgress /></Box>;
+  if (error) return <Alert severity="error">{error}</Alert>;
 
-    const csvContent = csvData.map(e => e.join(",")).join("\n");
+  const rows = [
+    ["Building Permit Fee", Number(summary?.building_permit_fee || 0)],
+    ["Electrical Fee", Number(summary?.electrical_fee || 0)],
+    ["Zoning Fee", Number(summary?.zoning_fee || 0)],
+    ["Livestock Dev Fund", Number(summary?.livestock_dev_fund || 0)],
+    ["Diving Fee", Number(summary?.diving_fee || 0)],
+    ["Total", Number(summary?.total || 0)],
+  ];
 
-    // Get the current date and time for the file name
-    const now = new Date();
-    const formattedDate = now.toISOString().split('T')[0]; // YYYY-MM-DD
-    const formattedTime = now.toTimeString().split(' ')[0].replace(/:/g, '-'); // HH-MM-SS
-    const fileName = `TOB-${formattedDate}-${formattedTime}.csv`;
-
-    // Create a blob and download it as a CSV file
-    const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
-    const url = URL.createObjectURL(blob);
-    const link = document.createElement('a');
-    link.setAttribute('href', url);
-    link.setAttribute('download', fileName); // Use the dynamic file name
-    link.style.visibility = 'hidden';
-    document.body.appendChild(link);
-    link.click();
-    document.body.removeChild(link);
-};
   return (
-    <Box
-    sx={{
-            display: 'flex',
-            flexDirection: 'column',
-            alignItems: 'center',
-            py: 2,
-            width: '100%',
-        }}
-        >
-            <Box
-            sx={{
-                display: 'flex',
-                alignItems: 'center',
-                justifyContent: 'center',
-                position: 'relative',
-            }}
-            >
-                <Grid container spacing={2} alignItems="center" sx={{ marginBottom: 2 }}>
-                <Grid item sx={{ ml: 'auto' }}>
-                <Autocomplete
-                disablePortal
-                id="month-selector"
-                options={months}
-                sx={{ width: 150, mr: 2 }}
-                onChange={handleMonthChange}
-                renderInput={(params) => <TextField {...params} label="Month" />}
-                isOptionEqualToValue={(option, value) => option.value === value.value}
-                />
-                </Grid>
-
-                <Grid item sx={{ ml: 'auto' }}>
-                <Autocomplete
-                disablePortal
-                id="day-selector"
-                options={availableDays}
-                sx={{ width: 150, mr: 2 }}
-                onChange={handleDayChange}
-                renderInput={(params) => <TextField {...params} label="Day" />}
-                value={day ? { label: String(day.value), value: day.value } : null}
-                isOptionEqualToValue={(option, value) => option.value === value.value}
-                disabled={!availableDays.length}
-                />
-                </Grid>
-                <Grid item sx={{ ml: 'auto' }}>
-                <Autocomplete
-                disablePortal
-                id="year-selector"
-                options={years}
-                sx={{ width: 150 }}
-                onChange={handleYearChange}
-                renderInput={(params) => <TextField {...params} label="Year" />}
-                isOptionEqualToValue={(option, value) => option.value === value.value}
-                />
-                </Grid>
-                <Grid item sx={{ ml: 'auto' }}>
-                <Button 
-                variant="contained"
-                color="primary"
-                onClick={handleDownload}
-                sx={{ height: '40px' }} // Ensure consistent height with TextField components
-                >
-                    Download
-                </Button>
-                </Grid>
-                </Grid>
-                </Box>
-                
-                
-                <TableContainer component={Paper}>
-                    <Table>
-                        <TableHead>
-                            <TableRow>
-                                <TableCell>Taxes</TableCell>
-                                <TableCell align="right">Total</TableCell>
-                                </TableRow>
-                                </TableHead>
-                                <TableBody>
-                                    {taxData.length > 0 ? (
-                                        taxData.map((row, index) => (
-                                        <TableRow key={index}>
-                                            <TableCell>{row.Taxes}</TableCell>
-                                            <TableCell align="right">{row.Total}</TableCell>
-                                            </TableRow>
-                                            ))
-                                        ) : (
-                                        <TableRow>
-                                            <TableCell colSpan={2} align="center">No data available</TableCell>
-                                            </TableRow>
-                                        )}
-                                        </TableBody>
-                                        </Table>
-                                        </TableContainer>
-                                        </Box>
-                                        );
+    <TableContainer component={Paper}>
+      <Table>
+        <TableHead>
+          <TableRow>
+            <TableCell>Taxes</TableCell>
+            <TableCell align="right">Total</TableCell>
+          </TableRow>
+        </TableHead>
+        <TableBody>
+          {rows.map(([label, value]) => (
+            <TableRow key={label}>
+              <TableCell>{label}</TableCell>
+              <TableCell align="right">
+                {value.toLocaleString("en-PH", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+              </TableCell>
+            </TableRow>
+          ))}
+        </TableBody>
+      </Table>
+    </TableContainer>
+  );
 }
 
-export default TotalTrustFund
+TotalTrustFund.propTypes = {
+  month: PropTypes.string,
+  year: PropTypes.string,
+};
+
+export default TotalTrustFund;

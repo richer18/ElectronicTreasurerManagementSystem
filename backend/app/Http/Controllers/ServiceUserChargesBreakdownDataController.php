@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers;
 
+use App\Helpers\GeneralFundPaymentSummaryHelper;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Log;
@@ -21,58 +22,37 @@ class ServiceUserChargesBreakdownDataController extends Controller
         }
 
         $monthList = collect(explode(',', $months))
-            ->map(fn($m) => (int) $m)
-            ->filter(fn($m) => $m >= 1 && $m <= 12)
+            ->map(fn ($m) => (int) $m)
+            ->filter(fn ($m) => $m >= 1 && $m <= 12)
             ->values()
             ->toArray();
 
-        // Base where clause
-        $monthClause = '';
-
-        if (!empty($monthList)) {
-            $placeholders = implode(',', array_fill(0, count($monthList), '?'));
-            $monthClause = " AND MONTH(date) IN ($placeholders)";
-        }
-
         try {
-            // Apply binding set per query block
-            $bindings = [];
-            for ($i = 0; $i < 3; $i++) {
-                $bindings[] = $year;
-                $bindings = array_merge($bindings, $monthList);
+            $query = DB::table('general_fund_payment as gfp')
+                ->where('gfp.FUNDTYPE_CT', 'GF')
+                ->whereNotIn('gfp.AFTYPE', ['CTC', 'AF56'])
+                ->whereYear('gfp.PAYMENTDATE', $year);
+
+            GeneralFundPaymentSummaryHelper::applyActiveFilter($query, 'gfp');
+            if (!empty($monthList)) {
+                $query->whereIn(DB::raw('MONTH(gfp.PAYMENTDATE)'), $monthList);
             }
 
-            $sql = "
-                SELECT category, SUM(total) AS total_amount FROM (
-                    SELECT 'Secretaries Fee' AS category,
-                        SUM(COALESCE(Secretaries_Fee, 0) + COALESCE(Police_Report_Clearance, 0)) AS total
-                    FROM general_fund_data
-                    WHERE YEAR(date) = ? {$monthClause}
+            $row = $query
+                ->selectRaw(GeneralFundPaymentSummaryHelper::detailSelectRaw('gfp', 'gfp'))
+                ->first();
 
-                    UNION ALL
-
-                    SELECT 'Garbage Fees' AS category,
-                        SUM(COALESCE(Garbage_Fees, 0)) AS total
-                    FROM general_fund_data
-                    WHERE YEAR(date) = ? {$monthClause}
-
-                    UNION ALL
-
-                    SELECT 'Med./Lab Fees' AS category,
-                        SUM(COALESCE(Med_Dent_Lab_Fees, 0)) AS total
-                    FROM general_fund_data
-                    WHERE YEAR(date) = ? {$monthClause}
-                ) AS summary
-                GROUP BY category
-            ";
-
-            $results = DB::select($sql, $bindings);
+            $breakdown = [
+                ['category' => 'Secretaries Fee', 'total_amount' => (float) (($row->Secretaries_Fee ?? 0) + ($row->Police_Report_Clearance ?? 0))],
+                ['category' => 'Garbage Fees', 'total_amount' => (float) ($row->Garbage_Fees ?? 0)],
+                ['category' => 'Med./Lab Fees', 'total_amount' => (float) ($row->Med_Dent_Lab_Fees ?? 0)],
+            ];
 
             return response()->json([
                 'year' => $year,
                 'months' => $monthList,
                 'currency' => 'PHP',
-                'breakdown' => $results
+                'breakdown' => $breakdown,
             ]);
         } catch (\Exception $e) {
             Log::error("ServiceUserCharges DB error: " . $e->getMessage());

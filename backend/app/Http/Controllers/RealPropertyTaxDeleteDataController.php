@@ -10,7 +10,7 @@ class RealPropertyTaxDeleteDataController extends Controller
     public function destroy($id)
     {
         try {
-            $deleted = DB::table('real_property_tax_data')->where('id', $id)->delete();
+            $deleted = DB::table('real_property_tax_payment')->where('ID', $id)->delete();
 
             if ($deleted === 0) {
                 return response()->json(['message' => 'Record not found'], 404);
@@ -24,4 +24,3 @@ class RealPropertyTaxDeleteDataController extends Controller
         }
     }
 }
-

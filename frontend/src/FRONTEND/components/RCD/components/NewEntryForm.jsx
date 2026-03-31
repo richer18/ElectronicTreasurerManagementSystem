@@ -2,7 +2,7 @@ import { Box, Button, Dialog, DialogActions, DialogContent, DialogTitle, MenuIte
 import { useEffect, useMemo, useState } from "react";
 import axiosInstance from "../../../../api/axiosInstance";
 
-function NewEntryForm({ onSaved, onCancel }) {
+function NewEntryForm({ onSaved, onCancel, initialValues = null }) {
   const normalizeDigits = (value) => String(value ?? "").replace(/\D/g, "");
   const toInt = (value) => {
     const digits = normalizeDigits(value);
@@ -10,22 +10,69 @@ function NewEntryForm({ onSaved, onCancel }) {
     return Number.parseInt(digits, 10);
   };
 
-  const [formData, setFormData] = useState({
-    issued_date: new Date().toISOString().split("T")[0],
-    fund: "100 General Fund",
-    collector: "",
-    type_of_receipt: "",
-    serial_no: "",
-    receipt_no_from: "",
-    receipt_no_to: "",
-    total: "",
-    status: "Not Remit",
+  const buildInitialFormData = () => ({
+    issued_date: initialValues?.issued_date || new Date().toISOString().split("T")[0],
+    fund: initialValues?.fund || "100 General Fund",
+    collector: initialValues?.collector || "",
+    type_of_receipt: initialValues?.type_of_receipt || "",
+    serial_no: initialValues?.serial_no || "",
+    receipt_no_from: normalizeDigits(initialValues?.receipt_no_from || ""),
+    receipt_no_to: normalizeDigits(initialValues?.receipt_no_to || ""),
+    total:
+      initialValues?.total !== undefined && initialValues?.total !== null
+        ? String(initialValues.total)
+        : "",
+    status: initialValues?.status || "Not Remit",
   });
+
+  const [formData, setFormData] = useState(buildInitialFormData);
   const [issuedForms, setIssuedForms] = useState([]);
+  const [receiptTypeOptions, setReceiptTypeOptions] = useState([]);
   const [duplicateDialog, setDuplicateDialog] = useState({
     open: false,
     message: "",
   });
+
+  const sameIdentity = (row, payload) => {
+    const rowDate = String(row?.issued_date || row?.Date || row?.date || "").slice(0, 10);
+    const rowCollector = String(row?.collector || row?.Collector || "").trim().toLowerCase();
+    const rowSerial = String(row?.serial_no || row?.Serial_No || "").trim().toLowerCase();
+    const rowType = String(row?.type_of_receipt || row?.Type_Of_Receipt || "").trim().toLowerCase();
+    const rowFrom = normalizeDigits(row?.receipt_no_from || row?.Receipt_No_From || "");
+    const rowTo = normalizeDigits(row?.receipt_no_to || row?.Receipt_No_To || "");
+
+    return (
+      rowDate === payload.issued_date &&
+      rowCollector === String(payload.collector || "").trim().toLowerCase() &&
+      rowSerial === String(payload.serial_no || "").trim().toLowerCase() &&
+      rowType === String(payload.type_of_receipt || "").trim().toLowerCase() &&
+      rowFrom === normalizeDigits(payload.receipt_no_from) &&
+      rowTo === normalizeDigits(payload.receipt_no_to)
+    );
+  };
+
+  const overlapsIdentityRange = (row, payload) => {
+    const rowDate = String(row?.issued_date || row?.Date || row?.date || "").slice(0, 10);
+    const rowCollector = String(row?.collector || row?.Collector || "").trim().toLowerCase();
+    const rowSerial = String(row?.serial_no || row?.Serial_No || "").trim().toLowerCase();
+    const rowType = String(row?.type_of_receipt || row?.Type_Of_Receipt || "").trim().toLowerCase();
+
+    if (
+      rowDate !== payload.issued_date ||
+      rowCollector !== String(payload.collector || "").trim().toLowerCase() ||
+      rowSerial !== String(payload.serial_no || "").trim().toLowerCase() ||
+      rowType !== String(payload.type_of_receipt || "").trim().toLowerCase()
+    ) {
+      return false;
+    }
+
+    const existingFrom = toInt(row?.receipt_no_from || row?.Receipt_No_From || 0);
+    const existingTo = toInt(row?.receipt_no_to || row?.Receipt_No_To || 0);
+    const nextFrom = toInt(payload.receipt_no_from);
+    const nextTo = toInt(payload.receipt_no_to);
+
+    return nextFrom <= existingTo && nextTo >= existingFrom;
+  };
 
   useEffect(() => {
     axiosInstance
@@ -36,6 +83,20 @@ function NewEntryForm({ onSaved, onCancel }) {
         setIssuedForms([]);
       });
   }, []);
+
+  useEffect(() => {
+    axiosInstance
+      .get("/form-types")
+      .then((res) => setReceiptTypeOptions(Array.isArray(res.data) ? res.data : []))
+      .catch((err) => {
+        console.error("Failed to load receipt types:", err);
+        setReceiptTypeOptions([]);
+      });
+  }, []);
+
+  useEffect(() => {
+    setFormData(buildInitialFormData());
+  }, [initialValues]);
 
   const collectors = useMemo(() => {
     const unique = new Set(
@@ -48,6 +109,31 @@ function NewEntryForm({ onSaved, onCancel }) {
     return Array.from(unique);
   }, [issuedForms]);
 
+  const getReceiptTypeLabel = useMemo(() => {
+    const byValue = new Map();
+
+    receiptTypeOptions.forEach((option) => {
+      const code = String(option?.code ?? option?.id ?? "").trim();
+      const description = String(
+        option?.description ?? option?.name ?? option?.code ?? option?.id ?? ""
+      ).trim();
+
+      if (code) {
+        byValue.set(code.toLowerCase(), description || code);
+      }
+
+      if (description) {
+        byValue.set(description.toLowerCase(), description);
+      }
+    });
+
+    return (value) => {
+      const normalized = String(value ?? "").trim();
+      if (!normalized) return "";
+      return byValue.get(normalized.toLowerCase()) || normalized;
+    };
+  }, [receiptTypeOptions]);
+
   const formTypes = useMemo(() => {
     const unique = new Set(
       issuedForms
@@ -57,8 +143,11 @@ function NewEntryForm({ onSaved, onCancel }) {
         .map((item) => item?.Form_Type ?? item?.form_type)
         .filter(Boolean)
     );
-    return Array.from(unique);
-  }, [issuedForms, formData.collector]);
+    return Array.from(unique).map((value) => ({
+      value,
+      label: getReceiptTypeLabel(value),
+    }));
+  }, [issuedForms, formData.collector, getReceiptTypeLabel]);
 
   const serialOptions = useMemo(() => {
     const unique = new Set(
@@ -179,17 +268,22 @@ function NewEntryForm({ onSaved, onCancel }) {
           params: { month, year },
         });
         const existingRows = Array.isArray(existingRes?.data) ? existingRes.data : [];
-        const duplicate = existingRows.find((row) => {
-          const rowDate = String(row?.issued_date || row?.Date || row?.date || "").slice(0, 10);
-          const rowCollector = String(row?.collector || row?.Collector || "").trim().toLowerCase();
-          const rowSerial = String(row?.serial_no || row?.Serial_No || "").trim().toLowerCase();
-          return rowDate === targetDate && rowCollector === targetCollector && rowSerial === targetSerial;
-        });
+        const duplicate = existingRows.find((row) => sameIdentity(row, formData));
 
         if (duplicate) {
           setDuplicateDialog({
             open: true,
-            message: "There is already data added for this Date + Collector + Serial No.",
+            message: "There is already an entry for this Date + Collector + Serial No. + Receipt Type + Receipt Range.",
+          });
+          return;
+        }
+
+        const overlap = existingRows.find((row) => overlapsIdentityRange(row, formData));
+
+        if (overlap) {
+          setDuplicateDialog({
+            open: true,
+            message: "The receipt range overlaps an existing entry for this Date + Collector + Serial No. + Receipt Type.",
           });
           return;
         }
@@ -210,7 +304,9 @@ function NewEntryForm({ onSaved, onCancel }) {
       if (err?.response?.status === 409) {
         setDuplicateDialog({
           open: true,
-          message: apiMessage || "There is already data added for this Date + Collector + Serial No.",
+          message:
+            apiMessage ||
+            "There is already an entry for this Date + Collector + Serial No. + Receipt Type + Receipt Range.",
         });
         return;
       }
@@ -297,8 +393,8 @@ function NewEntryForm({ onSaved, onCancel }) {
           disabled={!formData.collector}
         >
           {formTypes.map((type) => (
-            <MenuItem key={type} value={type}>
-              {type}
+            <MenuItem key={type.value} value={type.value}>
+              {type.label}
             </MenuItem>
           ))}
         </TextField>
@@ -373,11 +469,10 @@ function NewEntryForm({ onSaved, onCancel }) {
           required
           fullWidth
         >
-          <MenuItem value="Remit">Remit</MenuItem>
-          <MenuItem value="Not Remit">Not Remit</MenuItem>
-          <MenuItem value="Deposit">Deposit</MenuItem>
-          <MenuItem value="Approve">Approve</MenuItem>
-          <MenuItem value="Purchase">Purchase</MenuItem>
+          <MenuItem value="Not Remit">Draft</MenuItem>
+          <MenuItem value="Remit">Submitted</MenuItem>
+          <MenuItem value="Approve">Approved</MenuItem>
+          <MenuItem value="Deposit">Deposited</MenuItem>
         </TextField>
       </Box>
 

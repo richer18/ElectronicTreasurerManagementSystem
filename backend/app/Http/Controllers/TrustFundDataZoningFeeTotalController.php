@@ -17,6 +17,9 @@ class TrustFundDataZoningFeeTotalController extends Controller
                 ->join('T_OTHERPAYMENTRATE as opr', 'pd.SOURCEID', '=', 'opr.OPRATE_ID')
                 ->where('pd.FUNDTYPE_CT', 'TF')
                 ->whereRaw('COALESCE(p.VOID_BV, 0) = 0')
+                ->where(function ($query) {
+                    $query->whereNull('p.STATUS_CT')->orWhere('p.STATUS_CT', '<>', 'CNL');
+                })
                 ->where('opr.ITAXTYPE_CT', 'ZLC');
 
             $query = QueryHelpers::addDateFilters($query, $request, 'p.PAYMENTDATE');

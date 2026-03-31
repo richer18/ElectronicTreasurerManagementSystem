@@ -14,7 +14,9 @@ function GeneralFundDialog({ open, onClose, data }) {
 
   useEffect(() => {
     const fetchViewRows = async () => {
-      if (!open || !data?.id) {
+      const paymentId = data?.payment_id ?? data?.id;
+
+      if (!open || !paymentId) {
         setRows([]);
         setLoading(false);
         return;
@@ -22,7 +24,7 @@ function GeneralFundDialog({ open, onClose, data }) {
 
       try {
         setLoading(true);
-        const response = await axiosInstance.get(`generalFundPaymentView/${data.id}`);
+        const response = await axiosInstance.get(`generalFundPaymentView/${paymentId}`);
         setRows(Array.isArray(response.data) ? response.data : []);
       } catch (error) {
         console.error('Error fetching view details:', error);

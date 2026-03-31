@@ -1,0 +1,1 @@
+{"timestamp":"2026-03-31 02:06:06","collector":"Custodian","event":"purchase_accountable_form","context":{"purchase_id":2,"purchase_date":"2026-03-31","form_type":"Accountable Forms 51","serial_no":"01","range_from":"1001","range_to":"1050","stock":50,"status":"AVAILABLE"}}

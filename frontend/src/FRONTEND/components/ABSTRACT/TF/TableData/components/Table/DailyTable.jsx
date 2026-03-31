@@ -158,7 +158,7 @@ const DailyTablev2 = ({ data, onClose }) => {
 
       const user = "admin"; // replace this with actual logged-in user
 
-      // 🔹 Step 1: Update trust_fund_data
+      // Step 1: Update the Trust Fund prepared row comment
       await axiosInstance.post("updateTFComment", {
         RECEIPT_NO: currentRow.RECEIPT_NO,
         COMMENTS: currentComment,

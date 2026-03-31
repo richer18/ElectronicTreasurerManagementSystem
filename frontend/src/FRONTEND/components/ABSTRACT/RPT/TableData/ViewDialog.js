@@ -278,7 +278,7 @@ function ViewDialog({ open, onClose, data,selectedDate, onDataUpdate }) {
         formattedDate = format(new Date(currentRow.date), "yyyy-MM-dd");
       }
 
-      // ✅ 1. Update comment in real_property_tax_data
+      // 1. Update the prepared RPT row comment
       await axios.post("/updateComment", {
         receipt_no: currentRow.receipt_no,
         comment: currentComment,

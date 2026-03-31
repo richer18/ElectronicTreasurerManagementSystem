@@ -5,6 +5,7 @@ namespace App\Http\Controllers;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Log;
+use Illuminate\Support\Facades\Schema;
 
 class RealPropertyTaxDataViewDialogUpdateCommentController extends Controller
 {
@@ -18,9 +19,13 @@ class RealPropertyTaxDataViewDialogUpdateCommentController extends Controller
         }
 
         try {
-            DB::table('real_property_tax_data')
-                ->where('receipt_no', $receiptNo)
-                ->update(['comments' => $comment]);
+            if (Schema::hasColumn('real_property_tax_payment', 'COMMENTS')) {
+                DB::table('real_property_tax_payment')
+                    ->where('OR_NO', $receiptNo)
+                    ->update(['COMMENTS' => $comment]);
+            } else {
+                Log::info('Skipping RPT row comment update because COMMENTS column is not present on real_property_tax_payment.');
+            }
 
             Log::info("Comment updated for receipt_no: {$receiptNo}");
 

@@ -16,7 +16,7 @@ class RealPropertyTaxDataBldgDataController extends Controller
             $results = [];
 
             foreach (RealPropertyTaxQueryHelper::buildingCategoryMap() as $label => $statuses) {
-                $query = DB::table(RealPropertyTaxQueryHelper::table())
+                $query = RealPropertyTaxQueryHelper::applyActiveFilter(DB::table(RealPropertyTaxQueryHelper::table()))
                     ->selectRaw("'{$label}' AS category")
                     ->selectRaw('IFNULL(SUM(BASIC_CURRENT_YEAR), 0) AS current')
                     ->selectRaw('IFNULL(SUM(BASIC_DISCOUNTS), 0) AS discount')

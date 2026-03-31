@@ -56,7 +56,7 @@ function GenerateReport({ open, onClose }) {
   // ✅ Corrected Cashier Mapping
   const cashierOptionsByReport = {
     CTCI: ["flora", "angelique", "agnes", "ricardo"],
-    real_property_tax_data: [
+    RPT: [
       "RICARDO ENOPIA",
       "IRIS RAFALES",
       "FLORA MY FERRER",
@@ -380,7 +380,7 @@ function GenerateReport({ open, onClose }) {
                   label="Report Type"
                 >
                   <MenuItem value="CTCI">Cedula</MenuItem>
-                  <MenuItem value="real_property_tax_data">RPT</MenuItem>
+                  <MenuItem value="RPT">RPT</MenuItem>
                   <MenuItem value="51">GF AND TF</MenuItem>
                 </Select>
               </FormControl>

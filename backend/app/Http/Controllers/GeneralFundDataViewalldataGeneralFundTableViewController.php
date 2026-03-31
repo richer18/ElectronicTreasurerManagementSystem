@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers;
 
+use App\Helpers\GeneralFundPaymentSummaryHelper;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Log;
@@ -17,55 +18,26 @@ class GeneralFundDataViewalldataGeneralFundTableViewController extends Controlle
         }
 
         try {
-            $results = DB::table('general_fund_data')
+            $results = DB::table('general_fund_payment as gfp')
+                ->where('gfp.FUNDTYPE_CT', 'GF')
+                ->whereNotIn('gfp.AFTYPE', ['CTC', 'AF56'])
+                ->whereDate('gfp.PAYMENTDATE', '=', $date);
+
+            GeneralFundPaymentSummaryHelper::applyActiveFilter($results, 'gfp');
+
+            $results = $results
+                ->groupBy('gfp.PAYMENT_ID', DB::raw('DATE(gfp.PAYMENTDATE)'))
                 ->select(
-                    'id',
-                    'date',
-                    'name',
-                    'receipt_no',
-                    'Manufacturing',
-                    'Distributor',
-                    'Retailing',
-                    'Financial',
-                    'Other_Business_Tax',
-                    'Sand_Gravel',
-                    'Fines_Penalties',
-                    'Mayors_Permit',
-                    'Weighs_Measure',
-                    'Tricycle_Operators',
-                    'Occupation_Tax',
-                    'Cert_of_Ownership',
-                    'Cert_of_Transfer',
-                    'Cockpit_Prov_Share',
-                    'Cockpit_Local_Share',
-                    'Docking_Mooring_Fee',
-                    'Sultadas',
-                    'Miscellaneous_Fee',
-                    'Reg_of_Birth',
-                    'Marriage_Fees',
-                    'Burial_Fees',
-                    'Correction_of_Entry',
-                    'Fishing_Permit_Fee',
-                    'Sale_of_Agri_Prod',
-                    'Sale_of_Acct_Form',
-                    'Water_Fees',
-                    'Stall_Fees',
-                    'Cash_Tickets',
-                    'Slaughter_House_Fee',
-                    'Rental_of_Equipment',
-                    'Doc_Stamp',
-                    'Police_Report_Clearance',
-                    'Secretaries_Fee',
-                    'Med_Dent_Lab_Fees',
-                    'Garbage_Fees',
-                    'Cutting_Tree',
-                    'total',
-                    'cashier',
-                    'type_receipt',
-                    'comments'
+                    DB::raw('gfp.PAYMENT_ID as id'),
+                    DB::raw('DATE(gfp.PAYMENTDATE) as date'),
+                    DB::raw('MAX(gfp.PAIDBY) as name'),
+                    DB::raw('MAX(gfp.RECEIPTNO) as receipt_no'),
+                    DB::raw("MAX(COALESCE(NULLIF(gfp.COLLECTOR, ''), gfp.USERID)) as cashier"),
+                    DB::raw('MAX(gfp.AFTYPE) as type_receipt'),
+                    DB::raw("NULL as comments")
                 )
-                ->whereDate('date', '=', $date)
-                ->orderBy('id', 'asc')
+                ->selectRaw(\App\Helpers\GeneralFundPaymentSummaryHelper::detailSelectRaw('gfp', 'gfp'))
+                ->orderBy('gfp.PAYMENT_ID', 'asc')
                 ->get();
 
             if ($results->isEmpty()) {

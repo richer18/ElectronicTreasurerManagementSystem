@@ -8,11 +8,13 @@ import SearchIcon from "@mui/icons-material/Search";
 import {
   Autocomplete,
   Card,
+  Checkbox,
   Dialog,
   DialogActions,
   DialogContent,
   DialogContentText,
   DialogTitle,
+  FormControlLabel,
   TextField,
   Tooltip,
 } from "@mui/material";
@@ -586,6 +588,10 @@ function RealPropertyTax() {
   const [data, setData] = useState([]);
   const [searchQuery, setSearchQuery] = useState("");
   const [pendingSearchQuery, setPendingSearchQuery] = useState("");
+  const [downloadDialogOpen, setDownloadDialogOpen] = useState(false);
+  const [downloadMonth, setDownloadMonth] = useState(null);
+  const [downloadYear, setDownloadYear] = useState(null);
+  const [downloadIncludeCancelled, setDownloadIncludeCancelled] = useState(false);
 
   const [reportDialog, setReportDialog] = useState({
     open: false,
@@ -744,34 +750,7 @@ function RealPropertyTax() {
       return;
     }
 
-    let newFiltered = data;
-
-    // (a) Filter by searchQuery
-    if (searchQuery) {
-      const q = searchQuery.toLowerCase();
-      newFiltered = newFiltered.filter((row) => {
-        const rowName = (row?.name ?? "").toLowerCase();
-        const rowCtcNo = (row?.receipt_no ?? "").toString().toLowerCase();
-        // .includes() = partial substring match
-        return rowName.includes(q) || rowCtcNo.includes(q);
-      });
-    }
-
-    // (b) Filter by month/year
-    if (month || year) {
-      newFiltered = newFiltered.filter((row) => {
-        if (!row.date) return false;
-        const rowDate = new Date(row.date);
-        const rowMonth = rowDate.getMonth() + 1;
-        const rowYear = rowDate.getFullYear();
-
-        const monthMatches = month ? rowMonth === parseInt(month) : true;
-        const yearMatches = year ? rowYear === parseInt(year) : true;
-        return monthMatches && yearMatches;
-      });
-    }
-
-    setFilteredData(newFiltered);
+    setFilteredData(applyClientFilters(data));
     setPage(0); // reset pagination when filters change
   }, [data, searchQuery, month, year]);
 
@@ -833,8 +812,51 @@ function RealPropertyTax() {
     });
   };
 
+  const applyClientFilters = (
+    rows,
+    activeMonth = month,
+    activeYear = year
+  ) => {
+    if (!Array.isArray(rows)) {
+      return [];
+    }
+
+    let newFiltered = rows;
+
+    if (searchQuery) {
+      const q = searchQuery.toLowerCase();
+      newFiltered = newFiltered.filter((row) => {
+        const rowName = (row?.name ?? "").toLowerCase();
+        const rowCtcNo = (row?.receipt_no ?? "").toString().toLowerCase();
+        return rowName.includes(q) || rowCtcNo.includes(q);
+      });
+    }
+
+    if (activeMonth || activeYear) {
+      newFiltered = newFiltered.filter((row) => {
+        if (!row.date) return false;
+        const rowDate = new Date(row.date);
+        const rowMonth = rowDate.getMonth() + 1;
+        const rowYear = rowDate.getFullYear();
+
+        const monthMatches = activeMonth ? rowMonth === parseInt(activeMonth) : true;
+        const yearMatches = activeYear ? rowYear === parseInt(activeYear) : true;
+        return monthMatches && yearMatches;
+      });
+    }
+
+    return newFiltered;
+  };
+
   const handleDownload = () => {
-    if (!month || !year) {
+    setDownloadMonth(month);
+    setDownloadYear(year);
+    setDownloadIncludeCancelled(false);
+    setDownloadDialogOpen(true);
+  };
+
+  const handleDownloadConfirm = async () => {
+    if (!downloadMonth || !downloadYear) {
       setSnackbar({
         open: true,
         message: "Please select both month and year before downloading.",
@@ -843,7 +865,29 @@ function RealPropertyTax() {
       return;
     }
 
-    const filteredExportData = getFilteredDataByMonthYear();
+    let filteredExportData = [];
+
+    try {
+      const response = await axios.get("/allData", {
+        params: {
+          include_cancelled: downloadIncludeCancelled ? 1 : undefined,
+        },
+      });
+
+      filteredExportData = applyClientFilters(
+        Array.isArray(response.data) ? response.data : [],
+        downloadMonth,
+        downloadYear
+      );
+    } catch (error) {
+      console.error("Error fetching downloadable real property tax data:", error);
+      setSnackbar({
+        open: true,
+        message: "Failed to prepare the download.",
+        severity: "error",
+      });
+      return;
+    }
 
     if (filteredExportData.length === 0) {
       setSnackbar({
@@ -859,7 +903,7 @@ function RealPropertyTax() {
     const formattedData = filteredExportData.map((item) => {
       return {
         ...item,
-        DATE: new Date(item.DATE).toLocaleString("en-US", {
+        DATE: new Date(item.date ?? item.DATE).toLocaleString("en-US", {
           timeZone: "Asia/Manila", // Set timezone to PHT
           year: "numeric",
           month: "2-digit",
@@ -874,8 +918,9 @@ function RealPropertyTax() {
 
     const file = XLSX.write(workbook, { bookType: "xlsx", type: "array" });
     const blob = new Blob([file], { type: "application/octet-stream" });
-    const fileName = `Real_Property_Tax_Report_${months.find((m) => m.value === month)?.label}_${year}.xlsx`;
+    const fileName = `Real_Property_Tax_Report_${months.find((m) => m.value === downloadMonth)?.label}_${downloadYear}.xlsx`;
     saveAs(blob, fileName);
+    setDownloadDialogOpen(false);
   };
 
   const handleClickOpen = (content) => {
@@ -1480,6 +1525,51 @@ function RealPropertyTax() {
 
       <Box>
         {/*Snackbar Component (with prop fixes)*/}
+        <Dialog
+          open={downloadDialogOpen}
+          onClose={() => setDownloadDialogOpen(false)}
+          maxWidth="sm"
+          fullWidth
+        >
+          <DialogTitle>Download Real Property Tax Report</DialogTitle>
+          <DialogContent>
+            <Box sx={{ display: "flex", gap: 2, mt: 1, flexWrap: "wrap" }}>
+              <Autocomplete
+                options={months}
+                value={months.find((option) => option.value === downloadMonth) ?? null}
+                onChange={(e, value) => setDownloadMonth(value?.value ?? null)}
+                getOptionLabel={(option) => option.label}
+                renderInput={(params) => <TextField {...params} label="Month" fullWidth />}
+                sx={{ minWidth: 220, flex: 1 }}
+              />
+              <Autocomplete
+                options={years}
+                value={years.find((option) => option.value === downloadYear) ?? null}
+                onChange={(e, value) => setDownloadYear(value?.value ?? null)}
+                getOptionLabel={(option) => option.label}
+                renderInput={(params) => <TextField {...params} label="Year" fullWidth />}
+                sx={{ minWidth: 220, flex: 1 }}
+              />
+            </Box>
+            <FormControlLabel
+              sx={{ mt: 2 }}
+              control={
+                <Checkbox
+                  checked={downloadIncludeCancelled}
+                  onChange={(e) => setDownloadIncludeCancelled(e.target.checked)}
+                />
+              }
+              label="Include cancelled payments"
+            />
+          </DialogContent>
+          <DialogActions>
+            <Button onClick={() => setDownloadDialogOpen(false)}>Cancel</Button>
+            <Button variant="contained" onClick={handleDownloadConfirm}>
+              Download
+            </Button>
+          </DialogActions>
+        </Dialog>
+
         <Snackbar
           open={snackbar.open}
           autoHideDuration={6000}

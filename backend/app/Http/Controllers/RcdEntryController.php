@@ -3,7 +3,9 @@
 namespace App\Http\Controllers;
 
 use App\Models\IssuedAccountableForm;
+use App\Models\RcdBatch;
 use App\Models\RcdEntry;
+use App\Models\RcdEntryLedger;
 use App\Support\CollectorLogger;
 use Illuminate\Http\Request;
 use Illuminate\Support\Carbon;
@@ -13,6 +15,16 @@ use Illuminate\Support\Facades\Validator;
 
 class RcdEntryController extends Controller
 {
+    private array $accountabilitySensitiveFields = [
+        'issued_date',
+        'fund',
+        'collector',
+        'type_of_receipt',
+        'serial_no',
+        'receipt_no_from',
+        'receipt_no_to',
+    ];
+
     private function normalizeDigitsString($value): ?string
     {
         if ($value === null) {
@@ -35,6 +47,331 @@ class RcdEntryController extends Controller
         }
 
         return str_pad((string) $value, max(1, $width), '0', STR_PAD_LEFT);
+    }
+
+    private function normalizedString($value): string
+    {
+        return trim((string) ($value ?? ''));
+    }
+
+    private function applyIdentityScope($query, array $payload, bool $hasRcdSerialColumn)
+    {
+        $query
+            ->whereDate('issued_date', $payload['issued_date'])
+            ->where('collector', $payload['collector'])
+            ->where('type_of_receipt', $payload['type_of_receipt'])
+            ->where('receipt_no_from', $payload['receipt_no_from'])
+            ->where('receipt_no_to', $payload['receipt_no_to']);
+
+        if ($hasRcdSerialColumn) {
+            $serial = $this->normalizedString($payload['serial_no'] ?? null);
+
+            if ($serial === '') {
+                $query->where(function ($serialQuery) {
+                    $serialQuery
+                        ->whereNull('serial_no')
+                        ->orWhere('serial_no', '');
+                });
+            } else {
+                $query->where('serial_no', $serial);
+            }
+        }
+
+        return $query;
+    }
+
+    private function findOverlappingEntry(array $payload, bool $hasRcdSerialColumn, ?int $excludeId = null): ?RcdEntry
+    {
+        $query = RcdEntry::query()
+            ->whereDate('issued_date', $payload['issued_date'])
+            ->where('collector', $payload['collector'])
+            ->where('type_of_receipt', $payload['type_of_receipt']);
+
+        if ($hasRcdSerialColumn) {
+            $serial = $this->normalizedString($payload['serial_no'] ?? null);
+
+            if ($serial === '') {
+                $query->where(function ($serialQuery) {
+                    $serialQuery
+                        ->whereNull('serial_no')
+                        ->orWhere('serial_no', '');
+                });
+            } else {
+                $query->where('serial_no', $serial);
+            }
+        }
+
+        if ($excludeId !== null) {
+            $query->where('id', '<>', $excludeId);
+        }
+
+        $from = $this->toInt($payload['receipt_no_from']);
+        $to = $this->toInt($payload['receipt_no_to']);
+
+        return $query
+            ->whereRaw('CAST(receipt_no_from AS UNSIGNED) <= ?', [$to])
+            ->whereRaw('CAST(receipt_no_to AS UNSIGNED) >= ?', [$from])
+            ->orderByDesc('id')
+            ->first();
+    }
+
+    private function hasAccountabilityFieldChanges(RcdEntry $entry, array $validated, bool $hasRcdSerialColumn): bool
+    {
+        $current = [
+            'issued_date' => Carbon::parse($entry->issued_date)->toDateString(),
+            'fund' => $this->normalizedString($entry->fund ?? null),
+            'collector' => $this->normalizedString($entry->collector ?? null),
+            'type_of_receipt' => $this->normalizedString($entry->type_of_receipt ?? null),
+            'serial_no' => $hasRcdSerialColumn ? $this->normalizedString($entry->serial_no ?? null) : '',
+            'receipt_no_from' => $this->normalizedString($entry->receipt_no_from ?? null),
+            'receipt_no_to' => $this->normalizedString($entry->receipt_no_to ?? null),
+        ];
+
+        $incoming = [
+            'issued_date' => Carbon::parse($validated['issued_date'])->toDateString(),
+            'fund' => $this->normalizedString($validated['fund'] ?? null),
+            'collector' => $this->normalizedString($validated['collector'] ?? null),
+            'type_of_receipt' => $this->normalizedString($validated['type_of_receipt'] ?? null),
+            'serial_no' => $hasRcdSerialColumn ? $this->normalizedString($validated['serial_no'] ?? null) : '',
+            'receipt_no_from' => $this->normalizedString($validated['receipt_no_from'] ?? null),
+            'receipt_no_to' => $this->normalizedString($validated['receipt_no_to'] ?? null),
+        ];
+
+        foreach ($this->accountabilitySensitiveFields as $field) {
+            if (($current[$field] ?? '') !== ($incoming[$field] ?? '')) {
+                return true;
+            }
+        }
+
+        return false;
+    }
+
+    private function batchStatusForEntryStatus(string $status): string
+    {
+        return match (strtolower(trim($status))) {
+            'deposit' => 'Deposited',
+            'approve' => 'Approved',
+            'remit' => 'Submitted',
+            default => 'Draft',
+        };
+    }
+
+    private function syncBatchForCollectorDate(string $collector, string $issuedDate): ?RcdBatch
+    {
+        $reportDate = Carbon::parse($issuedDate)->toDateString();
+        $entries = RcdEntry::query()
+            ->whereDate('issued_date', $reportDate)
+            ->where('collector', $collector)
+            ->orderBy('id')
+            ->get();
+
+        if ($entries->isEmpty()) {
+            RcdBatch::query()
+                ->whereDate('report_date', $reportDate)
+                ->where('collector', $collector)
+                ->delete();
+
+            return null;
+        }
+
+        $batchStatus = 'Draft';
+        foreach ($entries as $entry) {
+            $candidate = $this->batchStatusForEntryStatus((string) ($entry->status ?? ''));
+            if ($candidate === 'Deposited') {
+                $batchStatus = 'Deposited';
+                break;
+            }
+            if ($candidate === 'Approved') {
+                $batchStatus = 'Approved';
+                continue;
+            }
+            if ($candidate === 'Submitted' && $batchStatus === 'Draft') {
+                $batchStatus = 'Submitted';
+            }
+        }
+
+        $batch = RcdBatch::firstOrNew([
+            'report_date' => $reportDate,
+            'collector' => $collector,
+        ]);
+
+        $batch->status = $batchStatus;
+        $batch->total_amount = round((float) $entries->sum('total'), 2);
+        $batch->entry_count = (int) $entries->count();
+
+        if ($batchStatus === 'Submitted' && !$batch->submitted_at) {
+            $batch->submitted_at = now();
+        }
+        if (in_array($batchStatus, ['Approved', 'Deposited'], true) && !$batch->submitted_at) {
+            $batch->submitted_at = now();
+        }
+        if ($batchStatus === 'Approved' && !$batch->reviewed_at) {
+            $batch->reviewed_at = now();
+        }
+        if ($batchStatus === 'Deposited') {
+            if (!$batch->submitted_at) {
+                $batch->submitted_at = now();
+            }
+            if (!$batch->reviewed_at) {
+                $batch->reviewed_at = now();
+            }
+            if (!$batch->deposited_at) {
+                $batch->deposited_at = now();
+            }
+        }
+
+        $batch->save();
+
+        RcdEntryLedger::query()
+            ->whereDate('issued_date', $reportDate)
+            ->where('collector', $collector)
+            ->update(['batch_id' => $batch->id]);
+
+        return $batch;
+    }
+
+    private function syncLedgerForEntry(RcdEntry $entry, array $validated, ?IssuedAccountableForm $issuedForm, string $flowMode = 'same_day'): void
+    {
+        $reportDate = Carbon::parse($validated['issued_date'])->toDateString();
+        $batch = $this->syncBatchForCollectorDate($validated['collector'], $reportDate);
+        $issuedQty = ($this->toInt($validated['receipt_no_to']) - $this->toInt($validated['receipt_no_from'])) + 1;
+        $existingLedger = RcdEntryLedger::query()->where('rcd_entry_id', $entry->id)->first();
+
+        RcdEntryLedger::updateOrCreate(
+            ['rcd_entry_id' => $entry->id],
+            [
+                'issued_accountable_form_id' => $issuedForm?->ID ?? $existingLedger?->issued_accountable_form_id,
+                'batch_id' => $batch?->id,
+                'flow_mode' => $flowMode,
+                'issued_date' => $reportDate,
+                'collector' => $validated['collector'],
+                'fund' => $validated['fund'] ?? null,
+                'type_of_receipt' => $validated['type_of_receipt'],
+                'serial_no' => $validated['serial_no'] ?? null,
+                'receipt_no_from' => $validated['receipt_no_from'],
+                'receipt_no_to' => $validated['receipt_no_to'],
+                'issued_qty' => $issuedQty,
+                'total' => (float) $validated['total'],
+                'status' => $validated['status'],
+                'balance_after_qty' => (int) ($issuedForm?->Stock ?? $existingLedger?->balance_after_qty ?? 0),
+                'balance_after_from' => (string) ($issuedForm?->Ending_Balance_receipt_from ?? $existingLedger?->balance_after_from ?? '0'),
+                'balance_after_to' => (string) ($issuedForm?->Ending_Balance_receipt_to ?? $existingLedger?->balance_after_to ?? '0'),
+            ]
+        );
+    }
+
+    private function getIssuedFormBaseRange(object $issuedForm): array
+    {
+        $beginQty = (int) ($issuedForm->Begginning_Balance_receipt_qty ?? 0);
+        $beginFromRaw = (string) ($issuedForm->Begginning_Balance_receipt_from ?? '0');
+        $beginToRaw = (string) ($issuedForm->Begginning_Balance_receipt_to ?? '0');
+        $beginFrom = $this->toInt($beginFromRaw);
+        $beginTo = $this->toInt($beginToRaw);
+
+        if ($beginQty > 0 && $beginFrom > 0 && $beginTo >= $beginFrom) {
+            return [
+                'qty' => $beginQty,
+                'from' => $beginFrom,
+                'to' => $beginTo,
+                'from_raw' => $beginFromRaw,
+                'to_raw' => $beginToRaw,
+            ];
+        }
+
+        $rangeQty = (int) ($issuedForm->Receipt_Range_qty ?? 0);
+        $rangeFromRaw = (string) ($issuedForm->Receipt_Range_From ?? '0');
+        $rangeToRaw = (string) ($issuedForm->Receipt_Range_To ?? '0');
+        $rangeFrom = $this->toInt($rangeFromRaw);
+        $rangeTo = $this->toInt($rangeToRaw);
+
+        return [
+            'qty' => $rangeQty,
+            'from' => $rangeFrom,
+            'to' => $rangeTo,
+            'from_raw' => $rangeFromRaw,
+            'to_raw' => $rangeToRaw,
+        ];
+    }
+
+    private function recalculateIssuedFormState(int $issuedFormId): void
+    {
+        $issuedForm = DB::table('issued_accountable_forms')->where('ID', $issuedFormId)->first();
+        if (!$issuedForm) {
+            return;
+        }
+
+        $base = $this->getIssuedFormBaseRange($issuedForm);
+        $baseQty = (int) ($base['qty'] ?? 0);
+        $baseFrom = (int) ($base['from'] ?? 0);
+        $baseTo = (int) ($base['to'] ?? 0);
+        $seriesWidth = max(
+            strlen((string) ($base['from_raw'] ?? '0')),
+            strlen((string) ($base['to_raw'] ?? '0'))
+        );
+
+        $ledgers = RcdEntryLedger::query()
+            ->where('issued_accountable_form_id', $issuedFormId)
+            ->orderByRaw('CAST(receipt_no_from AS UNSIGNED)')
+            ->get();
+
+        if ($baseQty <= 0 || $baseFrom <= 0 || $baseTo < $baseFrom || $ledgers->isEmpty()) {
+            DB::table('issued_accountable_forms')
+                ->where('ID', $issuedFormId)
+                ->update([
+                    'Ending_Balance_receipt_qty' => $baseQty,
+                    'Ending_Balance_receipt_from' => $baseQty > 0 ? $this->padReceipt($baseFrom, $seriesWidth) : '0',
+                    'Ending_Balance_receipt_to' => $baseQty > 0 ? $this->padReceipt($baseTo, $seriesWidth) : '0',
+                    'Issued_receipt_qty' => 0,
+                    'Issued_receipt_from' => '0',
+                    'Issued_receipt_to' => '0',
+                    'Stock' => $baseQty,
+                ]);
+            return;
+        }
+
+        $maxIssuedTo = $baseFrom - 1;
+        $latestLedger = null;
+        foreach ($ledgers as $ledger) {
+            $ledgerTo = $this->toInt($ledger->receipt_no_to);
+            if ($ledgerTo > $maxIssuedTo) {
+                $maxIssuedTo = $ledgerTo;
+                $latestLedger = $ledger;
+            }
+        }
+
+        if ($maxIssuedTo < $baseFrom) {
+            $newEndingQty = $baseQty;
+            $newEndingFrom = $baseFrom;
+            $newEndingTo = $baseTo;
+        } else {
+            $consumedQty = max(0, ($maxIssuedTo - $baseFrom) + 1);
+            $newEndingQty = max(0, $baseQty - $consumedQty);
+            $newEndingFrom = $newEndingQty > 0 ? $maxIssuedTo + 1 : 0;
+            $newEndingTo = $newEndingQty > 0 ? $baseTo : 0;
+        }
+
+        DB::table('issued_accountable_forms')
+            ->where('ID', $issuedFormId)
+            ->update([
+                'Ending_Balance_receipt_qty' => $newEndingQty,
+                'Ending_Balance_receipt_from' => $newEndingQty > 0 ? $this->padReceipt($newEndingFrom, $seriesWidth) : '0',
+                'Ending_Balance_receipt_to' => $newEndingQty > 0 ? $this->padReceipt($newEndingTo, $seriesWidth) : '0',
+                'Issued_receipt_qty' => (int) ($latestLedger->issued_qty ?? 0),
+                'Issued_receipt_from' => $latestLedger ? (string) $latestLedger->receipt_no_from : '0',
+                'Issued_receipt_to' => $latestLedger ? (string) $latestLedger->receipt_no_to : '0',
+                'Stock' => $newEndingQty,
+            ]);
+
+        $updatedIssuedForm = DB::table('issued_accountable_forms')->where('ID', $issuedFormId)->first();
+        if ($updatedIssuedForm) {
+            RcdEntryLedger::query()
+                ->where('issued_accountable_form_id', $issuedFormId)
+                ->update([
+                    'balance_after_qty' => (int) ($updatedIssuedForm->Stock ?? 0),
+                    'balance_after_from' => (string) ($updatedIssuedForm->Ending_Balance_receipt_from ?? '0'),
+                    'balance_after_to' => (string) ($updatedIssuedForm->Ending_Balance_receipt_to ?? '0'),
+                ]);
+        }
     }
 
     public function index(Request $request)
@@ -99,18 +436,22 @@ class RcdEntryController extends Controller
             ], 422);
         }
 
-        $hasDuplicate = RcdEntry::query()
-            ->whereDate('issued_date', $validated['issued_date'])
-            ->where('collector', $validated['collector'])
-            ->when($hasRcdSerialColumn && !empty($validated['serial_no']), function ($query) use ($validated) {
-                $query->where('serial_no', $validated['serial_no']);
-            })
-            ->exists();
+        $duplicateQuery = RcdEntry::query();
+        $this->applyIdentityScope($duplicateQuery, $validated, $hasRcdSerialColumn);
+        $hasDuplicate = $duplicateQuery->exists();
 
         if ($hasDuplicate) {
             return response()->json([
-                'message' => 'Entry already exists for this date, collector, and serial number.',
+                'message' => 'Entry already exists for this date, collector, serial number, receipt type, and receipt range.',
             ], 409);
+        }
+
+        $overlappingEntry = $this->findOverlappingEntry($validated, $hasRcdSerialColumn);
+
+        if ($overlappingEntry) {
+            return response()->json([
+                'message' => 'Receipt range overlaps an existing entry for this date, collector, serial number, and receipt type.',
+            ], 422);
         }
 
         return DB::transaction(function () use ($validated) {
@@ -322,6 +663,9 @@ class RcdEntryController extends Controller
                 'stock' => $endingQty,
             ]);
 
+            $entry->refresh();
+            $this->syncLedgerForEntry($entry, $validated, $issuedForm, $flowMode);
+
             return response()->json([
                 'message' => 'Entry saved successfully.',
                 'entry' => $entry,
@@ -368,6 +712,41 @@ class RcdEntryController extends Controller
             ], 422);
         }
 
+        $duplicateQuery = RcdEntry::query()->where('id', '<>', $entry->id);
+        $this->applyIdentityScope($duplicateQuery, $validated, $hasRcdSerialColumn);
+        if ($duplicateQuery->exists()) {
+            return response()->json([
+                'message' => 'Another entry already exists for this date, collector, serial number, receipt type, and receipt range.',
+            ], 409);
+        }
+
+        $overlappingEntry = $this->findOverlappingEntry($validated, $hasRcdSerialColumn, (int) $entry->id);
+        if ($overlappingEntry) {
+            return response()->json([
+                'message' => 'Receipt range overlaps an existing entry for this date, collector, serial number, and receipt type.',
+            ], 422);
+        }
+
+        if ($this->hasAccountabilityFieldChanges($entry, $validated, $hasRcdSerialColumn)) {
+            return response()->json([
+                'message' => 'This edit changes accountability fields. To protect stock balances, create a replacement entry instead of changing date, collector, receipt type, serial number, fund, or receipt range.',
+            ], 422);
+        }
+
+        $previousDate = Carbon::parse($entry->issued_date)->toDateString();
+        $previousCollector = $entry->collector;
+        $beforeState = [
+            'issued_date' => Carbon::parse($entry->issued_date)->toDateString(),
+            'fund' => $entry->fund ?? null,
+            'collector' => $entry->collector,
+            'type_of_receipt' => $entry->type_of_receipt,
+            'serial_no' => $entry->serial_no ?? '',
+            'receipt_no_from' => $entry->receipt_no_from,
+            'receipt_no_to' => $entry->receipt_no_to,
+            'total' => $entry->total,
+            'status' => $entry->status,
+        ];
+        $performedBy = $request->input('performed_by');
         $updateData = $validated;
         if (!Schema::hasColumn('rcd_issued_form', 'fund')) {
             unset($updateData['fund']);
@@ -379,18 +758,77 @@ class RcdEntryController extends Controller
 
         CollectorLogger::write($validated['collector'], 'rcd_entry_updated', [
             'entry_id' => $entry->id,
-            'issued_date' => $validated['issued_date'],
-            'type_of_receipt' => $validated['type_of_receipt'],
-            'serial_no' => $validated['serial_no'] ?? '',
-            'receipt_no_from' => $validated['receipt_no_from'],
-            'receipt_no_to' => $validated['receipt_no_to'],
-            'total' => $validated['total'],
-            'status' => $validated['status'],
+            'performed_by' => $performedBy,
+            'before' => $beforeState,
+            'after' => [
+                'issued_date' => $validated['issued_date'],
+                'fund' => $validated['fund'] ?? null,
+                'collector' => $validated['collector'],
+                'type_of_receipt' => $validated['type_of_receipt'],
+                'serial_no' => $validated['serial_no'] ?? '',
+                'receipt_no_from' => $validated['receipt_no_from'],
+                'receipt_no_to' => $validated['receipt_no_to'],
+                'total' => $validated['total'],
+                'status' => $validated['status'],
+            ],
         ]);
+
+        $this->syncBatchForCollectorDate($previousCollector, $previousDate);
+        $this->syncLedgerForEntry($entry->fresh(), $validated, null, 'status_update');
 
         return response()->json([
             'message' => 'Entry updated successfully.',
             'entry' => $entry->fresh(),
+        ]);
+    }
+
+    public function destroy(int $id)
+    {
+        $entry = RcdEntry::find($id);
+        if (!$entry) {
+            return response()->json(['message' => 'Entry not found.'], 404);
+        }
+
+        $entryDate = Carbon::parse($entry->issued_date)->toDateString();
+        $collector = $entry->collector;
+        $deletedState = [
+            'issued_date' => $entryDate,
+            'fund' => $entry->fund ?? null,
+            'collector' => $entry->collector,
+            'type_of_receipt' => $entry->type_of_receipt,
+            'serial_no' => $entry->serial_no ?? '',
+            'receipt_no_from' => $entry->receipt_no_from,
+            'receipt_no_to' => $entry->receipt_no_to,
+            'total' => $entry->total,
+            'status' => $entry->status,
+        ];
+        $performedBy = request()->input('performed_by');
+        $ledger = RcdEntryLedger::query()->where('rcd_entry_id', $entry->id)->first();
+
+        DB::transaction(function () use ($entry, $ledger, $collector, $entryDate) {
+            $issuedFormId = $ledger?->issued_accountable_form_id;
+
+            if ($ledger) {
+                $ledger->delete();
+            }
+
+            $entry->delete();
+
+            if ($issuedFormId) {
+                $this->recalculateIssuedFormState((int) $issuedFormId);
+            }
+
+            $this->syncBatchForCollectorDate($collector, $entryDate);
+        });
+
+        CollectorLogger::write($collector, 'rcd_entry_deleted', [
+            'entry_id' => $id,
+            'performed_by' => $performedBy,
+            'deleted_entry' => $deletedState,
+        ]);
+
+        return response()->json([
+            'message' => 'Entry deleted successfully.',
         ]);
     }
 }

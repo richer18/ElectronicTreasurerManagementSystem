@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers;
 
+use App\Helpers\TrustFundPaymentSummaryHelper;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Log;
@@ -11,39 +12,24 @@ class TrustFundDataDivingFeesController extends Controller
     public function __invoke(Request $request)
     {
         try {
-            $conditions = [];
-            $bindings = [];
+            $query = DB::table('trust_fund_payment');
+            $query = TrustFundPaymentSummaryHelper::applyActiveFilter($query);
+            $query = TrustFundPaymentSummaryHelper::applyDateFilters($query, $request);
 
-            if ($request->filled('year')) {
-                $conditions[] = 'YEAR(date) = ?';
-                $bindings[] = $request->query('year');
-            }
-            if ($request->filled('month')) {
-                $conditions[] = 'MONTH(date) = ?';
-                $bindings[] = $request->query('month');
-            }
-            if ($request->filled('day')) {
-                $conditions[] = 'DAY(date) = ?';
-                $bindings[] = $request->query('day');
-            }
+            $totals = $query->selectRaw("
+                ROUND(COALESCE(SUM(LOCAL_40_PERCENT_DIVE_FEE), 0), 2) AS local_total,
+                ROUND(COALESCE(SUM(FISHERS_30_PERCENT), 0), 2) AS fishers_total,
+                ROUND(COALESCE(SUM(BRGY_30_PERCENT), 0), 2) AS brgy_total
+            ")->first();
 
-            $whereClause = $conditions ? 'WHERE ' . implode(' AND ', $conditions) : '';
-
-            $sql = "
-                SELECT 'Diving Fee Local 40%' AS Taxes, SUM(LOCAL_40_PERCENT_DIVE_FEE) AS Total FROM trust_fund_data $whereClause
-                UNION ALL
-                SELECT 'Diving Fee Fishers 30%', SUM(FISHERS_30_PERCENT) FROM trust_fund_data $whereClause
-                UNION ALL
-                SELECT 'Diving Fee Brgy 30%', SUM(BRGY_30_PERCENT) FROM trust_fund_data $whereClause
-                UNION ALL
-                SELECT 'Overall Total', SUM(LOCAL_40_PERCENT_DIVE_FEE + FISHERS_30_PERCENT + BRGY_30_PERCENT) FROM trust_fund_data $whereClause
-            ";
-
-            $results = DB::select($sql, array_merge($bindings, $bindings, $bindings, $bindings));
-
-            return response()->json($results);
+            return response()->json([
+                ['Taxes' => 'Diving Fee Local 40%', 'Total' => $totals->local_total ?? 0],
+                ['Taxes' => 'Diving Fee Fishers 30%', 'Total' => $totals->fishers_total ?? 0],
+                ['Taxes' => 'Diving Fee Brgy 30%', 'Total' => $totals->brgy_total ?? 0],
+                ['Taxes' => 'Overall Total', 'Total' => ($totals->local_total ?? 0) + ($totals->fishers_total ?? 0) + ($totals->brgy_total ?? 0)],
+            ]);
         } catch (\Exception $e) {
-            Log::error("Error fetching diving fee report: " . $e->getMessage());
+            Log::error('Error fetching diving fee report: ' . $e->getMessage());
             return response()->json(['error' => 'Failed to fetch data'], 500);
         }
     }

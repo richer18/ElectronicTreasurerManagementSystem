@@ -79,6 +79,7 @@ function AbstractGF({ data, mode }) {
   const [progress, setProgress] = useState(0);
   const [rateOptions, setRateOptions] = useState([]);
   const [rateLoading, setRateLoading] = useState(false);
+  const [receiptTypeOptions, setReceiptTypeOptions] = useState([]);
 
   const rateById = useMemo(() => {
     const map = new Map();
@@ -157,6 +158,20 @@ function AbstractGF({ data, mode }) {
     };
 
     fetchRates();
+  }, []);
+
+  useEffect(() => {
+    const fetchReceiptTypes = async () => {
+      try {
+        const response = await axiosInstance.get("form-types");
+        setReceiptTypeOptions(Array.isArray(response.data) ? response.data : []);
+      } catch (error) {
+        console.error("Error fetching receipt types:", error);
+        setReceiptTypeOptions([]);
+      }
+    };
+
+    fetchReceiptTypes();
   }, []);
 
   // Calculate total
@@ -402,13 +417,19 @@ function AbstractGF({ data, mode }) {
                 <FaIdCard style={{ marginRight: 8 }} />
                 Type of Receipt
               </Form.Label>
-              <Form.Control
-                type="text"
+              <Form.Select
                 value={typeReceipt}
                 onChange={(e) => setTypeReceipt(e.target.value)}
                 required
                 style={inputStyle}
-              />
+              >
+                <option value="">Select receipt type</option>
+                {receiptTypeOptions.map((option) => (
+                  <option key={option.code || option.id} value={option.code}>
+                    {option.description || option.name || option.code}
+                  </option>
+                ))}
+              </Form.Select>
             </Form.Group>
           </Col>
 

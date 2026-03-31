@@ -1,6 +1,7 @@
 import { CssBaseline } from "@mui/material";
 import { ThemeProvider, createTheme } from "@mui/material/styles";
 import Routers from "./Router/Router";
+import { AuthProvider } from "./auth/AuthContext";
 
 function App() {
   const theme = createTheme({
@@ -34,10 +35,12 @@ function App() {
   });
 
   return (
-    <ThemeProvider theme={theme}>
-      <CssBaseline />
-      <Routers />
-    </ThemeProvider>
+    <AuthProvider>
+      <ThemeProvider theme={theme}>
+        <CssBaseline />
+        <Routers />
+      </ThemeProvider>
+    </AuthProvider>
   );
 }
 

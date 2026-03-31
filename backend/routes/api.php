@@ -2,15 +2,9 @@
 
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Route;
-
-use App\Models\Cedula;
-use App\Models\GeneralFundData;
-use App\Models\TrustFundData;
-use App\Models\RealPropertyTaxData;
-
-use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Facades\DB;
 
+use App\Http\Controllers\AuthController;
 use App\Http\Controllers\RealPropertyTaxController;
 use App\Http\Controllers\RealPropertyTaxControllerTotalFund;
 use App\Http\Controllers\RealPropertyTaxControllerTotalGeneralFund;
@@ -44,6 +38,7 @@ use App\Http\Controllers\GeneralFundDataTaxOnBusinessTotalController;
 use App\Http\Controllers\GeneralFundDataRegulatoryFeesTotalController;
 use App\Http\Controllers\GeneralFundDataServiceUserChargesTotalController;
 use App\Http\Controllers\GeneralFundDataReceiptsFromEconomicEnterprisesTotalController;
+use App\Http\Controllers\GeneralFundDashboardSummaryController;
 use App\Http\Controllers\GeneralFundDataUpdateGeneralFundDataController;
 use App\Http\Controllers\GeneralFundDataSaveGeneralFundDataController;
 use App\Http\Controllers\GeneralFundDataDeleteGFController;
@@ -122,6 +117,8 @@ use App\Http\Controllers\WaterWorksAccountNumberPaymentJSONDataController;
 
 use App\Http\Controllers\BploRecordController;
 use App\Http\Controllers\TotalRevenueController;
+use App\Http\Controllers\RcdBatchController;
+use App\Http\Controllers\RcdSuggestedCollectionController;
 use App\Http\Controllers\TotalRegisteredController;
 use App\Http\Controllers\TotalRenewController;
 use App\Http\Controllers\TotalExpiryController;
@@ -133,15 +130,25 @@ use App\Http\Controllers\FormTypeController;
 use App\Http\Controllers\AssignFormController;
 use App\Http\Controllers\IssuedFormController;
 use App\Http\Controllers\RcdEntryController;
+use App\Http\Controllers\AccountableFormReturnController;
+use App\Http\Controllers\AccountabilityLogController;
+use App\Http\Controllers\UserManagementController;
 
-
-Route::get('/user', function (Request $request) {
-    return $request->user();
-})->middleware('auth:sanctum');
 
 Route::get('/ping', function () {
     return response()->json(['message' => 'ping from Laravel']);
 });
+
+Route::post('/login', [AuthController::class, 'login'])->middleware('web');
+
+Route::middleware(['web', 'auth:sanctum', 'module.permission'])->group(function () {
+Route::get('/user', [AuthController::class, 'user']);
+Route::post('/logout', [AuthController::class, 'logout']);
+Route::post('/rcd/verify-password', [AuthController::class, 'verifyPassword']);
+Route::get('/users', [UserManagementController::class, 'index'])->middleware('permission:users.view');
+Route::get('/roles/permissions', [UserManagementController::class, 'roles'])->middleware('permission:users.view');
+Route::post('/users', [UserManagementController::class, 'store'])->middleware('permission:users.create');
+Route::put('/users/{user}', [UserManagementController::class, 'update'])->middleware('permission:users.update');
 
 Route::get('/calendar-events', [CalendarEventController::class, 'index']);
 Route::post('/calendar-events', [CalendarEventController::class, 'store']);
@@ -150,38 +157,8 @@ Route::put('/calendar-events/{calendarEvent}', [CalendarEventController::class, 
 Route::delete('/calendar-events/{calendarEvent}', [CalendarEventController::class, 'destroy']);
 Route::get('/calendar-events/{calendarEvent}/attachment', [CalendarEventController::class, 'attachment']);
 
-Route::get('/cedula', function () {
-    return Cedula::all();
-});
-
-Route::get('/general_fund_data', function () {
-    return GeneralFundData::all();
-});
-
-Route::get('/trust_fund_data', function () {
-    return TrustFundData::all();
-});
-
-Route::get('/real_property_tax_data', function () {
-    return RealPropertyTaxData::all();
-});
-
-Route::post('/login', function (Request $request) {
-    $user = DB::table('users')->where('USERNAME', $request->username)->first();
-
-    if (!$user || !Hash::check($request->password, $user->PASSWORD_HASH)) {
-        return response()->json(['message' => 'Invalid credentials'], 401);
-    }
-
-    return response()->json([
-        'message' => 'Login successful',
-        'user' => [
-            'id' => $user->USER_ID,
-            'username' => $user->USERNAME,
-            'role' => $user->ROLE,
-            'status' => $user->ACCOUNT_STATUS,
-        ]
-    ]);
+Route::get('/cedula-raw', function () {
+    return DB::table('community_tax_certificate_payment')->get();
 });
 
 Route::get('/rpt-json', function () {
@@ -222,6 +199,7 @@ Route::post('/updateComment', [RealPropertyTaxDataViewDialogUpdateCommentControl
 Route::post('/insertComment', [RealPropertyTaxDataViewDialogInsertCommentController::class, 'insert']);
 
 Route::get('/generalFundDataAll', [GeneralFundDataAllController::class, 'index']);
+Route::get('/general-fund-dashboard-summary', [GeneralFundDashboardSummaryController::class, 'index']);
 Route::get('/generalFundPaymentRates', [GeneralFundPaymentRateOptionsController::class, 'index']);
 Route::post('/generalFundPayment', [GeneralFundPaymentCreateController::class, 'store']);
 Route::get('/generalFundPaymentView/{paymentId}', [GeneralFundPaymentViewController::class, 'show']);
@@ -370,6 +348,14 @@ Route::get('/available-forms', [PurchaseController::class, 'availableForms']);
 Route::put('/update-purchase-form/{serial}', [PurchaseController::class, 'updateStatus']);
 Route::post('/assign-forms', [AssignFormController::class, 'store']);
 Route::get('/issued-forms', [IssuedFormController::class, 'index']);
+Route::get('/accountable-form-returns', [AccountableFormReturnController::class, 'index']);
+Route::post('/accountable-form-returns', [AccountableFormReturnController::class, 'store']);
+Route::get('/accountability/logs', [AccountabilityLogController::class, 'index']);
 Route::get('/rcd-entries', [RcdEntryController::class, 'index']);
 Route::post('/rcd-entries', [RcdEntryController::class, 'store']);
 Route::put('/rcd-entries/{id}', [RcdEntryController::class, 'update']);
+Route::delete('/rcd-entries/{id}', [RcdEntryController::class, 'destroy']);
+Route::get('/rcd-batches', [RcdBatchController::class, 'index']);
+Route::patch('/rcd-batches/{id}/status', [RcdBatchController::class, 'updateStatus']);
+Route::get('/rcd/suggested-collections', [RcdSuggestedCollectionController::class, 'index']);
+});

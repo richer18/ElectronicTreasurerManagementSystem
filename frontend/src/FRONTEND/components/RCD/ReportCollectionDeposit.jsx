@@ -8,6 +8,8 @@ Box,
 Button,
 Card,
 Chip,
+Checkbox,
+Divider,
 Dialog,
 DialogActions,
 DialogContent,
@@ -34,7 +36,7 @@ Typography,
 import TablePagination from "@mui/material/TablePagination";
 // import axios from "axios";
 import { saveAs } from "file-saver"; // npm install file-saver
-import React, { useEffect, useRef, useState } from "react";
+import React, { useEffect, useMemo, useRef, useState } from "react";
 import html2pdf from "html2pdf.js";
 import axiosInstance from "../../../api/axiosInstance";
 import { BiSolidReport } from "react-icons/bi";
@@ -55,6 +57,8 @@ import IssueForm from "./components/IssueForm";
 import Logs from "./components/Logs";
 import NewEntryForm from "./components/NewEntryForm";
 import PurchaseForm from "./components/PurchaseForm";
+import ReturnAccountableForm from "./components/ReturnAccountableForm";
+import ReturnHistory from "./components/ReturnHistory";
 import RcdPrintTable from "./components/RcdPrintTable";
 
 const StyledTableCell = styled(TableCell)(({ theme }) => ({
@@ -178,6 +182,67 @@ const secondaryToolbarButtonSx = (accent, soft) => ({
   },
 });
 
+const getWorkflowStatus = (statusValue) => {
+  const normalized = String(statusValue || "").trim().toLowerCase();
+
+  if (normalized === "deposit") return "Deposited";
+  if (normalized === "approve") return "Approved";
+  if (normalized === "remit") return "Submitted";
+  if (normalized === "purchase") return "Purchase";
+  return "Draft";
+};
+
+const isPrintableRcdStatus = (statusValue) => {
+  const normalized = String(statusValue || "").trim().toLowerCase();
+  return normalized === "remit" || normalized === "deposit" || normalized === "approve";
+};
+
+const getWorkflowStatusMeta = (statusValue) => {
+  const workflowStatus = getWorkflowStatus(statusValue);
+
+  const meta = {
+    Draft: {
+      label: "Draft",
+      bg: "rgba(214,161,43,0.18)",
+      color: "#7a5300",
+    },
+    Submitted: {
+      label: "Submitted",
+      bg: "rgba(15,107,98,0.14)",
+      color: "#0f6b62",
+    },
+    Approved: {
+      label: "Approved",
+      bg: "rgba(46,125,50,0.14)",
+      color: "#2e7d32",
+    },
+    Deposited: {
+      label: "Deposited",
+      bg: "rgba(2,136,209,0.14)",
+      color: "#0277bd",
+    },
+    Purchase: {
+      label: "Purchase",
+      bg: "rgba(75,93,115,0.12)",
+      color: "#4b5d73",
+    },
+  };
+
+  return meta[workflowStatus] || meta.Draft;
+};
+
+const accountabilitySections = [
+  "accountability",
+  "assign-form",
+  "check-stock",
+  "inventory",
+  "issue-form",
+  "return-form",
+  "return-history",
+  "purchase-form",
+  "logs",
+];
+
 function ReportCollectionDeposit() {
     // Dialog states
       const [isDialogOpen, setIsDialogOpen] = useState(false);
@@ -218,7 +283,7 @@ function ReportCollectionDeposit() {
       const [showReportTable, setShowReportTable] = useState(false);
       const [dailyTableData, setDailyTableData] = useState([]);
       const [showFilters, setShowFilters] = useState(true);
-      const [activeSection, setActiveSection] = useState("main");
+      const [activeSection, setActiveSection] = useState("overview");
       const [openDeleteDialog, setOpenDeleteDialog] = useState(false);
       const [selectedId, setSelectedId] = useState(null);
       const [month, setMonth] = useState(null);
@@ -256,10 +321,56 @@ function ReportCollectionDeposit() {
       const [openPrintSelector, setOpenPrintSelector] = useState(false);
       const [printCollector, setPrintCollector] = useState("");
       const [printDate, setPrintDate] = useState("");
+      const [rcdBatches, setRcdBatches] = useState([]);
+      const [selectedGenerateBatch, setSelectedGenerateBatch] = useState(null);
+      const [suggestedCollections, setSuggestedCollections] = useState([]);
+      const [suggestedCollectionsLoading, setSuggestedCollectionsLoading] = useState(false);
+      const [batchLoading, setBatchLoading] = useState(false);
+      const [batchActionLoading, setBatchActionLoading] = useState(false);
+      const [permissionDialogOpen, setPermissionDialogOpen] = useState(false);
+      const [permissionPassword, setPermissionPassword] = useState("");
+      const [permissionAction, setPermissionAction] = useState("");
+      const [permissionLoading, setPermissionLoading] = useState(false);
+      const [permissionError, setPermissionError] = useState("");
+      const [selectedSuggestionKeys, setSelectedSuggestionKeys] = useState([]);
+      const [multiImportQueue, setMultiImportQueue] = useState([]);
+      const [multiImportIndex, setMultiImportIndex] = useState(0);
+      const [multiImportDialogOpen, setMultiImportDialogOpen] = useState(false);
+      const [batchStatusDialog, setBatchStatusDialog] = useState({
+        open: false,
+        batch: null,
+        status: "",
+        reviewed_by: "",
+        deposit_reference: "",
+        remarks: "",
+      });
 
-       const ChhandleCloseDialog = () => {
+      const ChhandleCloseDialog = () => {
     setReportDialog({ ...reportDialog, open: false });
   };
+
+  function getCollectorFromRow(row) {
+    return row?.Collector || row?.collector || "";
+  }
+
+  function getDateFromRow(row) {
+    return row?.issued_date || row?.Date || row?.date || "";
+  }
+
+  function toDateKey(value) {
+    if (!value) return "";
+    if (typeof value === "string" && value.length >= 10) return value.slice(0, 10);
+    const date = new Date(value);
+    if (Number.isNaN(date.getTime())) return "";
+    const yyyy = date.getFullYear();
+    const mm = String(date.getMonth() + 1).padStart(2, "0");
+    const dd = String(date.getDate()).padStart(2, "0");
+    return `${yyyy}-${mm}-${dd}`;
+  }
+
+  function sameCollector(entryCollector, targetCollector) {
+    return String(entryCollector || "").trim().toLowerCase() === String(targetCollector || "").trim().toLowerCase();
+  }
 
 
   const handleGenerateReport = () => {
@@ -300,8 +411,27 @@ function ReportCollectionDeposit() {
     }
   };
 
+  const fetchBatches = async () => {
+    try {
+      setBatchLoading(true);
+      const response = await axiosInstance.get("/rcd-batches", {
+        params: {
+          month,
+          year,
+        },
+      });
+      setRcdBatches(Array.isArray(response.data) ? response.data : []);
+    } catch (error) {
+      console.error("Failed to load RCD batches:", error);
+      setRcdBatches([]);
+    } finally {
+      setBatchLoading(false);
+    }
+  };
+
   useEffect(() => {
     fetchEntries();
+    fetchBatches();
   }, [month, year, searchQuery]);
 
   useEffect(() => {
@@ -337,6 +467,110 @@ function ReportCollectionDeposit() {
     setServiceUserChargesTotal(agnes);
   }, [filteredData]);
 
+  const rcdBatchRows = useMemo(() => {
+    const grouped = new Map();
+
+    (Array.isArray(filteredData) ? filteredData : []).forEach((row) => {
+      const collector = getCollectorFromRow(row);
+      const dateKey = toDateKey(getDateFromRow(row));
+      if (!collector || !dateKey) return;
+
+      const key = `${dateKey}__${collector.toLowerCase()}`;
+      const amount = Number(row?.Total ?? row?.total ?? 0);
+      const rowWorkflowStatus = getWorkflowStatus(row?.Status ?? row?.status);
+      const receiptType = row?.Type_Of_Receipt || row?.type_of_receipt || "";
+
+      if (!grouped.has(key)) {
+        grouped.set(key, {
+          key,
+          date: dateKey,
+          collector,
+          total: 0,
+          entryCount: 0,
+          statuses: new Set(),
+          receiptTypes: new Set(),
+          rows: [],
+        });
+      }
+
+      const batch = grouped.get(key);
+      batch.total += amount;
+      batch.entryCount += 1;
+      batch.statuses.add(rowWorkflowStatus);
+      if (receiptType) batch.receiptTypes.add(receiptType);
+      batch.rows.push(row);
+    });
+
+    const getBatchStage = (statuses) => {
+      if (statuses.has("Deposited")) return "Deposited";
+      if (statuses.has("Approved")) return "Approved";
+      if (statuses.has("Submitted")) return "Submitted";
+      if (statuses.has("Purchase")) return "Purchase";
+      return "Draft";
+    };
+
+    return Array.from(grouped.values())
+      .map((batch) => ({
+        ...batch,
+        stage: getBatchStage(batch.statuses),
+        receiptTypeSummary: Array.from(batch.receiptTypes).join(", "),
+      }))
+      .sort((a, b) => {
+        if (a.date !== b.date) return a.date < b.date ? 1 : -1;
+        return a.collector.localeCompare(b.collector);
+      });
+  }, [filteredData]);
+
+  const workflowSummary = useMemo(() => {
+    return rcdBatchRows.reduce(
+      (acc, batch) => {
+        acc.total += batch.total;
+        if (batch.stage === "Draft") acc.draft += 1;
+        if (batch.stage === "Submitted") acc.submitted += 1;
+        if (batch.stage === "Approved") acc.approved += 1;
+        if (batch.stage === "Deposited") acc.deposited += 1;
+        return acc;
+      },
+      { total: 0, draft: 0, submitted: 0, approved: 0, deposited: 0 }
+    );
+  }, [rcdBatchRows]);
+
+  const displayedBatches = useMemo(() => {
+    if (Array.isArray(rcdBatches) && rcdBatches.length > 0) {
+      return rcdBatches.map((batch) => ({
+        key: `batch-${batch.id}`,
+        id: batch.id,
+        date: batch.report_date,
+        collector: batch.collector,
+        total: Number(batch.total_amount || 0),
+        entryCount: Number(batch.entry_count || 0),
+        stage: batch.status || "Draft",
+        receiptTypeSummary: batch.remarks || "",
+        rows: filteredData.filter((row) => {
+          const rowCollector = getCollectorFromRow(row);
+          const rowDate = toDateKey(getDateFromRow(row));
+          return sameCollector(rowCollector, batch.collector) && rowDate === batch.report_date;
+        }),
+      }));
+    }
+
+    return rcdBatchRows;
+  }, [rcdBatches, rcdBatchRows, filteredData]);
+
+  const displayedWorkflowSummary = useMemo(() => {
+    return displayedBatches.reduce(
+      (acc, batch) => {
+        acc.total += Number(batch.total || 0);
+        if (batch.stage === "Draft") acc.draft += 1;
+        if (batch.stage === "Submitted") acc.submitted += 1;
+        if (batch.stage === "Approved") acc.approved += 1;
+        if (batch.stage === "Deposited") acc.deposited += 1;
+        return acc;
+      },
+      { total: 0, draft: 0, submitted: 0, approved: 0, deposited: 0 }
+    );
+  }, [displayedBatches]);
+
   const getRowId = (row) => row?.id ?? row?.ID ?? null;
 
   const handleMenuClick = (event, row) => {
@@ -355,15 +589,15 @@ function ReportCollectionDeposit() {
   };
 
   const handleOpenPurchaseForm = () => {
-    setDialogTitle("Purchase Form");
-    setDialogContent(<PurchaseForm />);
-    setIsDialogOpen(true);
+    showSection("purchase-form");
   };
 
   const handleOpenAssignForm = () => {
-    setDialogTitle("Assign Accountable Form");
-    setDialogContent(<AssignAccountableForms />);
-    setIsDialogOpen(true);
+    showSection("assign-form");
+  };
+
+  const handleOpenReturnForm = () => {
+    showSection("return-form");
   };
 
   // TOTAL POPUP
@@ -425,7 +659,7 @@ function ReportCollectionDeposit() {
       return;
     }
 
-    if (section === "financial") {
+    if (section === "financial" || section === "generate-rcd" || section === "review-queue" || section === "deposit-queue") {
       setShowDailyTable(false);
       setShowMainTable(false);
       setShowReportTable(true);
@@ -433,11 +667,19 @@ function ReportCollectionDeposit() {
       return;
     }
 
-    if (section === "check-stock" || section === "inventory" || section === "issue-form" || section === "logs") {
+    if (accountabilitySections.includes(section)) {
       setShowDailyTable(false);
       setShowMainTable(false);
       setShowReportTable(false);
       setShowFilters(false);
+      return;
+    }
+
+    if (section === "overview") {
+      setShowDailyTable(false);
+      setShowMainTable(false);
+      setShowReportTable(false);
+      setShowFilters(true);
       return;
     }
 
@@ -449,11 +691,11 @@ function ReportCollectionDeposit() {
   };
 
   const toggleReportTable = () => {
-    showSection("financial");
+    showSection("generate-rcd");
   };
 
   const toggleDailyTable = () => {
-    showSection("daily");
+    showSection("entries");
   };
 
   const handleNewEntryClick = () => {
@@ -463,12 +705,98 @@ function ReportCollectionDeposit() {
       <NewEntryForm
         onSaved={() => {
           fetchEntries();
+          fetchBatches();
           handleCloseDialog();
         }}
         onCancel={handleCloseDialog}
       />
     );
     setIsDialogOpen(true);
+  };
+
+  const handleImportSuggestedCollection = (suggestion) => {
+    setDialogTitle("Import Suggested Collection");
+    setDialogContent(
+      <NewEntryForm
+        initialValues={{
+          issued_date: suggestion.collection_date,
+          collector: suggestion.collector,
+          fund: suggestion.fund === "RPT" ? "200 Special Education Fund" : "100 General Fund",
+          type_of_receipt: suggestion.type_of_receipt,
+          receipt_no_from: suggestion.receipt_no_from,
+          receipt_no_to: suggestion.receipt_no_to,
+          total: suggestion.total_amount,
+          status: "Not Remit",
+        }}
+        onSaved={() => {
+          fetchEntries();
+          fetchBatches();
+          if (selectedGenerateBatch) {
+            loadSuggestedCollections(selectedGenerateBatch);
+          }
+          handleCloseDialog();
+        }}
+        onCancel={handleCloseDialog}
+      />
+    );
+    setIsDialogOpen(true);
+  };
+
+  const getSuggestionKey = (suggestion, index) =>
+    `${suggestion.module}-${suggestion.type_of_receipt}-${suggestion.receipt_no_from}-${suggestion.receipt_no_to}-${index}`;
+
+  const toggleSuggestionSelection = (suggestionKey) => {
+    setSelectedSuggestionKeys((prev) =>
+      prev.includes(suggestionKey)
+        ? prev.filter((key) => key !== suggestionKey)
+        : [...prev, suggestionKey]
+    );
+  };
+
+  const handleImportSelectedSuggestions = () => {
+    const queue = suggestedCollections.filter((suggestion, index) =>
+      selectedSuggestionKeys.includes(getSuggestionKey(suggestion, index))
+    );
+
+    if (queue.length === 0) {
+      setSnackbar({
+        open: true,
+        message: "Select at least one suggested collection to import.",
+        severity: "warning",
+      });
+      return;
+    }
+
+    setMultiImportQueue(queue);
+    setMultiImportIndex(0);
+    setMultiImportDialogOpen(true);
+  };
+
+  const handleMultiImportClose = () => {
+    setMultiImportDialogOpen(false);
+    setMultiImportQueue([]);
+    setMultiImportIndex(0);
+  };
+
+  const handleMultiImportSaved = async () => {
+    await fetchEntries();
+    await fetchBatches();
+    if (selectedGenerateBatch) {
+      await loadSuggestedCollections(selectedGenerateBatch);
+    }
+
+    if (multiImportIndex < multiImportQueue.length - 1) {
+      setMultiImportIndex((prev) => prev + 1);
+      return;
+    }
+
+    setSelectedSuggestionKeys([]);
+    handleMultiImportClose();
+    setSnackbar({
+      open: true,
+      message: "Selected suggested collections were imported.",
+      severity: "success",
+    });
   };
 
   const handleCheckStockClick = () => {
@@ -487,14 +815,21 @@ function ReportCollectionDeposit() {
     showSection("logs");
   };
 
+  const handleReturnHistoryClick = () => {
+    showSection("return-history");
+  };
+
   const handleBackToMainTable = () => {
     showSection("main");
   };
 
-  // “Download” logic
-  const getCollectorFromRow = (row) => row?.Collector || row?.collector || "";
-  const getDateFromRow = (row) => row?.issued_date || row?.Date || row?.date || "";
+  const handleBackToAccountability = () => {
+    showSection("accountability");
+  };
 
+  const isAccountabilitySection = accountabilitySections.includes(activeSection);
+
+  // “Download” logic
   const handleViewClick = () => {
     if (!selectedRow) return;
 
@@ -545,6 +880,72 @@ function ReportCollectionDeposit() {
     handleMenuClose();
   };
 
+  const openPermissionDialog = (action) => {
+    setPermissionAction(action);
+    setPermissionPassword("");
+    setPermissionError("");
+    setPermissionDialogOpen(true);
+    handleMenuClose();
+  };
+
+  const handlePermissionClose = () => {
+    setPermissionDialogOpen(false);
+    setPermissionPassword("");
+    setPermissionError("");
+    setPermissionAction("");
+  };
+
+  const handlePermissionConfirm = async () => {
+    const authUserRaw = localStorage.getItem("authUser");
+    let authUser = null;
+
+    try {
+      authUser = authUserRaw ? JSON.parse(authUserRaw) : null;
+    } catch (error) {
+      authUser = null;
+    }
+
+    const username = authUser?.username;
+
+    if (!username) {
+      setPermissionError("No logged-in user found. Please sign in again.");
+      return;
+    }
+
+    if (!permissionPassword) {
+      setPermissionError("Password is required.");
+      return;
+    }
+
+    try {
+      setPermissionLoading(true);
+      setPermissionError("");
+      await axiosInstance.post("/rcd/verify-password", {
+        username,
+        password: permissionPassword,
+      });
+
+      setPermissionDialogOpen(false);
+      setPermissionPassword("");
+
+      if (permissionAction === "edit") {
+        handleEditClick();
+        return;
+      }
+
+      if (permissionAction === "delete") {
+        setSelectedId(getRowId(selectedRow));
+        setOpenDeleteDialog(true);
+      }
+    } catch (error) {
+      setPermissionError(
+        error?.response?.data?.message || "Password verification failed."
+      );
+    } finally {
+      setPermissionLoading(false);
+    }
+  };
+
   const handleEditFieldChange = (name, value) => {
     if (name === "receipt_no_from" || name === "receipt_no_to") {
       setEditFormData((prev) => ({
@@ -554,6 +955,18 @@ function ReportCollectionDeposit() {
       return;
     }
     setEditFormData((prev) => ({ ...prev, [name]: value }));
+  };
+
+  const getAuthUsername = () => {
+    const authUserRaw = localStorage.getItem("authUser");
+    if (!authUserRaw) return "";
+
+    try {
+      const authUser = JSON.parse(authUserRaw);
+      return authUser?.username || "";
+    } catch (error) {
+      return "";
+    }
   };
 
   const handleSaveUpdate = async () => {
@@ -567,9 +980,11 @@ function ReportCollectionDeposit() {
         receipt_no_to: String(editFormData.receipt_no_to || "").replace(/\D/g, ""),
         total: Number(editFormData.total || 0),
         status: editFormData.status,
+        performed_by: getAuthUsername(),
       });
       setOpenUpdateDialog(false);
       await fetchEntries();
+      await fetchBatches();
       setSnackbar({
         open: true,
         message: "Entry updated successfully.",
@@ -589,20 +1004,6 @@ function ReportCollectionDeposit() {
     const parsed = Number(value);
     return Number.isFinite(parsed) ? parsed : 0;
   };
-
-  const toDateKey = (value) => {
-    if (!value) return "";
-    if (typeof value === "string" && value.length >= 10) return value.slice(0, 10);
-    const date = new Date(value);
-    if (Number.isNaN(date.getTime())) return "";
-    const yyyy = date.getFullYear();
-    const mm = String(date.getMonth() + 1).padStart(2, "0");
-    const dd = String(date.getDate()).padStart(2, "0");
-    return `${yyyy}-${mm}-${dd}`;
-  };
-
-  const sameCollector = (entryCollector, targetCollector) =>
-    String(entryCollector || "").trim().toLowerCase() === String(targetCollector || "").trim().toLowerCase();
 
   const buildAccountabilityRows = ({ collector, targetDateKey, issuedForms }) => {
     const relevantForms = issuedForms.filter((form) => {
@@ -680,7 +1081,9 @@ function ReportCollectionDeposit() {
     );
 
     const sameDayEntries = collectorEntries.filter(
-      (entry) => toDateKey(entry?.issued_date ?? entry?.Date ?? entry?.date) === targetDateKey
+      (entry) =>
+        toDateKey(entry?.issued_date ?? entry?.Date ?? entry?.date) === targetDateKey &&
+        isPrintableRcdStatus(entry?.status ?? entry?.Status)
     );
 
     const collections = sameDayEntries.map((entry) => ({
@@ -1045,17 +1448,34 @@ function ReportCollectionDeposit() {
       return;
     }
 
-    setFilteredData((prev) =>
-      prev.filter((row) => String(getRowId(row)) !== String(selectedId))
-    );
-    setOpenDeleteDialog(false);
-    setSelectedId(null);
-    setSelectedRow(null);
-    setSnackbar({
-      open: true,
-      message: "Record removed from table.",
-      severity: "success",
-    });
+    try {
+      await axiosInstance.delete(`/rcd-entries/${selectedId}`, {
+        data: {
+          performed_by: getAuthUsername(),
+        },
+      });
+      await fetchEntries();
+      await fetchBatches();
+      if (selectedGenerateBatch) {
+        await loadSuggestedCollections(selectedGenerateBatch);
+      }
+      setSnackbar({
+        open: true,
+        message: "Entry deleted successfully.",
+        severity: "success",
+      });
+    } catch (error) {
+      console.error("Failed to delete entry:", error);
+      setSnackbar({
+        open: true,
+        message: error?.response?.data?.message || "Failed to delete entry.",
+        severity: "error",
+      });
+    } finally {
+      setOpenDeleteDialog(false);
+      setSelectedId(null);
+      setSelectedRow(null);
+    }
   };
 
   const printCollectorOptions = Array.from(
@@ -1065,6 +1485,147 @@ function ReportCollectionDeposit() {
   const printDateOptions = Array.from(
     new Set((filteredData || []).map((row) => toDateKey(getDateFromRow(row))).filter(Boolean))
   ).sort((a, b) => (a > b ? -1 : 1));
+
+  const loadSuggestedCollections = async (batch) => {
+    if (!batch?.date || !batch?.collector) {
+      setSuggestedCollections([]);
+      return;
+    }
+
+    try {
+      setSuggestedCollectionsLoading(true);
+      const response = await axiosInstance.get("/rcd/suggested-collections", {
+        params: {
+          date: batch.date,
+          collector: batch.collector,
+        },
+      });
+      setSuggestedCollections(Array.isArray(response.data) ? response.data : []);
+    } catch (error) {
+      console.error("Failed to load suggested collections:", error);
+      setSuggestedCollections([]);
+      setSnackbar({
+        open: true,
+        message: "Unable to load suggested collections.",
+        severity: "error",
+      });
+    } finally {
+      setSuggestedCollectionsLoading(false);
+    }
+  };
+
+  const updateBatchStatus = async (batch, status) => {
+    if (!batch?.id) {
+      setSnackbar({
+        open: true,
+        message: "This batch is not yet saved in the database.",
+        severity: "warning",
+      });
+      return;
+    }
+
+    try {
+      setBatchActionLoading(true);
+      const payload = { status };
+
+      if (status === "Approved") {
+        payload.reviewed_by = batchStatusDialog.reviewed_by || batch.reviewed_by || null;
+        payload.remarks = batchStatusDialog.remarks || batch.remarks || null;
+      }
+
+      if (status === "Deposited") {
+        payload.deposit_reference = batchStatusDialog.deposit_reference || batch.deposit_reference || null;
+        payload.remarks = batchStatusDialog.remarks || batch.remarks || null;
+      }
+
+      await axiosInstance.patch(`/rcd-batches/${batch.id}/status`, payload);
+      await fetchEntries();
+      await fetchBatches();
+
+      const nextSelected =
+        selectedGenerateBatch && selectedGenerateBatch.id === batch.id
+          ? { ...selectedGenerateBatch, stage: status, ...payload }
+          : null;
+      if (nextSelected) {
+        setSelectedGenerateBatch(nextSelected);
+      }
+
+      setSnackbar({
+        open: true,
+        message: `Batch marked as ${status}.`,
+        severity: "success",
+      });
+      setBatchStatusDialog({
+        open: false,
+        batch: null,
+        status: "",
+        reviewed_by: "",
+        deposit_reference: "",
+        remarks: "",
+      });
+    } catch (error) {
+      console.error("Failed to update batch status:", error);
+      setSnackbar({
+        open: true,
+        message:
+          error?.response?.data?.message || "Failed to update batch status.",
+        severity: "error",
+      });
+    } finally {
+      setBatchActionLoading(false);
+    }
+  };
+
+  const openBatchStatusDialog = (batch, status) => {
+    setBatchStatusDialog({
+      open: true,
+      batch,
+      status,
+      reviewed_by: batch?.reviewed_by || "",
+      deposit_reference: batch?.deposit_reference || "",
+      remarks: batch?.remarks || "",
+    });
+  };
+
+  const closeBatchStatusDialog = () => {
+    setBatchStatusDialog({
+      open: false,
+      batch: null,
+      status: "",
+      reviewed_by: "",
+      deposit_reference: "",
+      remarks: "",
+    });
+  };
+
+  const submitBatchStatusDialog = async () => {
+    if (!batchStatusDialog.batch || !batchStatusDialog.status) return;
+    await updateBatchStatus(batchStatusDialog.batch, batchStatusDialog.status);
+  };
+
+  const submittedBatches = displayedBatches.filter((batch) => batch.stage === "Submitted");
+  const approvedBatches = displayedBatches.filter((batch) => batch.stage === "Approved");
+  const depositedBatches = displayedBatches.filter((batch) => batch.stage === "Deposited");
+  const draftBatches = displayedBatches.filter((batch) => batch.stage === "Draft");
+
+  const workflowTabs = [
+    { key: "overview", label: "Overview" },
+    { key: "entries", label: "Daily Entries" },
+    { key: "generate-rcd", label: "Generate RCD" },
+    { key: "review-queue", label: "Review Queue" },
+    { key: "deposit-queue", label: "Deposit Queue" },
+    { key: "accountability", label: "Accountability" },
+    { key: "return-history", label: "Return History" },
+  ];
+
+  const selectedGenerateBatchSuggestedTotal = suggestedCollections.reduce(
+    (sum, item) => sum + Number(item.total_amount || 0),
+    0
+  );
+  const selectedGenerateBatchDifference = selectedGenerateBatch
+    ? Number(selectedGenerateBatch.total || 0) - selectedGenerateBatchSuggestedTotal
+    : 0;
+  const selectedSuggestionCount = selectedSuggestionKeys.length;
 
   return (
   
@@ -1115,12 +1676,40 @@ function ReportCollectionDeposit() {
                   sx={{ bgcolor: uiColors.amberSoft, color: "#fff" }}
                 />
                 <Chip
-                  label={showMainTable ? "Main Table" : activeSection.toUpperCase()}
+                  label={`Workflow: ${workflowTabs.find((tab) => tab.key === activeSection)?.label || "Daily Entries"}`}
                   size="small"
                   sx={{ bgcolor: "rgba(255,255,255,0.12)", color: "#fff" }}
                 />
               </Box>
             </Box>
+          </Box>
+        </Paper>
+
+        <Paper
+          sx={{
+            p: 2,
+            mb: 2,
+            borderRadius: 3,
+            border: `1px solid ${uiColors.cardBorder}`,
+            boxShadow: "0 8px 22px rgba(15,39,71,0.06)",
+            backgroundColor: uiColors.cardBg,
+          }}
+        >
+          <Box display="flex" gap={1.25} flexWrap="wrap">
+            {workflowTabs.map((tab) => (
+              <Button
+                key={tab.key}
+                variant={activeSection === tab.key ? "contained" : "outlined"}
+                onClick={() => showSection(tab.key)}
+                sx={
+                  activeSection === tab.key
+                    ? toolbarButtonSx(uiColors.navy, uiColors.navyHover)
+                    : secondaryToolbarButtonSx(uiColors.navy, "rgba(15,39,71,0.07)")
+                }
+              >
+                {tab.label}
+              </Button>
+            ))}
           </Box>
         </Paper>
 
@@ -1226,62 +1815,58 @@ function ReportCollectionDeposit() {
             </Tooltip>
 
             {/* Daily Report */}
-            <Tooltip title="Generate Daily Report" arrow>
+            <Tooltip title="Open Daily Entries" arrow>
               <Button
                 variant="contained"
                 startIcon={<IoToday size={16} />}
                 sx={secondaryToolbarButtonSx(uiColors.teal, "rgba(15,107,98,0.12)")}
                 onClick={toggleDailyTable}
               >
-                Daily Report
+                Daily Entries
               </Button>
             </Tooltip>
 
-            {/* Check Receipt */}
-            <Tooltip title="Generate Receipt Report" arrow>
+            <Tooltip title="Generate Collector RCD by date" arrow>
               <Button
                 variant="contained"
                 startIcon={<ReceiptIcon size={16} />}
                 sx={secondaryToolbarButtonSx(uiColors.sky, "rgba(47,109,181,0.12)")}
-                onClick={handleCheckStockClick}
+                onClick={toggleReportTable}
               >
-                Check Stock
+                Generate RCD
               </Button>
             </Tooltip>
 
-            {/* Inventory */}
-            <Tooltip title="Generate Receipt Report" arrow>
+            <Tooltip title="Review submitted RCD batches" arrow>
               <Button
                 variant="contained"
                 startIcon={<ReceiptIcon size={16} />}
                 sx={secondaryToolbarButtonSx(uiColors.amber, "rgba(214,161,43,0.14)")}
-                onClick={handleInventoryClick}
+                onClick={() => showSection("review-queue")}
               >
-                Inventory
+                Review Queue
               </Button>
             </Tooltip>
 
-            {/* Issue */}
-            <Tooltip title="Generate Receipt Report" arrow>
+            <Tooltip title="Prepare approved RCDs for bank deposit" arrow>
               <Button
                 variant="contained"
                 startIcon={<ReceiptIcon size={16} />}
                 sx={secondaryToolbarButtonSx("#8f3d2e", "rgba(143,61,46,0.12)")}
-                onClick={handleIssueFormClick}
+                onClick={() => showSection("deposit-queue")}
               >
-                Issue Form
+                Deposit Queue
               </Button>
             </Tooltip>
 
-            {/* Purchase Form */}
-            <Tooltip title="Financial Reports" arrow>
+            <Tooltip title="Open accountability and stock tools" arrow>
               <Button
                 variant="contained"
                 startIcon={<BiSolidReport size={18} />}
-                onClick={handleOpenPurchaseForm}
+                onClick={() => showSection("accountability")}
                 sx={secondaryToolbarButtonSx(uiColors.steel, "rgba(75,93,115,0.12)")}
               >
-                Purchase Form
+                Accountability
               </Button>
             </Tooltip>
 
@@ -1290,7 +1875,7 @@ function ReportCollectionDeposit() {
 
           <Box display="flex" gap={2}>
             {/* Financial Report */}
-            <Tooltip title="Financial Reports" arrow>
+            <Tooltip title="Assign accountable forms" arrow>
               <Button
                 variant="contained"
                 startIcon={<BiSolidReport size={18} />}
@@ -1302,7 +1887,7 @@ function ReportCollectionDeposit() {
             </Tooltip>
 
             {/* Print */}
-            <Tooltip title="Print Report" arrow>
+            <Tooltip title="Print collector RCD batch" arrow>
               <Button
                 variant="contained"
                 startIcon={<IoMdPrint size={18} />}
@@ -1314,7 +1899,7 @@ function ReportCollectionDeposit() {
             </Tooltip>
 
             {/* Logs */}
-            <Tooltip title="Export Data" arrow>
+            <Tooltip title="Open inventory logs" arrow>
               <Button
                 variant="contained"
                 startIcon={<IoMdDownload size={18} />}
@@ -1336,58 +1921,62 @@ function ReportCollectionDeposit() {
           gap={3}
           sx={{
             mt: 4,
-            flexDirection: { xs: "column", sm: "row" }, // Responsive layout
+            flexDirection: { xs: "column", sm: "row" },
           }}
         >
           {[
             {
-              value: allTotal,
-              text: "Total Collection",
+              value: displayedWorkflowSummary.total,
+              format: "currency",
+              text: "Collection Total",
+              caption: `${displayedBatches.length} collector-day batches`,
               icon: <AccountBalanceIcon />,
               accent: uiColors.navy,
               soft: "rgba(15,39,71,0.08)",
-              onClick: handleClickTotal,
+              onClick: () => showSection("overview"),
             },
             {
-              value: taxOnBusinessTotal,
-              text: "Flora My D. Ferrer",
+              value: displayedWorkflowSummary.draft,
+              format: "count",
+              text: "Draft RCD",
+              caption: `${draftBatches.length} pending collector-day groups`,
               icon: <BusinessCenterIcon />,
-              accent: uiColors.teal,
-              soft: "rgba(15,107,98,0.08)",
-              onClick: handleClickTax,
-            },
-            {
-              value: regulatoryFeesTotal,
-              text: "Emily E. Credo",
-              icon: <GavelIcon />,
               accent: uiColors.amber,
               soft: "rgba(214,161,43,0.1)",
-              onClick: handleClickRF,
+              onClick: () => showSection("entries"),
             },
             {
-              value: receiptsFromEconomicEnterprisesTotal,
-              text: "Ricardo T Enopia",
+              value: displayedWorkflowSummary.submitted,
+              format: "count",
+              text: "Submitted",
+              caption: `${submittedBatches.length} ready for review`,
+              icon: <GavelIcon />,
+              accent: uiColors.teal,
+              soft: "rgba(15,107,98,0.08)",
+              onClick: () => showSection("review-queue"),
+            },
+            {
+              value: displayedWorkflowSummary.approved,
+              format: "count",
+              text: "Approved",
+              caption: `${approvedBatches.length} ready for deposit`,
               icon: <StorefrontIcon />,
               accent: "#6d4c9a",
               soft: "rgba(109,76,154,0.08)",
-              onClick: handleClickRFEE,
+              onClick: () => showSection("deposit-queue"),
             },
             {
-              value: serviceUserChargesTotal,
-              text: "Agnes B. Ello",
+              value: displayedWorkflowSummary.deposited,
+              format: "count",
+              text: "Deposited",
+              caption: `${depositedBatches.length} finalized batches`,
               icon: <ReceiptLongIcon />,
               accent: uiColors.sky,
               soft: "rgba(47,109,181,0.08)",
-              onClick: handleClickSUC,
+              onClick: () => showSection("deposit-queue"),
             },
-          ].map(({ value, text, icon, accent, soft, onClick }) => (
-            <Card
-              key={text}
-              onClick={onClick}
-              sx={{
-                ...metricCardStyles,
-              }}
-            >
+          ].map(({ value, format, text, caption, icon, accent, soft, onClick }) => (
+            <Card key={text} onClick={onClick} sx={{ ...metricCardStyles }}>
               <Box
                 sx={{
                   px: 2.5,
@@ -1428,11 +2017,13 @@ function ReportCollectionDeposit() {
                     }}
                   >
                     {typeof value === "number"
-                      ? new Intl.NumberFormat("en-PH", {
-                          style: "currency",
-                          currency: "PHP",
-                          minimumFractionDigits: 2,
-                        }).format(value)
+                      ? format === "currency"
+                        ? new Intl.NumberFormat("en-PH", {
+                            style: "currency",
+                            currency: "PHP",
+                            minimumFractionDigits: 2,
+                          }).format(value)
+                        : new Intl.NumberFormat("en-PH").format(value)
                       : value}
                   </Typography>
                   <Typography
@@ -1442,7 +2033,7 @@ function ReportCollectionDeposit() {
                       fontWeight: 500,
                     }}
                   >
-                    Click to view details
+                    {caption}
                   </Typography>
                 </Box>
                 <Box
@@ -1489,12 +2080,544 @@ function ReportCollectionDeposit() {
         </Box>
       </Box>
 
+      {activeSection === "overview" && (
+        <Paper
+          sx={{
+            p: 3,
+            borderRadius: 4,
+            boxShadow: "0 10px 26px rgba(15,39,71,0.08)",
+            border: `1px solid ${uiColors.cardBorder}`,
+            backgroundColor: uiColors.cardBg,
+            mb: 3,
+          }}
+        >
+          <Typography variant="h6" sx={{ fontWeight: 800, color: uiColors.navy, mb: 1 }}>
+            Phase 1 RCD Workflow
+          </Typography>
+          <Typography variant="body2" sx={{ color: uiColors.steel, mb: 2 }}>
+            Daily entries are grouped by collector and date. Draft batches move to submitted review, then approved, then deposited after bank remittance.
+          </Typography>
+          <Divider sx={{ mb: 2 }} />
+          <Box sx={{ display: "grid", gap: 1.25 }}>
+            <Typography variant="body2"><strong>Daily Entries:</strong> collector records receipt ranges and totals.</Typography>
+            <Typography variant="body2"><strong>Generate RCD:</strong> print one RCD per collector and date using submitted or deposited collection rows only.</Typography>
+            <Typography variant="body2"><strong>Review Queue:</strong> custodian checks submitted batches before approval.</Typography>
+            <Typography variant="body2"><strong>Deposit Queue:</strong> approved and deposited batches are tracked for remittance.</Typography>
+            <Typography variant="body2"><strong>Accountability:</strong> assignments, stock, purchases, issue forms, and logs remain available in one area while Phase 2 and 3 are prepared.</Typography>
+          </Box>
+        </Paper>
+      )}
+
+      {activeSection === "generate-rcd" && (
+        <TableContainer
+          component={Paper}
+          sx={{
+            borderRadius: 4,
+            boxShadow: "0 10px 26px rgba(15,39,71,0.08)",
+            overflow: "hidden",
+            border: `1px solid ${uiColors.cardBorder}`,
+            backgroundColor: uiColors.cardBg,
+            mb: 3,
+          }}
+        >
+          <Box sx={{ p: 2.5, borderBottom: `1px solid ${uiColors.cardBorder}` }}>
+            <Typography variant="h6" sx={{ fontWeight: 800, color: uiColors.navy }}>
+              Generate RCD
+            </Typography>
+            <Typography variant="body2" sx={{ color: uiColors.steel }}>
+              Use one collector-day batch to prepare the RCD preview and compare it with active payment collections.
+            </Typography>
+          </Box>
+          {batchActionLoading && (
+            <Box sx={{ px: 2.5, pt: 2 }}>
+              <Alert severity="info">Updating batch workflow status...</Alert>
+            </Box>
+          )}
+          {batchLoading && (
+            <Box sx={{ px: 2.5, pb: 2 }}>
+              <Alert severity="info">Loading saved RCD batches...</Alert>
+            </Box>
+          )}
+          <Table>
+            <TableHead>
+              <TableRow>
+                <StyledTableCell>Date</StyledTableCell>
+                <StyledTableCell>Collector</StyledTableCell>
+                <StyledTableCell>Receipt Types</StyledTableCell>
+                <StyledTableCell>Entries</StyledTableCell>
+                <StyledTableCell>Total</StyledTableCell>
+                <StyledTableCell>Workflow</StyledTableCell>
+                <StyledTableCell>Action</StyledTableCell>
+              </TableRow>
+            </TableHead>
+            <TableBody>
+              {displayedBatches.map((batch) => {
+                const batchMeta = getWorkflowStatusMeta(batch.stage);
+                const printableRow = batch.rows.find((row) =>
+                  isPrintableRcdStatus(row?.status ?? row?.Status)
+                ) || batch.rows[0];
+
+                return (
+                  <TableRow key={batch.key} hover>
+                    <TableCell align="center">{formatDate(batch.date)}</TableCell>
+                    <TableCell align="center">{batch.collector}</TableCell>
+                    <TableCell align="center">{batch.receiptTypeSummary || "Use suggested collections below"}</TableCell>
+                    <TableCell align="center">{batch.entryCount}</TableCell>
+                    <TableCell align="center">
+                      {new Intl.NumberFormat("en-PH", {
+                        style: "currency",
+                        currency: "PHP",
+                        minimumFractionDigits: 2,
+                      }).format(batch.total)}
+                    </TableCell>
+                    <TableCell align="center">
+                      <Chip
+                        label={batchMeta.label}
+                        size="small"
+                        sx={{ fontWeight: 700, backgroundColor: batchMeta.bg, color: batchMeta.color }}
+                      />
+                    </TableCell>
+                    <TableCell align="center">
+                      <Box display="flex" gap={1} justifyContent="center" flexWrap="wrap">
+                        <Button
+                          size="small"
+                          variant="outlined"
+                          sx={secondaryToolbarButtonSx(uiColors.navy, "rgba(15,39,71,0.07)")}
+                          onClick={() => {
+                            setSelectedGenerateBatch(batch);
+                            loadSuggestedCollections(batch);
+                          }}
+                        >
+                          Suggestions
+                        </Button>
+                        <Button
+                          size="small"
+                          variant="contained"
+                          sx={toolbarButtonSx(uiColors.teal, uiColors.tealHover)}
+                          onClick={() => {
+                            setSelectedGenerateBatch(batch);
+                            setSelectedRow(printableRow);
+                            setPrintCollector(batch.collector);
+                            setPrintDate(batch.date);
+                            loadSuggestedCollections(batch);
+                            if (printableRow) {
+                              preparePrintForRow(printableRow, false);
+                            } else {
+                              setSnackbar({
+                                open: true,
+                                message: "No printable entry found for this batch.",
+                                severity: "warning",
+                              });
+                            }
+                          }}
+                        >
+                          Preview RCD
+                        </Button>
+                        {batch.stage === "Draft" && (
+                          <Button
+                            size="small"
+                            variant="contained"
+                            sx={toolbarButtonSx(uiColors.navy, uiColors.navyHover)}
+                            onClick={() => updateBatchStatus(batch, "Submitted")}
+                          >
+                            Submit
+                          </Button>
+                        )}
+                      </Box>
+                    </TableCell>
+                  </TableRow>
+                );
+              })}
+            </TableBody>
+          </Table>
+        </TableContainer>
+      )}
+
+      {activeSection === "generate-rcd" && selectedGenerateBatch && (
+        <Paper
+          sx={{
+            p: 3,
+            borderRadius: 4,
+            boxShadow: "0 10px 26px rgba(15,39,71,0.08)",
+            border: `1px solid ${uiColors.cardBorder}`,
+            backgroundColor: uiColors.cardBg,
+            mb: 3,
+          }}
+        >
+          <Typography variant="h6" sx={{ fontWeight: 800, color: uiColors.navy }}>
+            Suggested Collections
+          </Typography>
+          <Typography variant="body2" sx={{ color: uiColors.steel, mb: 2 }}>
+            Active payment collections for {selectedGenerateBatch.collector} on {formatDate(selectedGenerateBatch.date)}. Cancelled payments are already excluded.
+          </Typography>
+          <Box sx={{ display: "flex", gap: 3, flexWrap: "wrap", mb: 2 }}>
+            <Card sx={{ p: 2, minWidth: 220, borderRadius: 3, border: `1px solid ${uiColors.cardBorder}`, boxShadow: "none" }}>
+              <Typography variant="caption" sx={{ color: uiColors.steel }}>RCD Batch Total</Typography>
+              <Typography variant="h6" sx={{ fontWeight: 800, color: uiColors.navy }}>
+                {new Intl.NumberFormat("en-PH", { style: "currency", currency: "PHP", minimumFractionDigits: 2 }).format(Number(selectedGenerateBatch.total || 0))}
+              </Typography>
+            </Card>
+            <Card sx={{ p: 2, minWidth: 220, borderRadius: 3, border: `1px solid ${uiColors.cardBorder}`, boxShadow: "none" }}>
+              <Typography variant="caption" sx={{ color: uiColors.steel }}>Suggested Payment Total</Typography>
+              <Typography variant="h6" sx={{ fontWeight: 800, color: uiColors.navy }}>
+                {new Intl.NumberFormat("en-PH", { style: "currency", currency: "PHP", minimumFractionDigits: 2 }).format(selectedGenerateBatchSuggestedTotal)}
+              </Typography>
+            </Card>
+            <Card sx={{ p: 2, minWidth: 220, borderRadius: 3, border: `1px solid ${uiColors.cardBorder}`, boxShadow: "none" }}>
+              <Typography variant="caption" sx={{ color: uiColors.steel }}>Difference</Typography>
+              <Typography
+                variant="h6"
+                sx={{
+                  fontWeight: 800,
+                  color:
+                    selectedGenerateBatchDifference === 0
+                      ? "#2e7d32"
+                      : selectedGenerateBatchDifference > 0
+                        ? "#8f3d2e"
+                        : "#0277bd",
+                }}
+              >
+                {new Intl.NumberFormat("en-PH", { style: "currency", currency: "PHP", minimumFractionDigits: 2 }).format(selectedGenerateBatchDifference)}
+              </Typography>
+            </Card>
+          </Box>
+          <Alert
+            severity={selectedGenerateBatchDifference === 0 ? "success" : "warning"}
+            sx={{ mb: 2 }}
+          >
+            {selectedGenerateBatchDifference === 0
+              ? "RCD batch total matches the active payment collection suggestions."
+              : `RCD batch total differs from suggested active collections by ${new Intl.NumberFormat("en-PH", {
+                  style: "currency",
+                  currency: "PHP",
+                  minimumFractionDigits: 2,
+                }).format(selectedGenerateBatchDifference)}.`}
+          </Alert>
+          {suggestedCollectionsLoading ? (
+            <Alert severity="info">Loading suggested collections...</Alert>
+          ) : suggestedCollections.length === 0 ? (
+            <Alert severity="warning">No active payment collections matched this collector-date batch.</Alert>
+          ) : (
+            <>
+              <Box
+                sx={{
+                  display: "flex",
+                  justifyContent: "space-between",
+                  alignItems: "center",
+                  gap: 2,
+                  flexWrap: "wrap",
+                  mb: 2,
+                }}
+              >
+                <Typography variant="body2" sx={{ color: uiColors.steel }}>
+                  Selected suggestions: {selectedSuggestionCount}
+                </Typography>
+                <Box display="flex" gap={1.25} flexWrap="wrap">
+                  <Button
+                    variant="outlined"
+                    sx={secondaryToolbarButtonSx(uiColors.navy, "rgba(15,39,71,0.07)")}
+                    onClick={() =>
+                      setSelectedSuggestionKeys(
+                        suggestedCollections.map((suggestion, index) =>
+                          getSuggestionKey(suggestion, index)
+                        )
+                      )
+                    }
+                  >
+                    Select All
+                  </Button>
+                  <Button
+                    variant="outlined"
+                    sx={secondaryToolbarButtonSx(uiColors.steel, "rgba(75,93,115,0.12)")}
+                    onClick={() => setSelectedSuggestionKeys([])}
+                  >
+                    Clear
+                  </Button>
+                  <Button
+                    variant="contained"
+                    sx={toolbarButtonSx(uiColors.navy, uiColors.navyHover)}
+                    onClick={handleImportSelectedSuggestions}
+                  >
+                    Import Selected
+                  </Button>
+                </Box>
+              </Box>
+              <TableContainer component={Paper} sx={{ borderRadius: 3, border: `1px solid ${uiColors.cardBorder}`, boxShadow: "none" }}>
+              <Table>
+                <TableHead>
+                  <TableRow>
+                    <StyledTableCell>Select</StyledTableCell>
+                    <StyledTableCell>Module</StyledTableCell>
+                    <StyledTableCell>Fund</StyledTableCell>
+                    <StyledTableCell>Type</StyledTableCell>
+                    <StyledTableCell>Receipt From</StyledTableCell>
+                    <StyledTableCell>Receipt To</StyledTableCell>
+                    <StyledTableCell>Count</StyledTableCell>
+                    <StyledTableCell>Total</StyledTableCell>
+                    <StyledTableCell>Action</StyledTableCell>
+                  </TableRow>
+                </TableHead>
+                <TableBody>
+                  {suggestedCollections.map((item, index) => (
+                    <TableRow key={`${item.module}-${item.type_of_receipt}-${index}`} hover>
+                      <TableCell align="center">
+                        <Checkbox
+                          checked={selectedSuggestionKeys.includes(getSuggestionKey(item, index))}
+                          onChange={() => toggleSuggestionSelection(getSuggestionKey(item, index))}
+                        />
+                      </TableCell>
+                      <TableCell align="center">{item.module}</TableCell>
+                      <TableCell align="center">{item.fund}</TableCell>
+                      <TableCell align="center">{item.type_of_receipt}</TableCell>
+                      <TableCell align="center">{item.receipt_no_from || "-"}</TableCell>
+                      <TableCell align="center">{item.receipt_no_to || "-"}</TableCell>
+                      <TableCell align="center">{item.receipt_count}</TableCell>
+                      <TableCell align="center">
+                        {new Intl.NumberFormat("en-PH", { style: "currency", currency: "PHP", minimumFractionDigits: 2 }).format(Number(item.total_amount || 0))}
+                      </TableCell>
+                      <TableCell align="center">
+                        <Button
+                          size="small"
+                          variant="contained"
+                          sx={toolbarButtonSx(uiColors.navy, uiColors.navyHover)}
+                          onClick={() => handleImportSuggestedCollection(item)}
+                        >
+                          Import Entry
+                        </Button>
+                      </TableCell>
+                    </TableRow>
+                  ))}
+                </TableBody>
+              </Table>
+            </TableContainer>
+            </>
+          )}
+        </Paper>
+      )}
+
+      {activeSection === "review-queue" && (
+        <TableContainer component={Paper} sx={{ borderRadius: 4, boxShadow: "0 10px 26px rgba(15,39,71,0.08)", border: `1px solid ${uiColors.cardBorder}`, mb: 3 }}>
+          <Box sx={{ p: 2.5, borderBottom: `1px solid ${uiColors.cardBorder}` }}>
+            <Typography variant="h6" sx={{ fontWeight: 800, color: uiColors.navy }}>
+              Review Queue
+            </Typography>
+            <Typography variant="body2" sx={{ color: uiColors.steel }}>
+              Submitted batches should be reviewed by the RCD custodian before approval.
+            </Typography>
+          </Box>
+          <Table>
+            <TableHead>
+              <TableRow>
+                <StyledTableCell>Date</StyledTableCell>
+                <StyledTableCell>Collector</StyledTableCell>
+                <StyledTableCell>Entries</StyledTableCell>
+                <StyledTableCell>Total</StyledTableCell>
+                <StyledTableCell>Receipt Types</StyledTableCell>
+                <StyledTableCell>Action</StyledTableCell>
+              </TableRow>
+            </TableHead>
+            <TableBody>
+              {submittedBatches.length === 0 ? (
+                <TableRow>
+                  <TableCell colSpan={6} align="center">No submitted RCD batches for review.</TableCell>
+                </TableRow>
+              ) : (
+                submittedBatches.map((batch) => (
+                  <TableRow key={batch.key} hover>
+                    <TableCell align="center">{formatDate(batch.date)}</TableCell>
+                    <TableCell align="center">{batch.collector}</TableCell>
+                    <TableCell align="center">{batch.entryCount}</TableCell>
+                    <TableCell align="center">
+                      {new Intl.NumberFormat("en-PH", {
+                        style: "currency",
+                        currency: "PHP",
+                        minimumFractionDigits: 2,
+                      }).format(batch.total)}
+                    </TableCell>
+                    <TableCell align="center">{batch.receiptTypeSummary || "-"}</TableCell>
+                    <TableCell align="center">
+                      <Button
+                        size="small"
+                        variant="contained"
+                        sx={toolbarButtonSx(uiColors.teal, uiColors.tealHover)}
+                        onClick={() => openBatchStatusDialog(batch, "Approved")}
+                      >
+                        Approve
+                      </Button>
+                    </TableCell>
+                  </TableRow>
+                ))
+              )}
+            </TableBody>
+          </Table>
+        </TableContainer>
+      )}
+
+      {activeSection === "deposit-queue" && (
+        <TableContainer component={Paper} sx={{ borderRadius: 4, boxShadow: "0 10px 26px rgba(15,39,71,0.08)", border: `1px solid ${uiColors.cardBorder}`, mb: 3 }}>
+          <Box sx={{ p: 2.5, borderBottom: `1px solid ${uiColors.cardBorder}` }}>
+            <Typography variant="h6" sx={{ fontWeight: 800, color: uiColors.navy }}>
+              Deposit Queue
+            </Typography>
+            <Typography variant="body2" sx={{ color: uiColors.steel }}>
+              Approved batches are ready for remittance, while deposited batches remain visible for tracking.
+            </Typography>
+          </Box>
+          <Table>
+            <TableHead>
+              <TableRow>
+                <StyledTableCell>Date</StyledTableCell>
+                <StyledTableCell>Collector</StyledTableCell>
+                <StyledTableCell>Stage</StyledTableCell>
+                <StyledTableCell>Total</StyledTableCell>
+                <StyledTableCell>Entries</StyledTableCell>
+                <StyledTableCell>Action</StyledTableCell>
+              </TableRow>
+            </TableHead>
+            <TableBody>
+              {[...approvedBatches, ...depositedBatches].length === 0 ? (
+                <TableRow>
+                  <TableCell colSpan={6} align="center">No approved or deposited RCD batches found.</TableCell>
+                </TableRow>
+              ) : (
+                [...approvedBatches, ...depositedBatches].map((batch) => {
+                  const batchMeta = getWorkflowStatusMeta(batch.stage);
+                  return (
+                    <TableRow key={batch.key} hover>
+                      <TableCell align="center">{formatDate(batch.date)}</TableCell>
+                      <TableCell align="center">{batch.collector}</TableCell>
+                      <TableCell align="center">
+                        <Chip
+                          label={batchMeta.label}
+                          size="small"
+                          sx={{ fontWeight: 700, backgroundColor: batchMeta.bg, color: batchMeta.color }}
+                        />
+                      </TableCell>
+                      <TableCell align="center">
+                        {new Intl.NumberFormat("en-PH", {
+                          style: "currency",
+                          currency: "PHP",
+                          minimumFractionDigits: 2,
+                        }).format(batch.total)}
+                      </TableCell>
+                      <TableCell align="center">{batch.entryCount}</TableCell>
+                      <TableCell align="center">
+                        {batch.stage === "Approved" ? (
+                          <Button
+                            size="small"
+                            variant="contained"
+                            sx={toolbarButtonSx(uiColors.sky, uiColors.skyHover)}
+                            onClick={() => openBatchStatusDialog(batch, "Deposited")}
+                          >
+                            Mark Deposited
+                          </Button>
+                        ) : (
+                          <Typography variant="body2" sx={{ color: uiColors.steel }}>
+                            Finalized
+                          </Typography>
+                        )}
+                      </TableCell>
+                    </TableRow>
+                  );
+                })
+              )}
+            </TableBody>
+          </Table>
+        </TableContainer>
+      )}
+
+      {isAccountabilitySection && (
+        <Paper
+          sx={{
+            p: 3,
+            borderRadius: 4,
+            boxShadow: "0 10px 26px rgba(15,39,71,0.08)",
+            border: `1px solid ${uiColors.cardBorder}`,
+            backgroundColor: uiColors.cardBg,
+            mb: 3,
+          }}
+        >
+          <Typography variant="h6" sx={{ fontWeight: 800, color: uiColors.navy, mb: 1 }}>
+            Accountability Workspace
+          </Typography>
+          <Typography variant="body2" sx={{ color: uiColors.steel, mb: 2 }}>
+            Assignment, inventory, issued forms, stock checking, purchases, returns, and logs stay here while the RCD workflow is separated into entries, review, and deposit queues.
+          </Typography>
+          <Box display="flex" gap={2} flexWrap="wrap">
+            <Button variant={activeSection === "assign-form" ? "contained" : "outlined"} sx={secondaryToolbarButtonSx("#6d4c9a", "rgba(109,76,154,0.12)")} onClick={handleOpenAssignForm}>
+              Assign Form
+            </Button>
+            <Button variant={activeSection === "check-stock" ? "contained" : "outlined"} sx={secondaryToolbarButtonSx(uiColors.sky, "rgba(47,109,181,0.12)")} onClick={handleCheckStockClick}>
+              Check Stock
+            </Button>
+            <Button variant={activeSection === "inventory" ? "contained" : "outlined"} sx={secondaryToolbarButtonSx(uiColors.amber, "rgba(214,161,43,0.14)")} onClick={handleInventoryClick}>
+              Inventory
+            </Button>
+            <Button variant={activeSection === "issue-form" ? "contained" : "outlined"} sx={secondaryToolbarButtonSx("#8f3d2e", "rgba(143,61,46,0.12)")} onClick={handleIssueFormClick}>
+              Issue Form
+            </Button>
+            <Button variant={activeSection === "return-form" ? "contained" : "outlined"} sx={secondaryToolbarButtonSx(uiColors.teal, "rgba(15,107,98,0.12)")} onClick={handleOpenReturnForm}>
+              Return Form
+            </Button>
+            <Button variant={activeSection === "return-history" ? "contained" : "outlined"} sx={secondaryToolbarButtonSx("#5f4b32", "rgba(95,75,50,0.12)")} onClick={handleReturnHistoryClick}>
+              Return History
+            </Button>
+            <Button variant={activeSection === "purchase-form" ? "contained" : "outlined"} sx={secondaryToolbarButtonSx(uiColors.steel, "rgba(75,93,115,0.12)")} onClick={handleOpenPurchaseForm}>
+              Purchase Form
+            </Button>
+            <Button variant={activeSection === "logs" ? "contained" : "outlined"} sx={secondaryToolbarButtonSx("#6d4c9a", "rgba(109,76,154,0.12)")} onClick={handleLogsClick}>
+              Logs
+            </Button>
+          </Box>
+        </Paper>
+      )}
+
 
       {activeSection === "daily" && <DailyReport onBack={handleBackToMainTable} />}
-      {activeSection === "check-stock" && <CheckStocks />}
-      {activeSection === "inventory" && <Inventory onBack={handleBackToMainTable} />}
-      {activeSection === "issue-form" && <IssueForm onBack={handleBackToMainTable} />}
-      {activeSection === "logs" && <Logs />}
+      {activeSection === "check-stock" && <CheckStocks onBack={handleBackToAccountability} />}
+      {activeSection === "assign-form" && (
+        <AssignAccountableForms
+          onSaved={() => {
+            setSnackbar({
+              open: true,
+              message: "Accountable form assigned successfully.",
+              severity: "success",
+            });
+            handleBackToAccountability();
+          }}
+          onCancel={handleBackToAccountability}
+        />
+      )}
+      {activeSection === "inventory" && <Inventory onBack={handleBackToAccountability} />}
+      {activeSection === "issue-form" && <IssueForm onBack={handleBackToAccountability} />}
+      {activeSection === "return-form" && (
+        <ReturnAccountableForm
+          onSaved={() => {
+            setSnackbar({
+              open: true,
+              message: "Accountable form return saved successfully.",
+              severity: "success",
+            });
+            handleBackToAccountability();
+          }}
+          onCancel={handleBackToAccountability}
+        />
+      )}
+      {activeSection === "purchase-form" && (
+        <PurchaseForm
+          onSaved={() => {
+            setSnackbar({
+              open: true,
+              message: "Purchase saved successfully.",
+              severity: "success",
+            });
+            handleBackToAccountability();
+          }}
+          onCancel={handleBackToAccountability}
+        />
+      )}
+      {activeSection === "logs" && <Logs onBack={handleBackToAccountability} />}
+      {activeSection === "return-history" && <ReturnHistory onBack={handleBackToAccountability} />}
 
       {showMainTable && <TableContainer
                 component={Paper}
@@ -1519,7 +2642,7 @@ function ReportCollectionDeposit() {
                       <StyledTableCell>Receipt No. From</StyledTableCell>
                       <StyledTableCell>Receipt No. To</StyledTableCell>
                       <StyledTableCell>TOTAL</StyledTableCell>
-                      <StyledTableCell>Status</StyledTableCell>
+                      <StyledTableCell>Workflow Status</StyledTableCell>
                       <StyledTableCell>ACTION</StyledTableCell>
                     </TableRow>
                   </TableHead>
@@ -1586,22 +2709,22 @@ function ReportCollectionDeposit() {
                           </TableCell>
 
                           <TableCell align="center">
-                            <Chip
-                              label={row.Status || row.status || "Not Remit"}
-                              size="small"
-                              sx={{
-                                fontWeight: 700,
-                                minWidth: 92,
-                                color: "#0f2747",
-                                backgroundColor:
-                                  String(row.Status || row.status || "").toLowerCase() === "remit"
-                                    ? "rgba(46,125,50,0.14)"
-                                    : String(row.Status || row.status || "").toLowerCase() === "deposit"
-                                      ? "rgba(2,136,209,0.14)"
-                                      : "rgba(214,161,43,0.18)",
-                                border: "1px solid rgba(15,39,71,0.08)",
-                              }}
-                            />
+                            {(() => {
+                              const statusMeta = getWorkflowStatusMeta(row.Status || row.status);
+                              return (
+                                <Chip
+                                  label={statusMeta.label}
+                                  size="small"
+                                  sx={{
+                                    fontWeight: 700,
+                                    minWidth: 92,
+                                    color: statusMeta.color,
+                                    backgroundColor: statusMeta.bg,
+                                    border: "1px solid rgba(15,39,71,0.08)",
+                                  }}
+                                />
+                              );
+                            })()}
                           </TableCell>
       
                           <TableCell align="center">
@@ -1663,13 +2786,11 @@ function ReportCollectionDeposit() {
                       open={Boolean(anchorEl)}
                       onClose={handleMenuClose}
                     >
-                      <MenuItem onClick={handleEditClick}>Update</MenuItem>
+                      <MenuItem onClick={() => openPermissionDialog("edit")}>Update</MenuItem>
                       <MenuItem
                         onClick={(e) => {
                           e.stopPropagation(); // Prevent event propagation
-                          setSelectedId(getRowId(selectedRow));
-                          setOpenDeleteDialog(true);
-                          handleMenuClose();
+                          openPermissionDialog("delete");
                         }}
                       >
                         Delete
@@ -1699,6 +2820,148 @@ function ReportCollectionDeposit() {
                       <DialogContent>{dialogContent}</DialogContent>
                     </Dialog>
                     <Dialog
+                      open={multiImportDialogOpen}
+                      onClose={handleMultiImportClose}
+                      maxWidth="md"
+                      fullWidth
+                    >
+                      <DialogTitle
+                        sx={{
+                          display: "flex",
+                          alignItems: "center",
+                          justifyContent: "space-between",
+                        }}
+                      >
+                        {`Import Suggested Collection ${multiImportIndex + 1} of ${multiImportQueue.length}`}
+                        <IconButton onClick={handleMultiImportClose} size="small" aria-label="close">
+                          <CloseIcon fontSize="small" />
+                        </IconButton>
+                      </DialogTitle>
+                      <DialogContent>
+                        {multiImportQueue[multiImportIndex] && (
+                          <NewEntryForm
+                            key={`${getSuggestionKey(multiImportQueue[multiImportIndex], multiImportIndex)}-${multiImportIndex}`}
+                            initialValues={{
+                              issued_date: multiImportQueue[multiImportIndex].collection_date,
+                              collector: multiImportQueue[multiImportIndex].collector,
+                              fund:
+                                multiImportQueue[multiImportIndex].fund === "RPT"
+                                  ? "200 Special Education Fund"
+                                  : "100 General Fund",
+                              type_of_receipt: multiImportQueue[multiImportIndex].type_of_receipt,
+                              receipt_no_from: multiImportQueue[multiImportIndex].receipt_no_from,
+                              receipt_no_to: multiImportQueue[multiImportIndex].receipt_no_to,
+                              total: multiImportQueue[multiImportIndex].total_amount,
+                              status: "Not Remit",
+                            }}
+                            onSaved={handleMultiImportSaved}
+                            onCancel={handleMultiImportClose}
+                          />
+                        )}
+                      </DialogContent>
+                    </Dialog>
+                    <Dialog
+                      open={permissionDialogOpen}
+                      onClose={handlePermissionClose}
+                      maxWidth="xs"
+                      fullWidth
+                    >
+                      <DialogTitle>Permission Required</DialogTitle>
+                      <DialogContent>
+                        <Box sx={{ display: "grid", gap: 2, mt: 1 }}>
+                          <Alert severity="warning">
+                            Enter your password to {permissionAction === "delete" ? "delete" : "edit"} this RCD entry.
+                          </Alert>
+                          <TextField
+                            label="Password"
+                            type="password"
+                            value={permissionPassword}
+                            onChange={(e) => setPermissionPassword(e.target.value)}
+                            error={Boolean(permissionError)}
+                            helperText={permissionError || ""}
+                            fullWidth
+                          />
+                        </Box>
+                      </DialogContent>
+                      <DialogActions>
+                        <Button onClick={handlePermissionClose}>Cancel</Button>
+                        <Button
+                          variant="contained"
+                          onClick={handlePermissionConfirm}
+                          disabled={permissionLoading}
+                        >
+                          {permissionLoading ? "Verifying..." : "Confirm"}
+                        </Button>
+                      </DialogActions>
+                    </Dialog>
+
+                    <Dialog
+                      open={batchStatusDialog.open}
+                      onClose={closeBatchStatusDialog}
+                      maxWidth="sm"
+                      fullWidth
+                    >
+                      <DialogTitle>
+                        {batchStatusDialog.status === "Approved"
+                          ? "Approve RCD Batch"
+                          : "Mark Batch Deposited"}
+                      </DialogTitle>
+                      <DialogContent>
+                        <Box sx={{ display: "grid", gap: 2, mt: 1 }}>
+                          {batchStatusDialog.status === "Approved" && (
+                            <TextField
+                              label="Reviewed By"
+                              value={batchStatusDialog.reviewed_by}
+                              onChange={(e) =>
+                                setBatchStatusDialog((prev) => ({
+                                  ...prev,
+                                  reviewed_by: e.target.value,
+                                }))
+                              }
+                              fullWidth
+                            />
+                          )}
+                          {batchStatusDialog.status === "Deposited" && (
+                            <TextField
+                              label="Deposit Reference / Slip No."
+                              value={batchStatusDialog.deposit_reference}
+                              onChange={(e) =>
+                                setBatchStatusDialog((prev) => ({
+                                  ...prev,
+                                  deposit_reference: e.target.value,
+                                }))
+                              }
+                              fullWidth
+                            />
+                          )}
+                          <TextField
+                            label="Remarks"
+                            value={batchStatusDialog.remarks}
+                            onChange={(e) =>
+                              setBatchStatusDialog((prev) => ({
+                                ...prev,
+                                remarks: e.target.value,
+                              }))
+                            }
+                            multiline
+                            minRows={3}
+                            fullWidth
+                          />
+                        </Box>
+                      </DialogContent>
+                      <DialogActions>
+                        <Button onClick={closeBatchStatusDialog}>Cancel</Button>
+                        <Button
+                          variant="contained"
+                          onClick={submitBatchStatusDialog}
+                          disabled={batchActionLoading}
+                        >
+                          {batchActionLoading ? "Saving..." : "Confirm"}
+                        </Button>
+                      </DialogActions>
+                    </Dialog>
+
+                    <Dialog
                       open={openUpdateDialog}
                       onClose={() => setOpenUpdateDialog(false)}
                       maxWidth="sm"
@@ -1707,24 +2970,30 @@ function ReportCollectionDeposit() {
                       <DialogTitle>Update Entry</DialogTitle>
                       <DialogContent>
                         <Box sx={{ display: "grid", gap: 2, mt: 1 }}>
+                          <Alert severity="info">
+                            To protect accountable-form balances, only total and workflow status can be edited here.
+                          </Alert>
                           <TextField
                             label="Date"
                             type="date"
                             value={editFormData.issued_date}
                             onChange={(e) => handleEditFieldChange("issued_date", e.target.value)}
                             InputLabelProps={{ shrink: true }}
+                            disabled
                             fullWidth
                           />
                           <TextField
                             label="Collector"
                             value={editFormData.collector}
                             onChange={(e) => handleEditFieldChange("collector", e.target.value)}
+                            disabled
                             fullWidth
                           />
                           <TextField
                             label="Type of Receipt"
                             value={editFormData.type_of_receipt}
                             onChange={(e) => handleEditFieldChange("type_of_receipt", e.target.value)}
+                            disabled
                             fullWidth
                           />
                           <TextField
@@ -1732,6 +3001,7 @@ function ReportCollectionDeposit() {
                             value={editFormData.receipt_no_from}
                             onChange={(e) => handleEditFieldChange("receipt_no_from", e.target.value)}
                             inputProps={{ inputMode: "numeric", pattern: "[0-9]*" }}
+                            disabled
                             fullWidth
                           />
                           <TextField
@@ -1739,6 +3009,7 @@ function ReportCollectionDeposit() {
                             value={editFormData.receipt_no_to}
                             onChange={(e) => handleEditFieldChange("receipt_no_to", e.target.value)}
                             inputProps={{ inputMode: "numeric", pattern: "[0-9]*" }}
+                            disabled
                             fullWidth
                           />
                           <TextField
@@ -1756,11 +3027,10 @@ function ReportCollectionDeposit() {
                             onChange={(e) => handleEditFieldChange("status", e.target.value)}
                             fullWidth
                           >
-                            <MenuItem value="Remit">Remit</MenuItem>
-                            <MenuItem value="Not Remit">Not Remit</MenuItem>
-                            <MenuItem value="Deposit">Deposit</MenuItem>
-                            <MenuItem value="Approve">Approve</MenuItem>
-                            <MenuItem value="Purchase">Purchase</MenuItem>
+                            <MenuItem value="Not Remit">Draft</MenuItem>
+                            <MenuItem value="Remit">Submitted</MenuItem>
+                            <MenuItem value="Approve">Approved</MenuItem>
+                            <MenuItem value="Deposit">Deposited</MenuItem>
                           </TextField>
                         </Box>
                       </DialogContent>

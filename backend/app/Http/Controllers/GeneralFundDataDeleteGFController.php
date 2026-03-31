@@ -2,6 +2,8 @@
 
 namespace App\Http\Controllers;
 
+use App\Helpers\GeneralFundPaymentMirrorHelper;
+use App\Helpers\GeneralFundQueryCache;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Log;
@@ -26,18 +28,13 @@ class GeneralFundDataDeleteGFController extends Controller
             });
 
             if ($deletedPayment) {
+                GeneralFundPaymentMirrorHelper::deletePayment($id);
+                GeneralFundQueryCache::invalidate();
                 return response()->json(['message' => 'Record deleted successfully'], 200);
             }
 
-            $deletedLegacy = DB::table('general_fund_data')
-                ->where('id', $id)
-                ->delete();
-
-            if ($deletedLegacy === 0) {
-                return response()->json(['message' => 'Record not found'], 404);
-            }
-
-            return response()->json(['message' => 'Record deleted successfully'], 200);
+            GeneralFundPaymentMirrorHelper::deletePayment($id);
+            return response()->json(['message' => 'Record not found'], 404);
         } catch (\Exception $e) {
             Log::error('Error deleting record: ' . $e->getMessage());
             return response()->json(['error' => 'Error deleting record'], 500);

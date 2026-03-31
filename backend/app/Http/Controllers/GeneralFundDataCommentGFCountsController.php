@@ -11,6 +11,10 @@ class GeneralFundDataCommentGFCountsController extends Controller
     public function index()
     {
         try {
+            if (!DB::getSchemaBuilder()->hasTable('gf_comment')) {
+                return response()->json([]);
+            }
+
             $results = DB::select("
                 SELECT DATE_FORMAT(date, '%Y-%m-%d') AS formatted_date, COUNT(*) AS count
                 FROM gf_comment
@@ -26,7 +30,7 @@ class GeneralFundDataCommentGFCountsController extends Controller
             return response()->json($counts);
         } catch (\Exception $e) {
             Log::error('Error fetching comment counts: ' . $e->getMessage());
-            return response()->json(['error' => 'Error fetching comment counts'], 500);
+            return response()->json([]);
         }
     }
 }

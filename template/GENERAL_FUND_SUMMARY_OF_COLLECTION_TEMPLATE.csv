@@ -1,0 +1,37 @@
+﻿SOURCES OF COLLECTIONS,SOURCEID,ITAX_TYPE
+,,
+Manufacturing,524,MAS
+Distributor,528,WHO
+Retailing,518,RET
+Banks & Other Financial Int.,520,BFI
+Other Business Tax,"807, 808, 781, 844",OBT
+Sand & Gravel,989,TSG
+Fines & Penalties,987,GCF
+Mayor's Permit,681,MP
+Weights & Measures,"764, 767",FWM
+Tricycle Permit Fee,"940, 941, 943, 944, 956, 956, 365, 348, 346, 358, 636, 344, 350","TOP, FLF"
+Occupation Tax,693,OCC
+Cert. of Ownership,960,COO
+Cert. of Transfer,958,COT
+Cockpit Share,1020,CS
+Docking and Mooring Fee,"580, 639",IF
+Sultadas,561,ATM
+Miscellaneous,"993, 1008, 1006, 811, 823, 785, 786, 899, 900, 901, 898, 803, 804, 802, 834 , 826, 488","IM, HEC,  OCL, ICO, IPG"
+Registration of Birth,"963, 878, 857, 855, 896, 872, 897, 853",RB
+Marriage Fees,"894, 892, 880, 1000, 876, 882",RM
+Burial Fees,"948, 890, 885, 946, 863, 874",BF
+Correction of Entry,"998, 999",CE
+Fishing Permit Fee,"724, 722, 575, 440, 578, 615, 723, 637, 613",IF
+Sale of Agri. Prod.,"1009, 1007",IAP
+Sale of Acc. Forms,"1004, 945",IAF
+Water Fees,"819, 817, 821, 815, 827",IWO
+Market Stall Fee,606,RFM
+Cash Tickets,961,RFR
+Slaughterhouse Fee,1017,SPF
+Rent of Equipment,"839, 558, 992, 560, 505, 476, 478, 805, 507",RFR
+Doc Stamp Tax,810,SF
+Police Clearance,543,PCL
+Secretariat Fees,"790, 1003, 788, 833, 789, 796, 787, 793, 545, 947",SF
+Med./Lab. Fees,"918, 913, 915, 907, 912, 908, 909, 465, 911, 906, 795, 914, 904, 976, 917, 916, ",MDL
+Garbage Fees,"799, 801, 1005, 800",GCF
+Cutting Tree,set 0,

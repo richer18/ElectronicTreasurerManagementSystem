@@ -9,11 +9,13 @@ import {
   Box,
   Button,
   Card,
+  Checkbox,
   Dialog,
   DialogActions,
   DialogContent,
   DialogContentText,
   DialogTitle,
+  FormControlLabel,
   InputAdornment,
   Menu,
   MenuItem,
@@ -190,6 +192,10 @@ function Cedula({ ...props }) {
   const [selectedRow, setSelectedRow] = useState(null);
 
   const [showFilters, setShowFilters] = useState(true);
+  const [downloadDialogOpen, setDownloadDialogOpen] = useState(false);
+  const [downloadMonth, setDownloadMonth] = useState(null);
+  const [downloadYear, setDownloadYear] = useState(null);
+  const [downloadIncludeCancelled, setDownloadIncludeCancelled] = useState(false);
 
   const [snackbar, setSnackbar] = useState({
     open: false,
@@ -270,19 +276,19 @@ function Cedula({ ...props }) {
     });
   };
 
-  // ------------------------
-  //  2) Filter data on searchQuery & month/year
-  // ------------------------
-  useEffect(() => {
-    if (!Array.isArray(data)) {
-      setFilteredData([]);
-      return;
+  const applyClientFilters = (
+    rows,
+    activeMonth = month,
+    activeYear = year,
+    activeDay = day
+  ) => {
+    if (!Array.isArray(rows)) {
+      return [];
     }
 
-    let newFiltered = data;
+    let newFiltered = rows;
     const normalize = (value) => String(value ?? "").toLowerCase();
 
-    // (a) Filter by searchQuery
     if (searchQuery?.trim()) {
       const q = searchQuery.trim().toLowerCase();
       newFiltered = newFiltered.filter((row) => {
@@ -295,8 +301,7 @@ function Cedula({ ...props }) {
       });
     }
 
-    // (b) Filter by month, day, and year
-    if (month || year || day) {
+    if (activeMonth || activeYear || activeDay) {
       newFiltered = newFiltered.filter((row) => {
         if (!row.DATE) return false;
         const rowDate = new Date(row.DATE);
@@ -304,15 +309,27 @@ function Cedula({ ...props }) {
         const rowDay = rowDate.getDate();
         const rowYear = rowDate.getFullYear();
 
-        const monthMatches = month ? rowMonth === parseInt(month) : true;
-        const dayMatches = day ? rowDay === parseInt(day) : true;
-        const yearMatches = year ? rowYear === parseInt(year) : true;
+        const monthMatches = activeMonth ? rowMonth === parseInt(activeMonth) : true;
+        const dayMatches = activeDay ? rowDay === parseInt(activeDay) : true;
+        const yearMatches = activeYear ? rowYear === parseInt(activeYear) : true;
 
         return monthMatches && dayMatches && yearMatches;
       });
     }
 
-    setFilteredData(newFiltered);
+    return newFiltered;
+  };
+
+  // ------------------------
+  //  2) Filter data on searchQuery & month/year
+  // ------------------------
+  useEffect(() => {
+    if (!Array.isArray(data)) {
+      setFilteredData([]);
+      return;
+    }
+
+    setFilteredData(applyClientFilters(data));
     setPage(0); // reset pagination when filters change
   }, [data, searchQuery, month, day, year]);
   // ------------------------
@@ -431,7 +448,14 @@ function Cedula({ ...props }) {
   //  7) Download logic
   // ------------------------
   const handleDownload = () => {
-    if (!month || !year) {
+    setDownloadMonth(month);
+    setDownloadYear(year);
+    setDownloadIncludeCancelled(false);
+    setDownloadDialogOpen(true);
+  };
+
+  const handleDownloadConfirm = async () => {
+    if (!downloadMonth || !downloadYear) {
       setSnackbar({
         open: true,
         message: "Please select both month and year before downloading.",
@@ -440,7 +464,30 @@ function Cedula({ ...props }) {
       return;
     }
 
-    const filteredExportData = getFilteredDataByMonthYear();
+    let filteredExportData = [];
+
+    try {
+      const response = await axiosInstance.get("/cedula", {
+        params: {
+          include_cancelled: downloadIncludeCancelled ? 1 : undefined,
+        },
+      });
+
+      filteredExportData = applyClientFilters(
+        Array.isArray(response.data) ? response.data : [],
+        downloadMonth,
+        downloadYear,
+        null
+      );
+    } catch (error) {
+      console.error("Error fetching downloadable cedula data:", error);
+      setSnackbar({
+        open: true,
+        message: "Failed to prepare the download.",
+        severity: "error",
+      });
+      return;
+    }
 
     if (filteredExportData.length === 0) {
       setSnackbar({
@@ -471,8 +518,9 @@ function Cedula({ ...props }) {
 
     const file = XLSX.write(workbook, { bookType: "xlsx", type: "array" });
     const blob = new Blob([file], { type: "application/octet-stream" });
-    const fileName = `Cedula_Report_${months.find((m) => m.value === month)?.label}_${year}.xlsx`;
+    const fileName = `Cedula_Report_${months.find((m) => m.value === downloadMonth)?.label}_${downloadYear}.xlsx`;
     saveAs(blob, fileName);
+    setDownloadDialogOpen(false);
   };
 
   // ------------------------
@@ -1176,6 +1224,51 @@ function Cedula({ ...props }) {
       )}
 
       {/* Confirmation Dialog */}
+      <Dialog
+        open={downloadDialogOpen}
+        onClose={() => setDownloadDialogOpen(false)}
+        maxWidth="sm"
+        fullWidth
+      >
+        <DialogTitle>Download Cedula Report</DialogTitle>
+        <DialogContent>
+          <Box sx={{ display: "flex", gap: 2, mt: 1, flexWrap: "wrap" }}>
+            <Autocomplete
+              options={months}
+              value={months.find((option) => option.value === downloadMonth) ?? null}
+              onChange={(e, value) => setDownloadMonth(value?.value ?? null)}
+              getOptionLabel={(option) => option.label}
+              renderInput={(params) => <TextField {...params} label="Month" fullWidth />}
+              sx={{ minWidth: 220, flex: 1 }}
+            />
+            <Autocomplete
+              options={years}
+              value={years.find((option) => option.value === downloadYear) ?? null}
+              onChange={(e, value) => setDownloadYear(value?.value ?? null)}
+              getOptionLabel={(option) => option.label}
+              renderInput={(params) => <TextField {...params} label="Year" fullWidth />}
+              sx={{ minWidth: 220, flex: 1 }}
+            />
+          </Box>
+          <FormControlLabel
+            sx={{ mt: 2 }}
+            control={
+              <Checkbox
+                checked={downloadIncludeCancelled}
+                onChange={(e) => setDownloadIncludeCancelled(e.target.checked)}
+              />
+            }
+            label="Include cancelled payments"
+          />
+        </DialogContent>
+        <DialogActions>
+          <Button onClick={() => setDownloadDialogOpen(false)}>Cancel</Button>
+          <Button variant="contained" onClick={handleDownloadConfirm}>
+            Download
+          </Button>
+        </DialogActions>
+      </Dialog>
+
       <Dialog
         open={openDeleteDialog}
         onClose={() => setOpenDeleteDialog(false)}

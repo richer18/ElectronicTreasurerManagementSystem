@@ -5,11 +5,13 @@ import {
   Box,
   Button,
   Card,
+  Checkbox,
   Dialog,
   DialogActions,
   DialogContent,
   DialogContentText,
   DialogTitle,
+  FormControlLabel,
   InputAdornment,
   Menu,
   MenuItem,
@@ -124,6 +126,9 @@ const years = [
 
 
 function TrustFund() {
+  const currentDate = useMemo(() => new Date(), []);
+  const defaultMonth = String(currentDate.getMonth() + 1);
+  const defaultYear = String(currentDate.getFullYear());
   const [controller] = useMaterialUIController();
   const { darkMode } = controller;
   const uiColors = useMemo(
@@ -181,13 +186,17 @@ function TrustFund() {
   const [showFilters, setShowFilters] = useState(true);
 
   const [filteredData, setFilteredData] = useState([]);
-  const [month, setMonth] = useState(null);
-  const [year, setYear] = useState(null);
+  const [month, setMonth] = useState(defaultMonth);
+  const [year, setYear] = useState(defaultYear);
   // 3. Search states:
   //    a) what user is typing
   const [pendingSearchQuery, setPendingSearchQuery] = useState("");
   //    b) what we actually filter on
   const [searchQuery, setSearchQuery] = useState("");
+  const [downloadDialogOpen, setDownloadDialogOpen] = useState(false);
+  const [downloadMonth, setDownloadMonth] = useState(defaultMonth);
+  const [downloadYear, setDownloadYear] = useState(defaultYear);
+  const [downloadIncludeCancelled, setDownloadIncludeCancelled] = useState(false);
   const [snackbar, setSnackbar] = useState({
     open: false,
     message: "",
@@ -232,36 +241,15 @@ function TrustFund() {
     fetchTotals();
   }, [month, year]);
 
-   const [reportDialog, setReportDialog] = useState({
-        open: false,
-        status: 'idle', // 'idle' | 'loading' | 'success' | 'error'
-        progress: 0
-      });
-    
-      const ChhandleCloseDialog = () => {
-        setReportDialog({ ...reportDialog, open: false });
-      };
-  
-      const handleGenerateReport = () => {
-        // Open dialog in loading state
-        setReportDialog({
-          open: true,
-          status: 'loading',
-          progress: 0
-        });
-    
-        // Simulate report generation
-        const interval = setInterval(() => {
-          setReportDialog(prev => {
-            const newProgress = prev.progress + 10;
-            if (newProgress >= 100) {
-              clearInterval(interval);
-              return { ...prev, status: 'success', progress: 100 };
-            }
-            return { ...prev, progress: newProgress };
-          });
-        }, 300);
-      };
+  const [openCollectorReport, setOpenCollectorReport] = useState(false);
+
+  const handleCloseCollectorReport = () => {
+    setOpenCollectorReport(false);
+  };
+
+  const handleGenerateReport = () => {
+    setOpenCollectorReport(true);
+  };
 
   useEffect(() => {
     const fetchData = async () => {
@@ -442,7 +430,14 @@ function TrustFund() {
   };
 
   const handleDownload = () => {
-    if (!month || !year) {
+    setDownloadMonth(month || defaultMonth);
+    setDownloadYear(year || defaultYear);
+    setDownloadIncludeCancelled(false);
+    setDownloadDialogOpen(true);
+  };
+
+  const handleDownloadConfirm = async () => {
+    if (!downloadMonth || !downloadYear) {
       setSnackbar({
         open: true,
         message: "Please select both month and year before downloading.",
@@ -451,7 +446,29 @@ function TrustFund() {
       return;
     }
 
-    const filteredExportData = filteredData;
+    let filteredExportData = [];
+
+    try {
+      const params = {};
+      if (downloadMonth) params.month = downloadMonth;
+      if (downloadYear) params.year = downloadYear;
+      if (searchQuery) params.search = searchQuery;
+      if (downloadIncludeCancelled) params.include_cancelled = 1;
+
+      const response = await axiosInstance.get("table-trust-fund-all", {
+        params,
+      });
+
+      filteredExportData = Array.isArray(response.data) ? response.data : [];
+    } catch (error) {
+      console.error("Error fetching downloadable trust fund data:", error);
+      setSnackbar({
+        open: true,
+        message: "Failed to prepare the download.",
+        severity: "error",
+      });
+      return;
+    }
 
     if (filteredExportData.length === 0) {
       setSnackbar({
@@ -482,8 +499,9 @@ function TrustFund() {
 
     const file = XLSX.write(workbook, { bookType: "xlsx", type: "array" });
     const blob = new Blob([file], { type: "application/octet-stream" });
-    const fileName = `TrustFund_Report_${months.find((m) => m.value === month)?.label}_${year}.xlsx`;
+    const fileName = `TrustFund_Report_${months.find((m) => m.value === downloadMonth)?.label}_${downloadYear}.xlsx`;
     saveAs(blob, fileName);
+    setDownloadDialogOpen(false);
   };
 
   return (
@@ -574,7 +592,8 @@ function TrustFund() {
                       }}
                     />
                   )}
-                  onChange={(e, v) => setMonth(v?.value)}
+                  value={months.find((option) => option.value === month) || null}
+                  onChange={(e, v) => setMonth(v?.value || defaultMonth)}
                 />
 
                 <Autocomplete
@@ -608,7 +627,8 @@ function TrustFund() {
                       }}
                     />
                   )}
-                  onChange={(e, v) => setYear(v?.value)}
+                  value={years.find((option) => option.value === year) || null}
+                  onChange={(e, v) => setYear(v?.value || defaultYear)}
                 />
 
                 <Button
@@ -947,8 +967,8 @@ function TrustFund() {
         </Box>
       </Box>
 
-      {showDailyTable && <DailyTable onBack={handleBack} />}
-      {showReportTable && <ReportTable onBack={handleBack} />}
+      {showDailyTable && <DailyTable onBack={handleBack} initialMonth={month} initialYear={year} />}
+      {showReportTable && <ReportTable onBack={handleBack} initialMonth={month} initialYear={year} />}
 
       {showMainTable && (
         <TableContainer
@@ -1075,6 +1095,53 @@ function TrustFund() {
       )}
 
       <Dialog
+        open={downloadDialogOpen}
+        onClose={() => setDownloadDialogOpen(false)}
+        maxWidth="sm"
+        fullWidth
+      >
+        <DialogTitle>Download Trust Fund Report</DialogTitle>
+        <DialogContent>
+          <Box sx={{ display: "flex", gap: 2, mt: 1, flexWrap: "wrap" }}>
+            <Autocomplete
+              options={months}
+              value={months.find((option) => option.value === downloadMonth) ?? null}
+              onChange={(e, value) =>
+                setDownloadMonth(value?.value || defaultMonth)
+              }
+              getOptionLabel={(option) => option.label}
+              renderInput={(params) => <TextField {...params} label="Month" fullWidth />}
+              sx={{ minWidth: 220, flex: 1 }}
+            />
+            <Autocomplete
+              options={years}
+              value={years.find((option) => option.value === downloadYear) ?? null}
+              onChange={(e, value) => setDownloadYear(value?.value || defaultYear)}
+              getOptionLabel={(option) => option.label}
+              renderInput={(params) => <TextField {...params} label="Year" fullWidth />}
+              sx={{ minWidth: 220, flex: 1 }}
+            />
+          </Box>
+          <FormControlLabel
+            sx={{ mt: 2 }}
+            control={
+              <Checkbox
+                checked={downloadIncludeCancelled}
+                onChange={(e) => setDownloadIncludeCancelled(e.target.checked)}
+              />
+            }
+            label="Include cancelled payments"
+          />
+        </DialogContent>
+        <DialogActions>
+          <Button onClick={() => setDownloadDialogOpen(false)}>Cancel</Button>
+          <Button variant="contained" onClick={handleDownloadConfirm}>
+            Download
+          </Button>
+        </DialogActions>
+      </Dialog>
+
+      <Dialog
         open={openDeleteDialog}
         onClose={() => setOpenDeleteDialog(false)}
         maxWidth="xs"
@@ -1120,18 +1187,16 @@ function TrustFund() {
         </Snackbar>
       </Box>
 
-      <TrustFundDialogPopupBPF open={openBPF} onClose={handleCloseBPF} />
-      <TrustFundDialogPopupDF open={openDF} onClose={handleCloseDF} />
-      <TrustFundDialogPopupEPF open={openEPF} onClose={handleCloseEPF} />
-      <TrustFundDialogPopupZF open={openZF} onClose={handleCloseZF} />
-      <TrustFundDialogPopupLDF open={openLDF} onClose={handleCloseLDF} />
-      <TrustFundDialogPopupTOTAL open={openTOTAL} onClose={handleCloseTOTAL} />
+      <TrustFundDialogPopupBPF open={openBPF} onClose={handleCloseBPF} month={month} year={year} />
+      <TrustFundDialogPopupDF open={openDF} onClose={handleCloseDF} month={month} year={year} />
+      <TrustFundDialogPopupEPF open={openEPF} onClose={handleCloseEPF} month={month} year={year} />
+      <TrustFundDialogPopupZF open={openZF} onClose={handleCloseZF} month={month} year={year} />
+      <TrustFundDialogPopupLDF open={openLDF} onClose={handleCloseLDF} month={month} year={year} />
+      <TrustFundDialogPopupTOTAL open={openTOTAL} onClose={handleCloseTOTAL} month={month} year={year} />
 
       <GenerateReport
-        open={reportDialog.open}
-        onClose={ChhandleCloseDialog}
-        status={reportDialog.status}
-        progress={reportDialog.progress}
+        open={openCollectorReport}
+        onClose={handleCloseCollectorReport}
       />
     </Box>
   );

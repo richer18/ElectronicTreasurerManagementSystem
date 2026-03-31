@@ -16,7 +16,7 @@ class TrustFundDataUpdateTFCommentController extends Controller
         ]);
 
         try {
-            DB::table('trust_fund_data')
+            DB::table('trust_fund_payment')
                 ->where('RECEIPT_NO', $request->input('RECEIPT_NO'))
                 ->update([
                     'COMMENTS' => $request->input('COMMENTS')

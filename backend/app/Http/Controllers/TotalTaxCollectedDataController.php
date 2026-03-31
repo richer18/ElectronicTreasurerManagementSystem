@@ -2,6 +2,8 @@
 
 namespace App\Http\Controllers;
 
+use App\Helpers\CommunityTaxCertificateQueryHelper;
+use App\Helpers\RealPropertyTaxQueryHelper;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 
@@ -13,7 +15,9 @@ class TotalTaxCollectedDataController extends Controller
         $year = (int) $request->query('year', now()->year);
 
         $result = collect($months)->map(function ($month) use ($year) {
-            $cedula = DB::table('communitytaxcertificate')
+            $cedula = DB::table('community_tax_certificate_payment');
+            CommunityTaxCertificateQueryHelper::applyActiveFilter($cedula);
+            $cedula = $cedula
                 ->whereYear('DATEISSUED', $year)
                 ->whereMonth('DATEISSUED', $month)
                 ->sum('TOTALAMOUNTPAID');
@@ -28,11 +32,14 @@ class TotalTaxCollectedDataController extends Controller
                 })
                 ->whereNotIn('p.AFTYPE', ['CTC', 'AF56'])
                 ->where(function ($query) {
+                    $query->whereNull('p.STATUS_CT')->orWhere('p.STATUS_CT', '<>', 'CNL');
+                })
+                ->where(function ($query) {
                     $query->whereNull('pd.STATUS_CT')->orWhere('pd.STATUS_CT', '<>', 'CNL');
                 })
                 ->sum('pd.AMOUNTPAID');
 
-            $real = DB::table('real_property_tax_payment')
+            $real = RealPropertyTaxQueryHelper::applyActiveFilter(DB::table('real_property_tax_payment'))
                 ->whereYear('DATE', $year)
                 ->whereMonth('DATE', $month)
                 ->sum('BASIC_AND_SEF');
@@ -46,6 +53,9 @@ class TotalTaxCollectedDataController extends Controller
                     $query->whereNull('p.VOID_BV')->orWhere('p.VOID_BV', 0);
                 })
                 ->whereNotIn('p.AFTYPE', ['CTC', 'AF56'])
+                ->where(function ($query) {
+                    $query->whereNull('p.STATUS_CT')->orWhere('p.STATUS_CT', '<>', 'CNL');
+                })
                 ->where(function ($query) {
                     $query->whereNull('pd.STATUS_CT')->orWhere('pd.STATUS_CT', '<>', 'CNL');
                 })

@@ -7,6 +7,7 @@ use App\Models\IssuedAccountableForm;
 use App\Models\PurchaseAccountableForm;
 use App\Support\CollectorLogger;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Schema;
 
 class AssignFormController extends Controller
 {
@@ -36,6 +37,10 @@ class AssignFormController extends Controller
             'Receipt_Range_From' => $this->normalizeDigitsString($request->input('Receipt_Range_From')),
             'Receipt_Range_To' => $this->normalizeDigitsString($request->input('Receipt_Range_To')),
             'Stock' => (int) $request->input('Stock'),
+            'assigned_by' => $request->input('assigned_by'),
+            'collector_received_by' => $request->input('collector_received_by'),
+            'collector_signature_reference' => $request->input('collector_signature_reference'),
+            'logbook_reference_no' => $request->input('logbook_reference_no'),
         ];
 
         $validated = validator($payload, [
@@ -47,6 +52,10 @@ class AssignFormController extends Controller
             'Receipt_Range_From' => 'required|string|regex:/^\d+$/',
             'Receipt_Range_To' => 'required|string|regex:/^\d+$/',
             'Stock' => 'required|integer|min:1',
+            'assigned_by' => 'nullable|string|max:255',
+            'collector_received_by' => 'nullable|string|max:255',
+            'collector_signature_reference' => 'nullable|string|max:255',
+            'logbook_reference_no' => 'nullable|string|max:255',
         ])->validate();
 
         if ($this->toInt($validated['Receipt_Range_To']) < $this->toInt($validated['Receipt_Range_From'])) {
@@ -72,7 +81,7 @@ class AssignFormController extends Controller
                     ], 422));
                 }
 
-                $issuedForm = IssuedAccountableForm::create([
+                $issuedFormPayload = [
                     'Date' => $validated['Date'],
                     'Fund' => $validated['Fund'],
                     'Collector' => $validated['Collector'],
@@ -94,7 +103,22 @@ class AssignFormController extends Controller
                     'Stock' => (int) $validated['Stock'],
                     'Date_Issued' => now(),
                     'Status' => 'ISSUED',
-                ]);
+                ];
+
+                if (Schema::hasColumn('issued_accountable_forms', 'assigned_by')) {
+                    $issuedFormPayload['assigned_by'] = $validated['assigned_by'] ?? null;
+                }
+                if (Schema::hasColumn('issued_accountable_forms', 'collector_received_by')) {
+                    $issuedFormPayload['collector_received_by'] = $validated['collector_received_by'] ?? null;
+                }
+                if (Schema::hasColumn('issued_accountable_forms', 'collector_signature_reference')) {
+                    $issuedFormPayload['collector_signature_reference'] = $validated['collector_signature_reference'] ?? null;
+                }
+                if (Schema::hasColumn('issued_accountable_forms', 'logbook_reference_no')) {
+                    $issuedFormPayload['logbook_reference_no'] = $validated['logbook_reference_no'] ?? null;
+                }
+
+                $issuedForm = IssuedAccountableForm::create($issuedFormPayload);
 
                 $inventory = PurchaseAccountableForm::where('Serial_No', $validated['Serial_No'])->first();
                 if ($inventory) {
@@ -114,6 +138,10 @@ class AssignFormController extends Controller
                 'range_to' => (string) ($issuedForm->Receipt_Range_To ?? $validated['Receipt_Range_To']),
                 'stock' => (int) ($issuedForm->Stock ?? $validated['Stock']),
                 'status' => $issuedForm->Status ?? 'ISSUED',
+                'assigned_by' => $validated['assigned_by'] ?? null,
+                'collector_received_by' => $validated['collector_received_by'] ?? null,
+                'collector_signature_reference' => $validated['collector_signature_reference'] ?? null,
+                'logbook_reference_no' => $validated['logbook_reference_no'] ?? null,
             ]);
 
             return response()->json([

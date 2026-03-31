@@ -12,32 +12,43 @@ class RealPropertyTaxSaveDataController extends Controller
         $data = $request->all();
 
         try {
-            $id = DB::table('real_property_tax_data')->insertGetId([
-                'date' => $data['date'],
-                'name' => $data['name'],
-                'receipt_no' => $data['receipt_no'],
-                'current_year' => $data['current_year'],
-                'current_penalties' => $data['current_penalties'],
-                'current_discounts' => $data['current_discounts'],
-                'prev_year' => $data['prev_year'],
-                'prev_penalties' => $data['prev_penalties'],
-                'prior_years' => $data['prior_years'],
-                'prior_penalties' => $data['prior_penalties'],
-                'total' => $data['total'],
-                'barangay' => $data['barangay'],
-                'share' => $data['share'],
-                'additional_current_year' => $data['additional_current_year'],
-                'additional_penalties' => $data['additional_penalties'],
-                'additional_discounts' => $data['additional_discounts'],
-                'additional_prev_year' => $data['additional_prev_year'],
-                'additional_prev_penalties' => $data['additional_prev_penalties'],
-                'additional_prior_years' => $data['additional_prior_years'],
-                'additional_prior_penalties' => $data['additional_prior_penalties'],
-                'additional_total' => $data['additional_total'],
-                'gf_total' => $data['gf_total'],
-                'status' => $data['status'],
-                'advanced_payment' => $data['advanced_payment'],
-                'cashier' => $data['cashier'],
+            $basicCurrentYear = (float) ($data['current_year'] ?? 0);
+            $basicCurrentPenalties = (float) ($data['current_penalties'] ?? 0);
+            $basicDiscounts = abs((float) ($data['current_discounts'] ?? 0));
+            $sefCurrentYear = (float) ($data['additional_current_year'] ?? 0);
+            $sefCurrentPenalties = (float) ($data['additional_penalties'] ?? 0);
+            $sefDiscounts = abs((float) ($data['additional_discounts'] ?? 0));
+
+            $id = DB::table('real_property_tax_payment')->insertGetId([
+                'DATE' => $data['date'] ?? null,
+                'PAID_BY' => $data['paid_by'] ?? null,
+                'NAME_OF_TAXPAYER' => $data['name'] ?? null,
+                'PERIOD_COVERED' => $data['advanced_payment'] ?? null,
+                'PIN' => $data['pin'] ?? null,
+                'OR_NO' => $data['receipt_no'] ?? null,
+                'NAME_OF_BARANGAY' => $data['barangay'] ?? null,
+                'BASIC_CURRENT_YEAR' => $basicCurrentYear,
+                'BASIC_CURRENT_PENALTIES' => $basicCurrentPenalties,
+                'BASIC_DISCOUNTS' => $basicDiscounts,
+                'BASIC_IMMEDIATE' => $basicCurrentYear + $basicCurrentPenalties - $basicDiscounts,
+                'BASIC_PRECEDING_YEAR' => $data['prev_year'] ?? 0,
+                'BASIC_PRECEDING_PENALTIES' => $data['prev_penalties'] ?? 0,
+                'BASIC_PRIOR_YEARS' => $data['prior_years'] ?? 0,
+                'BASIC_PRIOR_PENALTIES' => $data['prior_penalties'] ?? 0,
+                'BASIC_TOTAL' => $data['total'] ?? 0,
+                'BASIC_25_SHARE' => $data['share'] ?? 0,
+                'SEF_CURRENT_YEAR' => $sefCurrentYear,
+                'SEF_CURRENT_PENALTIES' => $sefCurrentPenalties,
+                'SEF_DISCOUNTS' => $sefDiscounts,
+                'SEF_IMMEDIATE' => $sefCurrentYear + $sefCurrentPenalties - $sefDiscounts,
+                'SEF_PRECEDING_YEAR' => $data['additional_prev_year'] ?? 0,
+                'SEF_PRECEDING_PENALTIES' => $data['additional_prev_penalties'] ?? 0,
+                'SEF_PRIOR_YEARS' => $data['additional_prior_years'] ?? 0,
+                'SEF_PRIOR_PENALTIES' => $data['additional_prior_penalties'] ?? 0,
+                'SEF_TOTAL' => $data['additional_total'] ?? 0,
+                'BASIC_AND_SEF' => $data['gf_total'] ?? 0,
+                'PROPERTY_CLASSIFICATION' => $data['status'] ?? null,
+                'CASHIER' => $data['cashier'] ?? null,
             ]);
 
             return response()->json([

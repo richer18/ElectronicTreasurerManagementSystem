@@ -1,0 +1,12 @@
+[2026-03-30 14:50:22] Connecting to Firebird: localhost:E:\ZAMBOANGUITA.FDB
+[2026-03-30 14:50:22] Failed: ('Error while preparing SQL statement:\n- SQLCODE: -104\n- Dynamic SQL Error\n- SQL error code = -104\n- Token unknown - line 2, column 36\n- DATE', -104, 335544569)
+[2026-03-30 14:50:45] Connecting to Firebird: localhost:E:\ZAMBOANGUITA.FDB
+[2026-03-30 14:50:45] Failed: ('Error while preparing SQL statement:\n- SQLCODE: -104\n- Dynamic SQL Error\n- SQL error code = -104\n- Token unknown - line 2, column 36\n- DATE', -104, 335544569)
+[2026-03-30 16:03:46] Connecting to Firebird: localhost:E:\ZAMBOANGUITA.FDB
+[2026-03-30 16:03:46] Failed: ('Error while preparing SQL statement:\n- SQLCODE: -104\n- Dynamic SQL Error\n- SQL error code = -104\n- Token unknown - line 2, column 36\n- DATE', -104, 335544569)
+[2026-03-30 16:25:57] Connecting to Firebird: localhost:E:\ZAMBOANGUITA.FDB
+[2026-03-30 16:25:57] Failed: ('Error while preparing SQL statement:\n- SQLCODE: -104\n- Dynamic SQL Error\n- SQL error code = -104\n- Token unknown - line 2, column 36\n- DATE', -104, 335544569)
+[2026-03-30 16:27:28] Connecting to Firebird: localhost:E:\ZAMBOANGUITA.FDB
+[2026-03-30 16:27:28] Exported 1467 rows to C:\xampp\htdocs\ElectronicTreasurerManagementSystem\run_file\DATA_SCRAPER\TrustFund\SCRAPE_SAVE\trust_fund_payment.sql
+[2026-03-30 16:29:59] Connecting to Firebird: localhost:E:\ZAMBOANGUITA.FDB
+[2026-03-30 16:30:00] Exported 1467 rows to C:\xampp\htdocs\ElectronicTreasurerManagementSystem\run_file\DATA_SCRAPER\TrustFund\SCRAPE_SAVE\trust_fund_payment.sql

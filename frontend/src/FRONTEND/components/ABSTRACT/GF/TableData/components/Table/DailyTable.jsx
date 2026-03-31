@@ -173,7 +173,7 @@ const DailyTable_v2 = ({ data, onClose }) => {
       const dateComment = new Date().toISOString();
       const user = "current_user"; // Replace with real user logic
 
-      // 🔹 Step 1: Update comment in `real_property_tax_data`
+      // Step 1: Update the General Fund prepared row comment
       await axiosInstance.post("updateGFComment", {
         receipt_no: currentRow.receipt_no,
         comment: currentComment,

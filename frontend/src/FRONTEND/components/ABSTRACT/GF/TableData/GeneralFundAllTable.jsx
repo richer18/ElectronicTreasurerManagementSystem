@@ -13,8 +13,9 @@ const formatDate = (dateString) => {
 };
 
 function GeneralFundAllTable({ data }) {
-  const headerRow = data[0] || {};
-  const overallTotal = data.reduce((sum, row) => sum + Number(row.AMOUNT || 0), 0);
+  const visibleRows = data.filter((row) => Number(row.AMOUNT || 0) !== 0);
+  const headerRow = visibleRows[0] || data[0] || {};
+  const overallTotal = visibleRows.reduce((sum, row) => sum + Number(row.AMOUNT || 0), 0);
 
   return (
     <Paper
@@ -65,8 +66,8 @@ function GeneralFundAllTable({ data }) {
             </TableRow>
           </TableHead>
           <TableBody>
-            {data.length > 0 ? (
-              data.map((row, index) => (
+            {visibleRows.length > 0 ? (
+              visibleRows.map((row, index) => (
                 <TableRow
                   key={`${row.DESCRIPTION}-${index}`}
                   sx={{

@@ -2,6 +2,8 @@
 
 namespace App\Http\Controllers;
 
+use App\Helpers\GeneralFundPaymentMirrorHelper;
+use App\Helpers\GeneralFundQueryCache;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Str;
@@ -96,7 +98,11 @@ class GeneralFundPaymentCreateController extends Controller
                         'DATALASTEDITED' => $now,
                     ]);
                 }
+
+                GeneralFundPaymentMirrorHelper::syncPayment($paymentId);
             });
+
+            GeneralFundQueryCache::invalidate();
 
             return response()->json([
                 'message' => 'Payment saved successfully.',

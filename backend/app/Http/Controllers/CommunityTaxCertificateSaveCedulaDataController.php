@@ -26,7 +26,7 @@ class CommunityTaxCertificateSaveCedulaDataController extends Controller
         $CTCYEAR = $request->input('CTCYEAR');
 
         // Check if CTCNO already exists
-        $exists = DB::selectOne("SELECT 1 FROM communitytaxcertificate WHERE CTCNO = ? LIMIT 1", [$CTCNO]);
+        $exists = DB::selectOne("SELECT 1 FROM community_tax_certificate_payment WHERE CTCNO = ? LIMIT 1", [$CTCNO]);
 
         if ($exists) {
             return response()->json([
@@ -35,9 +35,12 @@ class CommunityTaxCertificateSaveCedulaDataController extends Controller
         }
 
         try {
+            $nextCtcId = ((int) DB::table('community_tax_certificate_payment')->max('CTC_ID')) + 1;
+
             // Insert new record
             $sql = "
-                INSERT INTO communitytaxcertificate (
+                INSERT INTO community_tax_certificate_payment (
+                    CTC_ID,
                     DATEISSUED,
                     TRANSDATE,
                     CTCNO,
@@ -52,10 +55,11 @@ class CommunityTaxCertificateSaveCedulaDataController extends Controller
                     TOTALAMOUNTPAID,
                     USERID,
                     CTCYEAR
-                ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+                ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
             ";
 
             DB::insert($sql, [
+                $nextCtcId,
                 $DATEISSUED,
                 date('Y-m-d H:i:s', strtotime($TRANSDATE)), // ensure MySQL-compatible format
                 $CTCNO,
@@ -76,7 +80,8 @@ class CommunityTaxCertificateSaveCedulaDataController extends Controller
 
             return response()->json([
                 'message' => 'Data saved successfully',
-                'id' => $id
+                'id' => $id,
+                'CTC_ID' => $nextCtcId,
             ]);
         } catch (\Exception $e) {
             \Log::error("Error saving data: " . $e->getMessage());

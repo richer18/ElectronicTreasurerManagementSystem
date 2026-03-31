@@ -1,14 +1,9 @@
 import {
   Autocomplete,
-  Badge,
   Box,
   Button,
-  // Dialog,
-  // DialogContent,
-  // DialogTitle,
+  Chip,
   IconButton,
-  Menu,
-  MenuItem,
   Paper,
   styled,
   Table,
@@ -17,7 +12,8 @@ import {
   TableContainer,
   TableHead,
   TableRow,
-  TextField, Typography
+  TextField,
+  Typography,
 } from '@mui/material';
 
 // import ArrowBackIcon from '@mui/icons-material/ArrowBack';
@@ -26,7 +22,6 @@ import axiosInstance from '../../../../api/axiosInstance'; // adjust path
 
 import VisibilityIcon from '@mui/icons-material/Visibility';
 
-import { format, parseISO } from 'date-fns';
 import dayjs from 'dayjs';
 // import PropTypes from 'prop-types';
 import { useEffect, useMemo, useState } from 'react';
@@ -86,33 +81,35 @@ const years = [
 ];
 
 
- const formatDate = (dateInput) => {
-    if (!dateInput) return 'Invalid Date';
-    let date;
-    if (typeof dateInput === 'string') {
-      date = parseISO(dateInput);
-    } else if (dateInput instanceof Date) {
-      date = dateInput;
-    } else {
-      return 'Invalid Date';
+const pick = (row, keys) => {
+  for (const key of keys) {
+    if (row?.[key] !== undefined && row?.[key] !== null && row?.[key] !== '') {
+      return row[key];
     }
-    if (isNaN(date)) return 'Invalid Date';
-    return format(date, 'MMMM d, yyyy');
-  };
-
+  }
+  return '';
+};
 
 function Inventory({ onDataFiltered, onBack }) {
     const [data, setData] = useState([]);
+    const [selectedMonth, setSelectedMonth] = useState(null);
+    const [selectedYear, setSelectedYear] = useState({ label: '2026', value: '2026' });
 
     useEffect(() => {
-        axiosInstance.get('/purchases')
+        axiosInstance.get('/purchases', {
+            params: {
+              month: selectedMonth?.value,
+              year: selectedYear?.value,
+            },
+        })
             .then((res) => {
-                setData(res.data);
+                setData(Array.isArray(res.data) ? res.data : []);
             })
             .catch((err) => {
                 console.error('Failed to fetch inventory:', err);
+                setData([]);
             });
-    }, []);
+    }, [selectedMonth, selectedYear]);
 
     // const [currentRow, setCurrentRow] = useState(null);
     // const [anchorEl, setAnchorEl] = useState(null);
@@ -161,21 +158,23 @@ function Inventory({ onDataFiltered, onBack }) {
       
       <Box display="flex" gap={2} alignItems="center">
       <Autocomplete
-      disablePortal
-      id="month-selector"
-      // options={months}
-      sx={{ width: 150, mr: 2 }}
-      // onChange={handleMonthChange}
-      renderInput={(params) => <TextField {...params} label="Month" />}
-    />
-    <Autocomplete
-      disablePortal
-      id="year-selector"
-      // options={years}
-      sx={{ width: 150 }}
-      // onChange={handleYearChange}
-      renderInput={(params) => <TextField {...params} label="Year" />}
-    />
+        disablePortal
+        id="month-selector"
+        options={months}
+        value={selectedMonth}
+        sx={{ width: 150, mr: 2 }}
+        onChange={(event, value) => setSelectedMonth(value)}
+        renderInput={(params) => <TextField {...params} label="Month" />}
+      />
+      <Autocomplete
+        disablePortal
+        id="year-selector"
+        options={years}
+        value={selectedYear}
+        sx={{ width: 150 }}
+        onChange={(event, value) => setSelectedYear(value)}
+        renderInput={(params) => <TextField {...params} label="Year" />}
+      />
       </Box>
     </Box>
 
@@ -205,14 +204,24 @@ function Inventory({ onDataFiltered, onBack }) {
         </TableHead>
         <TableBody>
   {data.map((row, index) => (
-    <StyledTableRow key={row.ID || index}>
-      <CenteredTableCell>{dayjs(row.purchase_date).format('MMM D, YYYY')}</CenteredTableCell>
-      <CenteredTableCell>{row.form_type }</CenteredTableCell>
-      <CenteredTableCell>{row.serial_no }</CenteredTableCell>
-      <CenteredTableCell>{row.receipt_range_from}</CenteredTableCell>
-      <CenteredTableCell>{row.receipt_range_to}</CenteredTableCell>
-      <CenteredTableCell>{row.stock}</CenteredTableCell>
-      <CenteredTableCell>{row.status}</CenteredTableCell>
+    <StyledTableRow key={row.ID || row.id || index}>
+      <CenteredTableCell>{pick(row, ['purchase_date']) ? dayjs(pick(row, ['purchase_date'])).format('MMM D, YYYY') : '-'}</CenteredTableCell>
+      <CenteredTableCell>{pick(row, ['form_type', 'Form_Type']) || '-'}</CenteredTableCell>
+      <CenteredTableCell>{pick(row, ['serial_no', 'Serial_No']) || '-'}</CenteredTableCell>
+      <CenteredTableCell>{pick(row, ['receipt_range_from', 'Receipt_Range_From']) || '-'}</CenteredTableCell>
+      <CenteredTableCell>{pick(row, ['receipt_range_to', 'Receipt_Range_To']) || '-'}</CenteredTableCell>
+      <CenteredTableCell>{pick(row, ['stock', 'Stock']) || 0}</CenteredTableCell>
+      <CenteredTableCell>
+        <Chip
+          label={pick(row, ['status', 'Status']) || '-'}
+          size="small"
+          sx={{
+            fontWeight: 700,
+            backgroundColor: 'rgba(15,39,71,0.08)',
+            color: '#0f2747',
+          }}
+        />
+      </CenteredTableCell>
       <CenteredTableCell>
         <IconButton>
           <VisibilityIcon color="primary" />

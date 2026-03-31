@@ -10,7 +10,10 @@ import {
 } from "@mui/material";
 import React, { useState, useEffect } from "react";
 import axiosInstance from "../../../../api/axiosInstance";
-function PurchaseForm() {
+function PurchaseForm({ onSaved, onCancel }) {
+  const getTypeLabel = (type) => type?.description ?? type?.name ?? "";
+  const getTypeKey = (type) => type?.code ?? type?.id ?? getTypeLabel(type);
+
   const [formData, setFormData] = useState({
     purchase_date: "",
     form_type: "",
@@ -62,10 +65,9 @@ function PurchaseForm() {
   axiosInstance.post("/purchases", payload)
     .then((res) => {
       console.log("Saved:", res.data);
-      alert("Purchase saved successfully!");
 
       // Optional: reset form
-      setFormData({
+      const resetForm = {
         purchase_date: "",
         form_type: "",
         serial_no: "",
@@ -73,7 +75,9 @@ function PurchaseForm() {
         receipt_range_to: "",
         stock: "50",
         status: "AVAILABLE",
-      });
+      };
+      setFormData(resetForm);
+      onSaved?.(res.data);
     })
     .catch((err) => {
       console.error("Error saving purchase:", err.response?.data || err);
@@ -155,7 +159,9 @@ function PurchaseForm() {
         >
           <MenuItem value="">-- Select Form Type --</MenuItem>
           {formTypes.map((type) => (
-            <MenuItem key={type.id} value={type.name}>{type.name}</MenuItem>
+            <MenuItem key={getTypeKey(type)} value={getTypeLabel(type)}>
+              {getTypeLabel(type)}
+            </MenuItem>
           ))}
         </TextField>
 
@@ -228,7 +234,12 @@ function PurchaseForm() {
           />
         </Box>
 
-        <Box sx={{ display: "flex", justifyContent: "flex-end", pt: 3 }}>
+        <Box sx={{ display: "flex", justifyContent: "flex-end", gap: 1.5, pt: 3 }}>
+          {onCancel && (
+            <Button variant="outlined" onClick={onCancel}>
+              Back
+            </Button>
+          )}
           <Button type="submit" variant="contained" size="large" sx={{ px: 4, fontWeight: 700 }}>
             Save Purchase
           </Button>

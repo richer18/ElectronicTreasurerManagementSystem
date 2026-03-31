@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers;
 
+use App\Helpers\TrustFundPaymentMirrorHelper;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Log;
 
@@ -13,6 +14,8 @@ class TrustFundPaymentDeleteController extends Controller
             $deleted = 0;
 
             DB::transaction(function () use ($id, &$deleted) {
+                TrustFundPaymentMirrorHelper::deletePayment($id);
+
                 $detailsDeleted = DB::table('paymentdetail')
                     ->where('PAYMENT_ID', $id)
                     ->where('FUNDTYPE_CT', 'TF')

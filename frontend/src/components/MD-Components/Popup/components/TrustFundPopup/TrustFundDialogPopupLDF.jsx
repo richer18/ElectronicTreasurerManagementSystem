@@ -7,7 +7,7 @@ import Tooltip from '@mui/material/Tooltip';
 import PropTypes from 'prop-types';
 import TrustFundReport from "../../../../../FRONTEND/components/ABSTRACT/TF/TableData/components/Table/LivestockDevFundFee";
 
-function TrustFundDialogPopupLDF({ open, onClose }) {
+function TrustFundDialogPopupLDF({ open, onClose, month, year }) {
     return (
     <Dialog open={open} onClose={onClose} maxWidth="md" fullWidth>
         <DialogTitle>
@@ -21,7 +21,7 @@ function TrustFundDialogPopupLDF({ open, onClose }) {
         </div>
         </DialogTitle>
         <DialogContent>
-        <TrustFundReport/>
+        <TrustFundReport month={month} year={year} />
         </DialogContent>
     </Dialog>
     )
@@ -31,5 +31,7 @@ function TrustFundDialogPopupLDF({ open, onClose }) {
 TrustFundDialogPopupLDF.propTypes = {
     open: PropTypes.bool.isRequired,
     onClose: PropTypes.func.isRequired,
+    month: PropTypes.string,
+    year: PropTypes.string,
 };
 export default TrustFundDialogPopupLDF

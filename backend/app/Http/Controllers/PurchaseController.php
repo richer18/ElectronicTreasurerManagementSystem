@@ -4,6 +4,7 @@ namespace App\Http\Controllers;
 
 use Illuminate\Http\Request;
 use App\Models\PurchaseAccountableForm;
+use App\Support\CollectorLogger;
 
 class PurchaseController extends Controller
 {
@@ -36,7 +37,7 @@ class PurchaseController extends Controller
 
         $validated = validator($payload, [
             'purchase_date' => 'required|date',
-            'form_type' => 'required|string',
+            'form_type' => 'required|string|exists:t_ortype,DESCRIPTION',
             'serial_no' => 'required|string',
             'receipt_range_from' => 'required|string|regex:/^\d+$/',
             'receipt_range_to' => 'required|string|regex:/^\d+$/',
@@ -60,6 +61,17 @@ class PurchaseController extends Controller
             'Status' => $validated['status'],
         ]);
 
+        CollectorLogger::write('Custodian', 'purchase_accountable_form', [
+            'purchase_id' => $purchase->id ?? null,
+            'purchase_date' => $purchase->purchase_date,
+            'form_type' => $purchase->Form_Type ?? null,
+            'serial_no' => $purchase->Serial_No ?? null,
+            'range_from' => $purchase->Receipt_Range_From ?? null,
+            'range_to' => $purchase->Receipt_Range_To ?? null,
+            'stock' => (int) ($purchase->Stock ?? 0),
+            'status' => $purchase->Status ?? null,
+        ]);
+
         return response()->json([
             'message' => 'Purchase saved successfully',
             'purchase' => $purchase
@@ -69,7 +81,17 @@ class PurchaseController extends Controller
     public function index()
 {
     // Fetch all purchases ordered by date descending
-    $purchases = \App\Models\PurchaseAccountableForm::orderBy('purchase_date', 'desc')->get();
+    $query = \App\Models\PurchaseAccountableForm::query();
+
+    if (request()->filled('month')) {
+        $query->whereMonth('purchase_date', (int) request()->month);
+    }
+
+    if (request()->filled('year')) {
+        $query->whereYear('purchase_date', (int) request()->year);
+    }
+
+    $purchases = $query->orderBy('purchase_date', 'desc')->get();
 
     return response()->json($purchases);
 }

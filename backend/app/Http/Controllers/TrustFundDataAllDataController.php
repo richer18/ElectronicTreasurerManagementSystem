@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers;
 
+use App\Helpers\TrustFundPaymentSummaryHelper;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Log;
@@ -11,49 +12,29 @@ class TrustFundDataAllDataController extends Controller
     public function index(Request $request)
     {
         try {
-            $query = DB::table('payment as p')
+            $query = DB::table('trust_fund_payment_main_view as tf')
                 ->select([
-                    'p.PAYMENT_ID',
-                    'p.LOCAL_TIN',
-                    'p.PAIDBY as NAME',
-                    'p.PAYMENTDATE as DATE',
-                    'p.AMOUNT as TOTAL',
-                    'p.RECEIPTNO as RECEIPT_NO',
-                    'p.USERID',
-                    'p.PAYGROUP_CT',
-                    'p.AFTYPE as TYPE_OF_RECEIPT',
-                    'p.COLLECTOR as CASHIER',
+                    'tf.ID',
+                    'tf.PAYMENT_ID',
+                    'tf.NAME',
+                    'tf.DATE',
+                    'tf.TOTAL',
+                    'tf.RECEIPT_NO',
+                    'tf.TYPE_OF_RECEIPT',
+                    'tf.CASHIER',
+                    'tf.COMMENTS',
                 ])
-                ->whereRaw('COALESCE(p.VOID_BV, 0) = 0')
-                ->whereNotIn('p.AFTYPE', ['CTC', 'AF56'])
-                ->whereExists(function ($subquery) {
-                    $subquery->select(DB::raw(1))
-                        ->from('paymentdetail as pd')
-                        ->whereColumn('pd.PAYMENT_ID', 'p.PAYMENT_ID')
-                        ->where('pd.FUNDTYPE_CT', 'TF');
-                });
+                ->whereNotNull('tf.RECEIPT_NO');
 
-            if ($request->filled('month')) {
-                $query->whereMonth('p.PAYMENTDATE', $request->month);
+            if (! $request->boolean('include_cancelled')) {
+                $query = TrustFundPaymentSummaryHelper::applyActiveFilter($query, 'tf');
             }
-
-            if ($request->filled('year')) {
-                $query->whereYear('p.PAYMENTDATE', $request->year);
-            }
-
-            if ($request->filled('search')) {
-                $search = trim($request->query('search'));
-                $query->where(function ($searchQuery) use ($search) {
-                    $searchQuery->where('p.PAIDBY', 'like', "%{$search}%")
-                        ->orWhere('p.RECEIPTNO', 'like', "%{$search}%")
-                        ->orWhere('p.LOCAL_TIN', 'like', "%{$search}%")
-                        ->orWhere('p.COLLECTOR', 'like', "%{$search}%");
-                });
-            }
+            $query = TrustFundPaymentSummaryHelper::applyDateFilters($query, $request, 'tf.DATE');
+            $query = TrustFundPaymentSummaryHelper::applySearch($query, $request->query('search'), 'tf');
 
             $data = $query
-                ->orderByDesc('p.PAYMENTDATE')
-                ->orderByDesc('p.PAYMENT_ID')
+                ->orderByDesc('tf.DATE')
+                ->orderByDesc('tf.RECEIPT_NO')
                 ->get();
 
             return response()->json($data);

@@ -12,7 +12,8 @@ const cashierOptions = [
 ];
 
 function GeneralFundPaymentEditForm({ data }) {
-  const paymentId = data?.id;
+  const paymentId = data?.payment_id ?? data?.id;
+  const [receiptTypeOptions, setReceiptTypeOptions] = useState([]);
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [form, setForm] = useState({
@@ -39,6 +40,19 @@ function GeneralFundPaymentEditForm({ data }) {
   };
 
   useEffect(() => {
+    const fetchReceiptTypes = async () => {
+      try {
+        const response = await axiosInstance.get("form-types");
+        setReceiptTypeOptions(Array.isArray(response.data) ? response.data : []);
+      } catch (error) {
+        setReceiptTypeOptions([]);
+      }
+    };
+
+    fetchReceiptTypes();
+  }, []);
+
+  useEffect(() => {
     const fetchEditData = async () => {
       if (!paymentId) return;
       try {
@@ -46,9 +60,12 @@ function GeneralFundPaymentEditForm({ data }) {
         const response = await axiosInstance.get(`generalFundPaymentEdit/${paymentId}`);
         const payment = response.data?.payment || {};
         const rows = Array.isArray(response.data?.details) ? response.data.details : [];
+        const normalizedDate = String(payment.PAYMENTDATE || "")
+          .split(" ")[0]
+          .split("T")[0];
 
         setForm({
-          date: payment.PAYMENTDATE || "",
+          date: normalizedDate,
           name: payment.PAIDBY || "",
           receipt_no: payment.RECEIPTNO || "",
           type_receipt: payment.AFTYPE || "",
@@ -73,6 +90,10 @@ function GeneralFundPaymentEditForm({ data }) {
 
   const total = useMemo(
     () => details.reduce((sum, row) => sum + Number(row.amount || 0), 0),
+    [details]
+  );
+  const visibleDetails = useMemo(
+    () => details.filter((row) => Number(row.amount || 0) !== 0),
     [details]
   );
 
@@ -165,10 +186,19 @@ function GeneralFundPaymentEditForm({ data }) {
         </TextField>
         <TextField
           label="Type of Receipt"
+          select
           value={form.type_receipt}
           onChange={(e) => setForm((prev) => ({ ...prev, type_receipt: e.target.value }))}
           fullWidth
-        />
+          SelectProps={{ native: true }}
+        >
+          <option value="">Select receipt type</option>
+          {receiptTypeOptions.map((option) => (
+            <option key={option.code || option.id} value={option.code}>
+              {option.description || option.name || option.code}
+            </option>
+          ))}
+        </TextField>
       </Box>
 
       <TableContainer component={Paper} sx={{ borderRadius: 2, border: "1px solid #d8e2ee" }}>
@@ -181,7 +211,7 @@ function GeneralFundPaymentEditForm({ data }) {
             </TableRow>
           </TableHead>
           <TableBody>
-            {details.map((row, index) => (
+            {visibleDetails.map((row, index) => (
               <TableRow key={row.paymentdetail_id}>
                 <TableCell>{index + 1}</TableCell>
                 <TableCell>{row.description}</TableCell>
@@ -189,7 +219,12 @@ function GeneralFundPaymentEditForm({ data }) {
                   <TextField
                     type="number"
                     value={row.amount}
-                    onChange={(e) => handleAmountChange(index, e.target.value)}
+                    onChange={(e) =>
+                      handleAmountChange(
+                        details.findIndex((item) => item.paymentdetail_id === row.paymentdetail_id),
+                        e.target.value
+                      )
+                    }
                     fullWidth
                     inputProps={{ min: 0, step: "0.01" }}
                   />
@@ -229,6 +264,7 @@ function GeneralFundPaymentEditForm({ data }) {
 GeneralFundPaymentEditForm.propTypes = {
   data: PropTypes.shape({
     id: PropTypes.oneOfType([PropTypes.string, PropTypes.number]),
+    payment_id: PropTypes.oneOfType([PropTypes.string, PropTypes.number]),
   }),
 };
 

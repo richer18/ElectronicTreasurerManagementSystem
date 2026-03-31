@@ -7,7 +7,7 @@ import Tooltip from '@mui/material/Tooltip';
 import PropTypes from 'prop-types';
 import TrustFundReport from "../../../../../FRONTEND/components/ABSTRACT/TF/TableData/components/Table/ZoningPermitFee";
 
-function TrustFundDialogPopupZF({ open, onClose }) {
+function TrustFundDialogPopupZF({ open, onClose, month, year }) {
     return (
     <Dialog open={open} onClose={onClose} maxWidth="md" fullWidth>
         <DialogTitle>
@@ -21,7 +21,7 @@ function TrustFundDialogPopupZF({ open, onClose }) {
         </div>
         </DialogTitle>
         <DialogContent>
-        <TrustFundReport/>
+        <TrustFundReport month={month} year={year} />
         </DialogContent>
     </Dialog>
     )
@@ -30,6 +30,8 @@ function TrustFundDialogPopupZF({ open, onClose }) {
 TrustFundDialogPopupZF.propTypes = {
     open: PropTypes.bool.isRequired,
     onClose: PropTypes.func.isRequired,
+    month: PropTypes.string,
+    year: PropTypes.string,
 };
 
 export default TrustFundDialogPopupZF

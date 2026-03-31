@@ -29,7 +29,6 @@ import SendRoundedIcon from "@mui/icons-material/SendRounded";
 import SettingsRoundedIcon from "@mui/icons-material/SettingsRounded";
 import SummarizeRoundedIcon from "@mui/icons-material/SummarizeRounded";
 import TrendingUpRoundedIcon from "@mui/icons-material/TrendingUpRounded";
-import WarningAmberRoundedIcon from "@mui/icons-material/WarningAmberRounded";
 import WaterDropRoundedIcon from "@mui/icons-material/WaterDropRounded";
 import Box from "@mui/material/Box";
 import Breadcrumbs from "@mui/material/Breadcrumbs";
@@ -62,6 +61,8 @@ import { DemoProvider } from "@toolpad/core/internal";
 import PropTypes from "prop-types";
 import * as React from "react";
 import axiosInstance from "../../api/axiosInstance";
+import { useAuth } from "../../auth/AuthContext";
+import { hasAnyPermission } from "../../auth/permissions";
 import { Outlet, useLocation, useNavigate } from "react-router-dom";
 import TaxCollected from "./components/CHARTS/TaxCollected";
 import CedulaCollected from "./components/CHARTS/CedulaCollected";
@@ -197,6 +198,7 @@ const NAVIGATION = [
   },
   {
     title: "Import Data",
+    requiredPermissions: ["users.update"],
     icon: <ImportExportRoundedIcon sx={navIconAccent} />,
     children: [
       {
@@ -223,6 +225,7 @@ const NAVIGATION = [
   },
   {
     title: "Document Templates",
+    requiredPermissions: ["reports.export"],
     icon: <DescriptionRoundedIcon sx={navIconAccent} />,
     children: [
       {
@@ -264,6 +267,7 @@ const NAVIGATION = [
   },
   {
     title: "Email and Notices",
+    requiredPermissions: ["reports.view"],
     icon: <MailRoundedIcon sx={navIconAccent} />,
     children: [
       {
@@ -280,11 +284,13 @@ const NAVIGATION = [
   },
   {
     title: "Income Target",
+    requiredPermissions: ["users.update"],
     icon: <TrendingUpRoundedIcon sx={navIconAccent} />,
   },
   {
     segment: "register-user",
     title: "User Registration",
+    requiredPermissions: ["users.view"],
     icon: <AppRegistrationRoundedIcon sx={navIconPrimary} />,
   },
   {
@@ -353,28 +359,94 @@ const demoTheme = createTheme({
   },
 });
 
-const filterNavigationByRole = (items, role) => {
-  const normalizedRole = String(role || "").toLowerCase();
-  const isAdmin = normalizedRole.includes("admin");
+const filterNavigationByRole = (items, user) => {
+  const visibleItems = items
+    .map((item) => {
+      if (item.kind) {
+        return item;
+      }
 
-  if (isAdmin) return items;
+      const filteredChildren = item.children
+        ? filterNavigationByRole(item.children, user)
+        : undefined;
 
-  return items.filter((item) => {
-    if (item.kind) return true;
-    if (item.title === "Import Data") return false;
-    if (item.title === "Document Templates") return false;
-    if (item.title === "Income Target") return false;
-    if (item.title === "User Registration") return false;
-    return true;
-  });
-};
+      const passesPermissionCheck = hasAnyPermission(
+        user,
+        item.requiredPermissions || []
+      );
 
-const getStoredAuthUser = () => {
-  try {
-    return JSON.parse(localStorage.getItem("authUser") || "null");
-  } catch (error) {
-    return null;
+      if (!passesPermissionCheck) {
+        return null;
+      }
+
+      if (item.children && (!filteredChildren || filteredChildren.length === 0)) {
+        return null;
+      }
+
+      return filteredChildren
+        ? {
+            ...item,
+            children: filteredChildren,
+          }
+        : item;
+    })
+    .filter(Boolean);
+
+  const cleanedItems = [];
+
+  for (let index = 0; index < visibleItems.length; index += 1) {
+    const item = visibleItems[index];
+
+    if (item.kind === "header") {
+      let hasSectionContent = false;
+
+      for (let lookAhead = index + 1; lookAhead < visibleItems.length; lookAhead += 1) {
+        const nextItem = visibleItems[lookAhead];
+
+        if (nextItem.kind === "header") {
+          break;
+        }
+
+        if (!nextItem.kind) {
+          hasSectionContent = true;
+          break;
+        }
+      }
+
+      if (hasSectionContent) {
+        cleanedItems.push(item);
+      }
+
+      continue;
+    }
+
+    if (item.kind === "divider") {
+      const previousItem = cleanedItems[cleanedItems.length - 1];
+      const nextContentItem = visibleItems
+        .slice(index + 1)
+        .find((candidate) => !candidate.kind || candidate.kind === "header");
+
+      if (!previousItem || previousItem.kind === "divider" || !nextContentItem) {
+        continue;
+      }
+
+      if (nextContentItem.kind === "header") {
+        continue;
+      }
+    }
+
+    cleanedItems.push(item);
   }
+
+  while (
+    cleanedItems.length > 0 &&
+    (cleanedItems[cleanedItems.length - 1].kind === "divider" ||
+      cleanedItems[cleanedItems.length - 1].kind === "header")
+  ) {
+    cleanedItems.pop();
+  }
+
+  return cleanedItems;
 };
 
 const buildDashboardNotifications = ({
@@ -521,7 +593,7 @@ DemoPageContent.propTypes = {
 
 function DashboardToolbarActions() {
   const navigate = useNavigate();
-  const authUser = React.useMemo(() => getStoredAuthUser(), []);
+  const { user: authUser, logout } = useAuth();
   const lastLoginAt = React.useMemo(
     () => localStorage.getItem("lastLoginAt"),
     []
@@ -605,11 +677,10 @@ function DashboardToolbarActions() {
     };
   }, [formatCurrency, formatDate]);
 
-  const handleLogout = React.useCallback(() => {
-    localStorage.removeItem("isAuthenticated");
-    localStorage.removeItem("authUser");
+  const handleLogout = React.useCallback(async () => {
+    await logout();
     navigate("/login");
-  }, [navigate]);
+  }, [logout, navigate]);
 
   return (
     <Stack direction="row" spacing={1} alignItems="center">
@@ -618,7 +689,7 @@ function DashboardToolbarActions() {
           {authUser?.username || "Treasury Staff"}
         </Typography>
         <Typography variant="caption" sx={{ color: "#6b7c93" }}>
-          {authUser?.role || "Staff"}
+          {authUser?.effective_role || authUser?.role || "Staff"}
           {lastLoginAt ? ` • ${formatDate(lastLoginAt)}` : ""}
         </Typography>
       </Box>
@@ -673,7 +744,7 @@ function DashboardToolbarActions() {
             {authUser?.username || "Treasury Staff"}
           </Typography>
           <Typography variant="body2" color="text.secondary">
-            {authUser?.role || "Staff"}
+            {authUser?.effective_role || authUser?.role || "Staff"}
           </Typography>
         </Box>
         <MenuItem onClick={() => setProfileAnchorEl(null)}>
@@ -715,11 +786,11 @@ function DashboardLayoutBranding(props) {
 
   const location = useLocation();
   const navigate = useNavigate();
-  const authUser = React.useMemo(() => getStoredAuthUser(), []);
+  const { user: authUser } = useAuth();
   const pathname = `/my-app${location.pathname.startsWith("/my-app") ? location.pathname.slice(7) : location.pathname}`;
   const navigationItems = React.useMemo(
-    () => filterNavigationByRole(NAVIGATION, authUser?.role),
-    [authUser?.role]
+    () => filterNavigationByRole(NAVIGATION, authUser),
+    [authUser]
   );
 
   const router = React.useMemo(
@@ -810,9 +881,7 @@ function DashboardHome() {
   const [loading, setLoading] = React.useState(false);
   const [fetchError, setFetchError] = React.useState("");
 
-  const authUser = React.useMemo(() => {
-    return getStoredAuthUser();
-  }, []);
+  const { user: authUser } = useAuth();
   const lastLoginAt = localStorage.getItem("lastLoginAt");
 
   const months = [
@@ -870,8 +939,8 @@ function DashboardHome() {
       const responses = await Promise.allSettled([
         axiosInstance.get("fetch-report"),
         axiosInstance.get("allData"),
-        axiosInstance.get("general_fund_data"),
-        axiosInstance.get("trust_fund_data"),
+        axiosInstance.get("generalFundDataAll"),
+        axiosInstance.get("table-trust-fund-all"),
         axiosInstance.get("cedula"),
         axiosInstance.get("calendar-events"),
       ]);
@@ -1271,7 +1340,7 @@ function DashboardHome() {
               }}
             />
             <Chip
-              label={`Role: ${authUser?.role || "Staff"}`}
+              label={`Role: ${authUser?.effective_role || authUser?.role || "Staff"}`}
               sx={{
                 bgcolor: "#f8fbff",
                 border: "1px solid #d9e2ec",

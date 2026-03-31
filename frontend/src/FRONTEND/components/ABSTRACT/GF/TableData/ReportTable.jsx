@@ -1,4 +1,5 @@
 import ArrowBackIcon from '@mui/icons-material/ArrowBack';
+import CircularProgress from '@mui/material/CircularProgress';
 import FileDownloadIcon from '@mui/icons-material/FileDownload';
 import PrintIcon from '@mui/icons-material/Print';
 import {
@@ -16,7 +17,6 @@ import {
   TextField,
   Typography,
 } from '@mui/material';
-import ExcelJS from 'exceljs';
 import PropTypes from 'prop-types';
 import React, { useEffect, useState } from 'react';
 import axiosInstance from "../../../../../api/axiosInstance";
@@ -94,171 +94,144 @@ const initialState = {
   secretaryfee: 0,
   medDentLabFees: 0,
   garbageFees: 0,
-  cuttingTree: 0
+  cuttingTree: 0,
+  total: 0,
 };
 
-function ReportTable({ onBack }) {
-  const [month, setMonth] = useState({ label: 'January', value: '1' });
-  const [year, setYear] = useState({ label: '2025', value: '2025' });
+const findMonthOption = (value) =>
+  months.find((option) => option.value === value) || { label: 'January', value: '1' };
 
-  const [data, setData] = useState({
-    manufacturing: 0,
-    distributor: 0,
-    retailing: 0,
-    financial: 0,
-    otherBusinessTax: 0,
-    sandGravel: 0,
-    finesPenalties: 0,
-    mayorsPermit: 0,
-    weighsMeasure: 0,
-    tricycleOperators: 0,
-    occupationTax: 0,
-    certOfOwnership: 0,
-    certOfTransfer: 0,
-    cockpitProvShare: 0,
-    cockpitLocalShare: 0,
-    dockingMooringFee: 0,
-    sultadas: 0,
-    miscellaneousFee: 0,
-    regOfBirth: 0,
-    marriageFees: 0,
-    burialFees: 0,
-    correctionOfEntry: 0,
-    fishingPermitFee: 0,
-    saleOfAgriProd: 0,
-    saleOfAcctForm: 0,
-    waterFees: 0,
-    stallFees: 0,
-    cashTickets: 0,
-    slaughterHouseFee: 0,
-    rentalOfEquipment: 0,
-    docStamp: 0,
-    policeReportClearance: 0,
-    comTaxCert: 0,
-    medDentLabFees: 0,
-    garbageFees: 0,
-    cuttingTree: 0,
-  });
+const findYearOption = (value) => {
+  const currentYear = value || new Date().getFullYear().toString();
+  return years.find((option) => option.value === currentYear) || years[0];
+};
+
+const mapReportRowToState = (row = {}) => ({
+  manufacturing: parseFloat(row.Manufacturing) || 0,
+  distributor: parseFloat(row.Distributor) || 0,
+  retailing: parseFloat(row.Retailing) || 0,
+  financial: parseFloat(row.Financial) || 0,
+  otherBusinessTax: parseFloat(row.Other_Business_Tax) || 0,
+  sandGravel: parseFloat(row.Sand_Gravel) || 0,
+  finesPenalties: parseFloat(row.Fines_Penalties) || 0,
+  mayorsPermit: parseFloat(row.Mayors_Permit) || 0,
+  weighsMeasure: parseFloat(row.Weighs_Measure) || 0,
+  tricycleOperators: parseFloat(row.Tricycle_Operators) || 0,
+  occupationTax: parseFloat(row.Occupation_Tax) || 0,
+  certOfOwnership: parseFloat(row.Cert_of_Ownership) || 0,
+  certOfTransfer: parseFloat(row.Cert_of_Transfer) || 0,
+  cockpitProvShare: parseFloat(row.Cockpit_Prov_Share) || 0,
+  cockpitLocalShare: parseFloat(row.Cockpit_Local_Share) || 0,
+  dockingMooringFee: parseFloat(row.Docking_Mooring_Fee) || 0,
+  sultadas: parseFloat(row.Sultadas) || 0,
+  miscellaneousFee: parseFloat(row.Miscellaneous_Fee) || 0,
+  regOfBirth: parseFloat(row.Reg_of_Birth) || 0,
+  marriageFees: parseFloat(row.Marriage_Fees) || 0,
+  burialFees: parseFloat(row.Burial_Fees) || 0,
+  correctionOfEntry: parseFloat(row.Correction_of_Entry) || 0,
+  fishingPermitFee: parseFloat(row.Fishing_Permit_Fee) || 0,
+  saleOfAgriProd: parseFloat(row.Sale_of_Agri_Prod) || 0,
+  saleOfAcctForm: parseFloat(row.Sale_of_Acct_Form) || 0,
+  waterFees: parseFloat(row.Water_Fees) || 0,
+  stallFees: parseFloat(row.Stall_Fees) || 0,
+  cashTickets: parseFloat(row.Cash_Tickets) || 0,
+  slaughterHouseFee: parseFloat(row.Slaughter_House_Fee) || 0,
+  rentalOfEquipment: parseFloat(row.Rental_of_Equipment) || 0,
+  docStamp: parseFloat(row.Doc_Stamp) || 0,
+  policeReportClearance: parseFloat(row.Police_Report_Clearance) || 0,
+  secretaryfee: parseFloat(row.Secretaries_Fee) || 0,
+  medDentLabFees: parseFloat(row.Med_Dent_Lab_Fees) || 0,
+  garbageFees: parseFloat(row.Garbage_Fees) || 0,
+  cuttingTree: parseFloat(row.Cutting_Tree) || 0,
+  total: parseFloat(row.total) || 0,
+});
+
+function ReportTable({ onBack, initialMonth, initialYear, onLoadingChange }) {
+  const [month, setMonth] = useState(
+    () => findMonthOption(initialMonth)
+  );
+  const [year, setYear] = useState(() => findYearOption(initialYear));
+  const [data, setData] = useState(initialState);
+  const [loading, setLoading] = useState(false);
+
+  useEffect(() => {
+    if (initialMonth) {
+      setMonth((currentMonth) => (
+        currentMonth.value === initialMonth ? currentMonth : findMonthOption(initialMonth)
+      ));
+    }
+  }, [initialMonth]);
+
+  useEffect(() => {
+    if (initialYear) {
+      setYear((currentYear) => (
+        currentYear.value === initialYear ? currentYear : findYearOption(initialYear)
+      ));
+    }
+  }, [initialYear]);
   
   useEffect(() => {
+    let active = true;
+
     const fetchData = async () => {
-      
+      if (!month?.value || !year?.value) {
+        return;
+      }
+
+      setLoading(true);
+      onLoadingChange?.(true);
       try {
-        
         const response = await axiosInstance.get("generalFundDataReport", {
           params: {
             month: month.value,
             year: year.value
           }
         });
-       
+
+        if (!active) {
+          return;
+        }
 
         if (response.data.length > 0) {
-          const filteredData = response.data.reduce(
-            (acc, row) => ({
-              manufacturing:
-                acc.manufacturing + (parseFloat(row.Manufacturing) || 0),
-              distributor: acc.distributor + (parseFloat(row.Distributor) || 0),
-              retailing: acc.retailing + (parseFloat(row.Retailing) || 0),
-              financial: acc.financial + (parseFloat(row.Financial) || 0),
-              otherBusinessTax:
-                acc.otherBusinessTax +
-                (parseFloat(row.Other_Business_Tax) || 0),
-              sandGravel: acc.sandGravel + (parseFloat(row.Sand_Gravel) || 0),
-              finesPenalties:
-                acc.finesPenalties + (parseFloat(row.Fines_Penalties) || 0),
-              mayorsPermit:
-                acc.mayorsPermit + (parseFloat(row.Mayors_Permit) || 0),
-              weighsMeasure:
-                acc.weighsMeasure + (parseFloat(row.Weighs_Measure) || 0),
-              tricycleOperators:
-                acc.tricycleOperators +
-                (parseFloat(row.Tricycle_Operators) || 0),
-              occupationTax:
-                acc.occupationTax + (parseFloat(row.Occupation_Tax) || 0),
-              certOfOwnership:
-                acc.certOfOwnership + (parseFloat(row.Cert_of_Ownership) || 0),
-              certOfTransfer:
-                acc.certOfTransfer + (parseFloat(row.Cert_of_Transfer) || 0),
-              cockpitProvShare:
-                acc.cockpitProvShare +
-                (parseFloat(row.Cockpit_Prov_Share) || 0),
-              cockpitLocalShare:
-                acc.cockpitLocalShare +
-                (parseFloat(row.Cockpit_Local_Share) || 0),
-              dockingMooringFee:
-                acc.dockingMooringFee +
-                (parseFloat(row.Docking_Mooring_Fee) || 0),
-              sultadas: acc.sultadas + (parseFloat(row.Sultadas) || 0),
-              miscellaneousFee:
-                acc.miscellaneousFee + (parseFloat(row.Miscellaneous_Fee) || 0),
-              regOfBirth: acc.regOfBirth + (parseFloat(row.Reg_of_Birth) || 0),
-              marriageFees:
-                acc.marriageFees + (parseFloat(row.Marriage_Fees) || 0),
-              burialFees: acc.burialFees + (parseFloat(row.Burial_Fees) || 0),
-              correctionOfEntry:
-                acc.correctionOfEntry +
-                (parseFloat(row.Correction_of_Entry) || 0),
-              fishingPermitFee:
-                acc.fishingPermitFee +
-                (parseFloat(row.Fishing_Permit_Fee) || 0),
-              saleOfAgriProd:
-                acc.saleOfAgriProd + (parseFloat(row.Sale_of_Agri_Prod) || 0),
-              saleOfAcctForm:
-                acc.saleOfAcctForm + (parseFloat(row.Sale_of_Acct_Form) || 0),
-              waterFees: acc.waterFees + (parseFloat(row.Water_Fees) || 0),
-              stallFees: acc.stallFees + (parseFloat(row.Stall_Fees) || 0),
-              cashTickets:
-                acc.cashTickets + (parseFloat(row.Cash_Tickets) || 0),
-              slaughterHouseFee:
-                acc.slaughterHouseFee +
-                (parseFloat(row.Slaughter_House_Fee) || 0),
-              rentalOfEquipment:
-                acc.rentalOfEquipment +
-                (parseFloat(row.Rental_of_Equipment) || 0),
-              docStamp: acc.docStamp + (parseFloat(row.Doc_Stamp) || 0),
-              policeReportClearance:
-                acc.policeReportClearance +
-                (parseFloat(row.Police_Report_Clearance) || 0),
-              secretaryfee:
-                acc.secretaryfee + (parseFloat(row.Secretaries_Fee) || 0),
-              medDentLabFees:
-                acc.medDentLabFees + (parseFloat(row.Med_Dent_Lab_Fees) || 0),
-              garbageFees:
-                acc.garbageFees + (parseFloat(row.Garbage_Fees) || 0),
-              cuttingTree:
-                acc.cuttingTree + (parseFloat(row.Cutting_Tree) || 0),
-            }),
-            initialState
-          );
-          setData(filteredData);
+          setData(mapReportRowToState(response.data[0]));
         } else {
           console.warn('No data available for selected month and year');
           setData(initialState);
         }
       } catch (error) {
+        if (!active) {
+          return;
+        }
         console.error('Error fetching data:', error);
         console.log('Failed to fetch data. Please try again.');
         setData(initialState);
+      } finally {
+        if (!active) {
+          return;
+        }
+        setLoading(false);
+        onLoadingChange?.(false);
       }
     };
 
     fetchData();
-  }, [month, year]);
+
+    return () => {
+      active = false;
+    };
+  }, [month.value, year.value]);
 
   const handleMonthChange = (event, value) => {
     setMonth(value || { label: 'January', value: '1' });
   };
 
   const handleYearChange = (event, value) => {
-    setYear(value || { label: '2024', value: '2024' });
+    const currentYear = new Date().getFullYear().toString();
+    setYear(value || years.find((option) => option.value === currentYear) || years[0]);
   };
 
-  const calculateTotal = (fields) => {
-  return fields
-    .map((value) => Number(value || 0)) // Ensure all values are numbers
-    .reduce((sum, current) => sum + current, 0); // Sum up the values
-};
+  const reportTotal = Number(data.total || 0);
+  const reportMunicipalTotal = reportTotal - Number(data.cockpitProvShare || 0);
 
 // Inject print-specific styles
 React.useEffect(() => {
@@ -333,7 +306,9 @@ const handlePrint = () => {
   document.title = originalTitle; // Restore original title
 };
 
-const handleDownloadExcel = () => {
+const handleDownloadExcel = async () => {
+  const ExcelJS = (await import('exceljs')).default;
+
   // Create a new workbook
   const workbook = new ExcelJS.Workbook();
   const worksheet = workbook.addWorksheet('Collections Summary');
@@ -342,7 +317,7 @@ const handleDownloadExcel = () => {
   worksheet.addRow(['SUMMARY OF COLLECTIONS', '', '', '', '', '', '', '', '', '', '']);
   worksheet.addRow(['ZAMBOANGUITA, NEGROS ORIENTAL', '', '', '', '', '', '', '', '', '', '']);
   worksheet.addRow(['LGU', '', '', '', '', '', '', '', '', '', '']);
-  worksheet.addRow(['Month of January 2025', '', '', '', '', '', '', '', '', '', '']);
+  worksheet.addRow([`Month of ${month.label} ${year.value}`, '', '', '', '', '', '', '', '', '', '']);
   worksheet.addRow([]); // Empty row for spacing
 
   // Add column headers
@@ -378,9 +353,9 @@ const handleDownloadExcel = () => {
 
   // Format currency with P prefix and proper formatting
   const formatCurrency = (value) => {
-    if (value === undefined || value === null) return 'P0.00';
-    if (typeof value === 'string' && value.includes('/')) return `P${value}`; // Handle values like "9.40/0.00"
-    return `P${Number(value).toLocaleString('en-US', { minimumFractionDigits: 2 })}`;
+    if (value === undefined || value === null) return '0.00';
+    if (typeof value === 'string' && value.includes('/')) return value;
+    return Number(value).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
   };
 
   // Add data rows from your data object
@@ -442,53 +417,16 @@ const handleDownloadExcel = () => {
   addDataRow('Slaughterhouse Fee', data.slaughterHouseFee);
   addDataRow('Rent of Equipment', data.rentalOfEquipment);
   addDataRow('Doc Stamp Tax', data.docStamp);
-  addDataRow('Police Clearance', data.policeReportClearance);
-  addDataRow('Secretariat Fees', data.secretaryfee);
+  addDataRow(
+    'Secretary Fees',
+    (data.policeReportClearance || 0) + (data.secretaryfee || 0)
+  );
   addDataRow('Med./Lab. Fees', data.medDentLabFees);
   addDataRow('Garbage Fees', data.garbageFees);
   addDataRow('Cutting Tree', data.cuttingTree);
 
-  // Calculate totals
-  const allValues = [
-  data.manufacturing,
-  data.distributor,
-  data.retailing,
-  data.financial,
-  data.otherBusinessTax,
-  data.sandGravel,
-  data.finesPenalties,
-  data.mayorsPermit,
-  data.weighsMeasure,
-  data.tricycleOperators,
-  data.occupationTax,
-  data.certOfOwnership,
-  data.certOfTransfer,
-  (data.cockpitLocalShare || 0) + (data.cockpitProvShare || 0),
-  data.dockingMooringFee,
-  data.sultadas,
-  data.miscellaneousFee,
-  data.regOfBirth,
-  data.marriageFees,
-  data.burialFees,
-  data.correctionOfEntry,
-  data.fishingPermitFee,
-  data.saleOfAgriProd,
-  data.saleOfAcctForm,
-  data.waterFees,
-  data.stallFees,
-  data.cashTickets,
-  data.slaughterHouseFee,
-  data.rentalOfEquipment,
-  data.docStamp,
-  data.policeReportClearance,
-  data.secretaryfee,
-  data.medDentLabFees,
-  data.garbageFees,
-  data.cuttingTree
-].filter(v => v !== undefined && v !== null);
-
-  const total = allValues.reduce((sum, value) => sum + (typeof value === 'number' ? value : 0), 0);
-  const municipalTotal = total - (data.cockpitProvShare || 0);
+  const total = reportTotal;
+  const municipalTotal = reportMunicipalTotal;
 
   // Add totals row
   worksheet.addRow([
@@ -511,8 +449,13 @@ const handleDownloadExcel = () => {
   worksheet.mergeCells('A2:L2');
   worksheet.mergeCells('A3:L3');
   worksheet.mergeCells('A4:L4');
-  worksheet.mergeCells('D5:F6'); // Provincial
-  worksheet.mergeCells('G5:I6'); // Municipal
+  worksheet.mergeCells('A6:A7');
+  worksheet.mergeCells('B6:B7');
+  worksheet.mergeCells('C6:C7');
+  worksheet.mergeCells('D6:F6'); // Provincial
+  worksheet.mergeCells('G6:J6'); // Municipal
+  worksheet.mergeCells('K6:K7');
+  worksheet.mergeCells('L6:L7');
 
   // Style headers
   const headerStyles = {
@@ -522,15 +465,15 @@ const handleDownloadExcel = () => {
 
   worksheet.getRow(1).font = { bold: true, size: 16 };
   worksheet.getRow(2).font = { bold: true, size: 14 };
-  worksheet.getRow(5).eachCell(cell => Object.assign(cell, headerStyles));
   worksheet.getRow(6).eachCell(cell => Object.assign(cell, headerStyles));
+  worksheet.getRow(7).eachCell(cell => Object.assign(cell, headerStyles));
   
   // Style totals row (last row)
   const lastRow = worksheet.lastRow;
   lastRow.eachCell(cell => {
     cell.font = { bold: true };
     if ([2, 4, 6, 7].includes(cell.col)) { // Columns with currency values
-      cell.numFmt = '"P"#,##0.00';
+      cell.numFmt = '#,##0.00';
     }
   });
 
@@ -685,7 +628,31 @@ workbook.xlsx.writeBuffer().then(buffer => {
         </Box>
       </Box>
 
-  <div id="printableArea">
+      {loading ? (
+        <Paper
+          sx={{
+            p: 6,
+            borderRadius: 3,
+            border: "1px solid #d6a12b",
+            boxShadow: "0 8px 20px rgba(15, 23, 42, 0.08)",
+            display: "flex",
+            flexDirection: "column",
+            alignItems: "center",
+            justifyContent: "center",
+            gap: 2,
+            minHeight: 420,
+          }}
+        >
+          <CircularProgress />
+          <Typography variant="h6" sx={{ color: "#0f2747", fontWeight: 700 }}>
+            Loading financial report
+          </Typography>
+          <Typography variant="body2" color="text.secondary">
+            Please wait while the General Fund report is prepared.
+          </Typography>
+        </Paper>
+      ) : (
+      <div id="printableArea">
     <Box>
             <Box>
         <Grid container justifyContent="center" alignItems="center" spacing={0} direction="column" mb={2}>
@@ -1290,23 +1257,7 @@ workbook.xlsx.writeBuffer().then(buffer => {
 
   <TableRow>
     {/*Fines & Penalties*/}
-    <TableCell align="left" sx={{ border: '1px solid black' }}>Police Clearance</TableCell>
-    <TableCell sx={{ border: '1px solid black' }} align="center">0</TableCell> {/* TOTAL COLLECTIONS */}
-    <TableCell sx={{ border: '1px solid black' }} align="center"></TableCell> {/* NATIONAL */}
-    <TableCell sx={{ border: '1px solid black' }} align="center"></TableCell> {/* PROVINCIAL GENERAL FUND */}
-    <TableCell sx={{ border: '1px solid black' }} align="center"></TableCell> {/* PROVINCIAL SPECIAL EDUC. FUND */}
-    <TableCell sx={{ border: '1px solid black' }} align="center"></TableCell> {/* PROVINCIAL TOTAL */}
-    <TableCell sx={{ border: '1px solid black' }} align="center">0</TableCell> {/* MUNICIPAL GENERAL FUND */}
-    <TableCell sx={{ border: '1px solid black' }} align="center"></TableCell> {/* MUNICIPAL SPECIAL EDUC. FUND */}
-    <TableCell sx={{ border: '1px solid black' }} align="center"></TableCell> {/* MUNICIPAL TRUST FUND */}
-    <TableCell sx={{ border: '1px solid black' }} align="center">0</TableCell> {/* MUNICIPAL TOTAL */}
-    <TableCell sx={{ border: '1px solid black' }} align="center"></TableCell> {/* BARANGAY SHARE */}
-    <TableCell sx={{ border: '1px solid black' }} align="center"></TableCell> {/* FISHERIES */}
-  </TableRow>
-
-  <TableRow>
-    {/*Fines & Penalties*/}
-    <TableCell align="left" sx={{ border: '1px solid black' }}>Secretaries Fees</TableCell>
+    <TableCell align="left" sx={{ border: '1px solid black' }}>Secretary Fees</TableCell>
     <TableCell sx={{ border: '1px solid black' }} align="center"> {formatCurrency((data.policeReportClearance || 0) +(data.secretaryfee || 0))}</TableCell> {/* TOTAL COLLECTIONS */}
     <TableCell sx={{ border: '1px solid black' }} align="center"></TableCell> {/* NATIONAL */}
     <TableCell sx={{ border: '1px solid black' }} align="center"></TableCell> {/* PROVINCIAL GENERAL FUND */}
@@ -1369,129 +1320,22 @@ workbook.xlsx.writeBuffer().then(buffer => {
   </TableRow>
 
   {/* OVERALL TOTAL */}
-<TableRow>
+  <TableRow>
   <TableCell align="left" sx={{ border: '1px solid black' }}>TOTAL</TableCell>
   <TableCell sx={{ border: '1px solid black' }} align="center">
-    {formatCurrency((data.manufacturing || 0) +
-      (data.distributor || 0) +
-      (data.retailing || 0) +
-      (data.financial || 0) +
-      (data.otherBusinessTax || 0) +
-      (data.sandGravel || 0) +
-      (data.finesPenalties || 0) +
-      (data.mayorsPermit || 0) +
-      (data.weighsMeasure || 0) +
-      (data.tricycleOperators || 0) +
-      (data.occupationTax || 0) +
-      (data.certOfOwnership || 0) +
-      (data.certOfTransfer || 0) +
-      (data.cockpitProvShare || 0) +
-      (data.cockpitLocalShare || 0) +
-      (data.dockingMooringFee || 0) +
-      (data.sultadas || 0) +
-      (data.miscellaneousFee || 0) +
-      (data.regOfBirth || 0) +
-      (data.marriageFees || 0) +
-      (data.burialFees || 0) +
-      (data.correctionOfEntry || 0) +
-      (data.fishingPermitFee || 0) +
-      (data.saleOfAgriProd || 0) +
-      (data.saleOfAcctForm || 0) +
-      (data.waterFees || 0) +
-      (data.stallFees || 0) +
-      (data.cashTickets || 0) +
-      (data.slaughterHouseFee || 0) +
-      (data.rentalOfEquipment || 0) +
-      (data.docStamp || 0) +
-      (data.policeReportClearance || 0) +
-      (data.secretaryfee || 0) +
-      (data.medDentLabFees || 0) +
-      (data.garbageFees || 0) +
-      (data.cuttingTree || 0))}
+    {formatCurrency(reportTotal)}
   </TableCell>
   <TableCell sx={{ border: '1px solid black' }} align="center"></TableCell> {/* TOTAL NATIONAL */}
   <TableCell sx={{ border: '1px solid black' }} align="center">{formatCurrency(data.cockpitProvShare || 0)}</TableCell> {/* TOTAL PROVINCIAL GENERAL FUND */}
   <TableCell sx={{ border: '1px solid black' }} align="center"></TableCell> {/* TOTAL PROVINCIAL SPECIAL EDUC. FUND */}
   <TableCell sx={{ border: '1px solid black' }} align="center"></TableCell> {/* TOTAL PROVINCIAL TOTAL */}
   <TableCell sx={{ border: '1px solid black' }} align="center">
-    {formatCurrency(calculateTotal([
-      data.manufacturing,
-      data.distributor,
-      data.retailing,
-      data.financial,
-      data.otherBusinessTax,
-      data.sandGravel,
-      data.finesPenalties,
-      data.mayorsPermit,
-      data.weighsMeasure,
-      data.tricycleOperators,
-      data.occupationTax,
-      data.certOfOwnership,
-      data.certOfTransfer,
-      data.cockpitLocalShare,
-      data.dockingMooringFee,
-      data.sultadas,
-      data.miscellaneousFee,
-      data.regOfBirth,
-      data.marriageFees,
-      data.burialFees,
-      data.correctionOfEntry,
-      data.fishingPermitFee,
-      data.saleOfAgriProd,
-      data.saleOfAcctForm,
-      data.waterFees,
-      data.stallFees,
-      data.cashTickets,
-      data.slaughterHouseFee,
-      data.rentalOfEquipment,
-      data.docStamp,
-      data.policeReportClearance,
-      data.secretaryfee,
-      data.medDentLabFees,
-      data.garbageFees,
-      data.cuttingTree,
-    ]))}
+    {formatCurrency(reportMunicipalTotal)}
   </TableCell> {/* TOTAL MUNICIPAL GENERAL FUND */}
   <TableCell sx={{ border: '1px solid black' }} align="center"></TableCell> {/* TOTAL MUNICIPAL SPECIAL EDUC. FUND */}
   <TableCell sx={{ border: '1px solid black' }} align="center"></TableCell> {/* TOTAL MUNICIPAL TRUST FUND */}
   <TableCell sx={{ border: '1px solid black' }} align="center">
-    {formatCurrency(calculateTotal([
-      data.manufacturing,
-      data.distributor,
-      data.retailing,
-      data.financial,
-      data.otherBusinessTax,
-      data.sandGravel,
-      data.finesPenalties,
-      data.mayorsPermit,
-      data.weighsMeasure,
-      data.tricycleOperators,
-      data.occupationTax,
-      data.certOfOwnership,
-      data.certOfTransfer,
-      data.cockpitLocalShare,
-      data.dockingMooringFee,
-      data.sultadas,
-      data.miscellaneousFee,
-      data.regOfBirth,
-      data.marriageFees,
-      data.burialFees,
-      data.correctionOfEntry,
-      data.fishingPermitFee,
-      data.saleOfAgriProd,
-      data.saleOfAcctForm,
-      data.waterFees,
-      data.stallFees,
-      data.cashTickets,
-      data.slaughterHouseFee,
-      data.rentalOfEquipment,
-      data.docStamp,
-      data.policeReportClearance,
-      data.secretaryfee,
-      data.medDentLabFees,
-      data.garbageFees,
-      data.cuttingTree,
-    ]))}
+    {formatCurrency(reportMunicipalTotal)}
   </TableCell> {/* TOTAL MUNICIPAL TOTAL */}
   <TableCell sx={{ border: '1px solid black' }} align="center"></TableCell> {/* TOTAL BARANGAY SHARE */}
   <TableCell sx={{ border: '1px solid black' }} align="center"></TableCell> {/* TOTAL FISHERIES */}
@@ -1503,6 +1347,7 @@ workbook.xlsx.writeBuffer().then(buffer => {
 </Box>
       </Box>
       </div>
+      )}
        {/* Printable Area Ends Here */}
 
 
@@ -1526,6 +1371,7 @@ workbook.xlsx.writeBuffer().then(buffer => {
               <Button
                 variant="contained"
                 onClick={handlePrint}
+                disabled={loading}
                 sx={{
                   display: "flex",
                   alignItems: "center",
@@ -1549,6 +1395,7 @@ workbook.xlsx.writeBuffer().then(buffer => {
               <Button
                 variant="outlined"
                 onClick={handleDownloadExcel}
+                disabled={loading}
                 sx={{
                   display: "flex",
                   alignItems: "center",
@@ -1574,7 +1421,10 @@ workbook.xlsx.writeBuffer().then(buffer => {
 }
 
 ReportTable.propTypes = {
+  initialMonth: PropTypes.string,
+  initialYear: PropTypes.string,
   onBack: PropTypes.func.isRequired,
+  onLoadingChange: PropTypes.func,
 };
 
 export default ReportTable;

@@ -3,10 +3,17 @@ import PropTypes from "prop-types";
 import { useEffect, useMemo, useState } from "react";
 import axiosInstance from "../../../api/axiosInstance";
 
-const cashierOptions = ["FLORA MY", "IRIS", "RICARDO", "AGNES", "AMABELLA"];
+const cashierOptions = [
+  { label: "FLORA MY", value: "flora" },
+  { label: "IRIS", value: "angelique" },
+  { label: "RICARDO", value: "ricardo" },
+  { label: "AGNES", value: "agnes" },
+  { label: "AMABELLA", value: "amabella" },
+];
 
 function TrustFundPaymentEditForm({ data }) {
-  const paymentId = data?.PAYMENT_ID;
+  const paymentId = data?.PAYMENT_ID ?? data?.payment_id ?? data?.ID ?? data?.id;
+  const [receiptTypeOptions, setReceiptTypeOptions] = useState([]);
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [form, setForm] = useState({
@@ -15,10 +22,35 @@ function TrustFundPaymentEditForm({ data }) {
     receipt_no: "",
     type_receipt: "",
     cashier: "",
-    local_tin: "",
   });
   const [details, setDetails] = useState([]);
   const [message, setMessage] = useState({ type: "", text: "" });
+  const toCashierLabel = (rawValue) => {
+    const value = String(rawValue || "").trim().toLowerCase();
+    const matchByValue = cashierOptions.find((c) => c.value.toLowerCase() === value);
+    if (matchByValue) return matchByValue.label;
+    const matchByLabel = cashierOptions.find((c) => c.label.toLowerCase() === value);
+    if (matchByLabel) return matchByLabel.label;
+    return "";
+  };
+
+  const toCashierValue = (label) => {
+    const match = cashierOptions.find((c) => c.label === label);
+    return match ? match.value : "";
+  };
+
+  useEffect(() => {
+    const fetchReceiptTypes = async () => {
+      try {
+        const response = await axiosInstance.get("form-types");
+        setReceiptTypeOptions(Array.isArray(response.data) ? response.data : []);
+      } catch (error) {
+        setReceiptTypeOptions([]);
+      }
+    };
+
+    fetchReceiptTypes();
+  }, []);
 
   useEffect(() => {
     const fetchEditData = async () => {
@@ -28,14 +60,16 @@ function TrustFundPaymentEditForm({ data }) {
         const response = await axiosInstance.get(`trustFundPaymentEdit/${paymentId}`);
         const payment = response.data?.payment || {};
         const rows = Array.isArray(response.data?.details) ? response.data.details : [];
+        const normalizedDate = String(payment.DATE || "")
+          .split(" ")[0]
+          .split("T")[0];
 
         setForm({
-          date: payment.PAYMENTDATE || "",
-          name: payment.PAIDBY || "",
-          receipt_no: payment.RECEIPTNO || "",
-          type_receipt: payment.AFTYPE || "",
-          cashier: payment.COLLECTOR || payment.USERID || "",
-          local_tin: payment.LOCAL_TIN || "",
+          date: normalizedDate,
+          name: payment.NAME || "",
+          receipt_no: payment.RECEIPT_NO || "",
+          type_receipt: payment.TYPE_OF_RECEIPT || "",
+          cashier: toCashierLabel(payment.CASHIER || ""),
         });
         setDetails(
           rows.map((row) => ({
@@ -58,6 +92,10 @@ function TrustFundPaymentEditForm({ data }) {
     () => details.reduce((sum, row) => sum + Number(row.amount || 0), 0),
     [details]
   );
+  const visibleDetails = useMemo(
+    () => details.filter((row) => Number(row.amount || 0) !== 0),
+    [details]
+  );
 
   const handleAmountChange = (index, value) => {
     setDetails((prev) =>
@@ -78,6 +116,7 @@ function TrustFundPaymentEditForm({ data }) {
       setMessage({ type: "", text: "" });
       await axiosInstance.put(`trustFundPaymentEdit/${paymentId}`, {
         ...form,
+        cashier: toCashierValue(form.cashier),
         details: details.map((row) => ({
           paymentdetail_id: row.paymentdetail_id,
           amount: Number(row.amount || 0),
@@ -113,7 +152,6 @@ function TrustFundPaymentEditForm({ data }) {
         <TextField label="Date" type="date" value={form.date} onChange={(e) => setForm((prev) => ({ ...prev, date: e.target.value }))} InputLabelProps={{ shrink: true }} fullWidth />
         <TextField label="Receipt No." value={form.receipt_no} onChange={(e) => setForm((prev) => ({ ...prev, receipt_no: e.target.value }))} fullWidth />
         <TextField label="Name" value={form.name} onChange={(e) => setForm((prev) => ({ ...prev, name: e.target.value }))} fullWidth />
-        <TextField label="Local TIN" value={form.local_tin} onChange={(e) => setForm((prev) => ({ ...prev, local_tin: e.target.value }))} fullWidth />
         <TextField
           label="Cashier"
           select
@@ -124,12 +162,26 @@ function TrustFundPaymentEditForm({ data }) {
         >
           <option value="">Select cashier</option>
           {cashierOptions.map((cashier) => (
-            <option key={cashier} value={cashier}>
-              {cashier}
+            <option key={cashier.value} value={cashier.label}>
+              {cashier.label}
             </option>
           ))}
         </TextField>
-        <TextField label="Type of Receipt" value={form.type_receipt} onChange={(e) => setForm((prev) => ({ ...prev, type_receipt: e.target.value }))} fullWidth />
+        <TextField
+          label="Type of Receipt"
+          select
+          value={form.type_receipt}
+          onChange={(e) => setForm((prev) => ({ ...prev, type_receipt: e.target.value }))}
+          fullWidth
+          SelectProps={{ native: true }}
+        >
+          <option value="">Select receipt type</option>
+          {receiptTypeOptions.map((option) => (
+            <option key={option.code || option.id} value={option.code}>
+              {option.description || option.name || option.code}
+            </option>
+          ))}
+        </TextField>
       </Box>
 
       <TableContainer component={Paper} sx={{ borderRadius: 2, border: "1px solid #d8e2ee" }}>
@@ -142,12 +194,23 @@ function TrustFundPaymentEditForm({ data }) {
             </TableRow>
           </TableHead>
           <TableBody>
-            {details.map((row, index) => (
+            {visibleDetails.map((row, index) => (
               <TableRow key={row.paymentdetail_id}>
                 <TableCell>{index + 1}</TableCell>
                 <TableCell>{row.description}</TableCell>
                 <TableCell>
-                  <TextField type="number" value={row.amount} onChange={(e) => handleAmountChange(index, e.target.value)} fullWidth inputProps={{ min: 0, step: "0.01" }} />
+                  <TextField
+                    type="number"
+                    value={row.amount}
+                    onChange={(e) =>
+                      handleAmountChange(
+                        details.findIndex((item) => item.paymentdetail_id === row.paymentdetail_id),
+                        e.target.value
+                      )
+                    }
+                    fullWidth
+                    inputProps={{ min: 0, step: "0.01" }}
+                  />
                 </TableCell>
               </TableRow>
             ))}
@@ -184,6 +247,9 @@ function TrustFundPaymentEditForm({ data }) {
 TrustFundPaymentEditForm.propTypes = {
   data: PropTypes.shape({
     PAYMENT_ID: PropTypes.oneOfType([PropTypes.string, PropTypes.number]),
+    payment_id: PropTypes.oneOfType([PropTypes.string, PropTypes.number]),
+    ID: PropTypes.oneOfType([PropTypes.string, PropTypes.number]),
+    id: PropTypes.oneOfType([PropTypes.string, PropTypes.number]),
   }),
 };
 

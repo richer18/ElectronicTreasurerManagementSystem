@@ -1,4 +1,5 @@
 import { Autocomplete, Box, Button, Grid, Paper, Table, TableBody, TableCell, TableContainer, TableHead, TableRow, TextField } from '@mui/material';
+import PropTypes from 'prop-types';
 import { useEffect, useState } from 'react';
 import axiosInstance from "../../../../../../../api/axiosInstance";
 
@@ -37,18 +38,30 @@ const years = Array.from({ length: 100 }, (_, i) => ({
     value: 2030 - i,
 }));
 
+const findMonthOption = (value) =>
+    months.find((option) => String(option.value) === String(value)) || null;
 
+const findYearOption = (value) =>
+    years.find((option) => String(option.value) === String(value)) || null;
 
-function ServiceUserCharges() {
-   const [month, setMonth] = useState(null);
+function ServiceUserCharges({ initialMonth, initialYear }) {
+   const [month, setMonth] = useState(() => findMonthOption(initialMonth));
     const [day, setDay] = useState(null);
-    const [year, setYear] = useState(null);
+    const [year, setYear] = useState(() => findYearOption(initialYear));
     const [availableDays, setAvailableDays] = useState(days);
     const [taxData, setTaxData] = useState([]);
     
     const handleMonthChange = (event, newValue) => setMonth(newValue);
     const handleDayChange = (event, newValue) => setDay(newValue);
     const handleYearChange = (event, newValue) => setYear(newValue);
+
+    useEffect(() => {
+        setMonth(findMonthOption(initialMonth));
+    }, [initialMonth]);
+
+    useEffect(() => {
+        setYear(findYearOption(initialYear));
+    }, [initialYear]);
     
     useEffect(() => {
       const fetchData = async () => {
@@ -143,6 +156,7 @@ const handleDownload = () => {
                 options={months}
                 sx={{ width: 150, mr: 2 }}
                 onChange={handleMonthChange}
+                value={month}
                 renderInput={(params) => <TextField {...params} label="Month" />}
                 isOptionEqualToValue={(option, value) => option.value === value.value}
                 />
@@ -168,6 +182,7 @@ const handleDownload = () => {
                 options={years}
                 sx={{ width: 150 }}
                 onChange={handleYearChange}
+                value={year}
                 renderInput={(params) => <TextField {...params} label="Year" />}
                 isOptionEqualToValue={(option, value) => option.value === value.value}
                 />
@@ -213,5 +228,10 @@ const handleDownload = () => {
                                         </Box>
                                         );
 }
+
+ServiceUserCharges.propTypes = {
+    initialMonth: PropTypes.string,
+    initialYear: PropTypes.string,
+};
 
 export default ServiceUserCharges

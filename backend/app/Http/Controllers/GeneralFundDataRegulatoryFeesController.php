@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers;
 
+use App\Helpers\GeneralFundPaymentSummaryHelper;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Log;
@@ -11,96 +12,42 @@ class GeneralFundDataRegulatoryFeesController extends Controller
     public function index(Request $request)
     {
         try {
-            $year = $request->input('year');
-            $month = $request->input('month');
-            $day = $request->input('day');
+            $row = DB::table('general_fund_payment as gfp')
+                ->where('gfp.FUNDTYPE_CT', 'GF')
+                ->whereNotIn('gfp.AFTYPE', ['CTC', 'AF56']);
 
-            // Base query builder
-            $filters = [];
-            $bindings = [];
+            GeneralFundPaymentSummaryHelper::applyActiveFilter($row, 'gfp');
+            GeneralFundPaymentSummaryHelper::applyDateFilters($row, $request, 'gfp.PAYMENTDATE');
 
-            if ($year) {
-                $filters[] = 'YEAR(date) = ?';
-                $bindings[] = $year;
-            }
-            if ($month) {
-                $filters[] = 'MONTH(date) = ?';
-                $bindings[] = $month;
-            }
-            if ($day) {
-                $filters[] = 'DAY(date) = ?';
-                $bindings[] = $day;
-            }
+            $row = $row
+                ->selectRaw(GeneralFundPaymentSummaryHelper::detailSelectRaw('gfp', 'gfp'))
+                ->first();
 
-            $whereClause = '';
-            if (count($filters) > 0) {
-                $whereClause = 'WHERE ' . implode(' AND ', $filters);
-            }
+            $items = [
+                ['Taxes' => 'Mayors Permit', 'Total' => (float) ($row->Mayors_Permit ?? 0)],
+                ['Taxes' => 'Weighs and Measure', 'Total' => (float) ($row->Weighs_Measure ?? 0)],
+                ['Taxes' => 'Tricycle Operators', 'Total' => (float) ($row->Tricycle_Operators ?? 0)],
+                ['Taxes' => 'Occupation Tax', 'Total' => (float) ($row->Occupation_Tax ?? 0)],
+                ['Taxes' => 'Certificate of Ownership', 'Total' => (float) ($row->Cert_of_Ownership ?? 0)],
+                ['Taxes' => 'Certificate of Transfer', 'Total' => (float) ($row->Cert_of_Transfer ?? 0)],
+                ['Taxes' => 'Cockpit Prov Share', 'Total' => (float) ($row->Cockpit_Prov_Share ?? 0)],
+                ['Taxes' => 'Cockpit Local Share', 'Total' => (float) ($row->Cockpit_Local_Share ?? 0)],
+                ['Taxes' => 'Docking and Mooring Fee', 'Total' => (float) ($row->Docking_Mooring_Fee ?? 0)],
+                ['Taxes' => 'Sultadas', 'Total' => (float) ($row->Sultadas ?? 0)],
+                ['Taxes' => 'Miscellaneous Fees', 'Total' => (float) ($row->Miscellaneous_Fee ?? 0)],
+                ['Taxes' => 'Registration of Birth', 'Total' => (float) ($row->Reg_of_Birth ?? 0)],
+                ['Taxes' => 'Marriage Fees', 'Total' => (float) ($row->Marriage_Fees ?? 0)],
+                ['Taxes' => 'Burial Fee', 'Total' => (float) ($row->Burial_Fees ?? 0)],
+                ['Taxes' => 'Correction of Entry', 'Total' => (float) ($row->Correction_of_Entry ?? 0)],
+                ['Taxes' => 'Fishing Permit Fee', 'Total' => (float) ($row->Fishing_Permit_Fee ?? 0)],
+                ['Taxes' => 'Sale of Agri. Prod', 'Total' => (float) ($row->Sale_of_Agri_Prod ?? 0)],
+                ['Taxes' => 'Sale of Acct Form', 'Total' => (float) ($row->Sale_of_Acct_Form ?? 0)],
+            ];
 
-            // SQL equivalent of your JS
-            $sql = "
-                SELECT 'Mayors Permit' AS Taxes, SUM(Mayors_Permit) AS Total FROM general_fund_data $whereClause
-                UNION ALL
-                SELECT 'Weighs and Measure', SUM(Weighs_Measure) FROM general_fund_data $whereClause
-                UNION ALL
-                SELECT 'Tricycle Operators', SUM(Tricycle_Operators) FROM general_fund_data $whereClause
-                UNION ALL
-                SELECT 'Occupation Tax', SUM(Occupation_Tax) FROM general_fund_data $whereClause
-                UNION ALL
-                SELECT 'Certificate of Ownership', SUM(Cert_of_Ownership) FROM general_fund_data $whereClause
-                UNION ALL
-                SELECT 'Certificate of Transfer', SUM(Cert_of_Transfer) FROM general_fund_data $whereClause
-                UNION ALL
-                SELECT 'Cockpit Prov Share', SUM(Cockpit_Prov_Share) FROM general_fund_data $whereClause
-                UNION ALL
-                SELECT 'Cockpit Local Share', SUM(Cockpit_Local_Share) FROM general_fund_data $whereClause
-                UNION ALL
-                SELECT 'Docking and Mooring Fee', SUM(Docking_Mooring_Fee) FROM general_fund_data $whereClause
-                UNION ALL
-                SELECT 'Sultadas', SUM(Sultadas) FROM general_fund_data $whereClause
-                UNION ALL
-                SELECT 'Miscellaneous Fees', SUM(Miscellaneous_Fee) FROM general_fund_data $whereClause
-                UNION ALL
-                SELECT 'Registration of Birth', SUM(Reg_of_Birth) FROM general_fund_data $whereClause
-                UNION ALL
-                SELECT 'Marriage Fees', SUM(Marriage_Fees) FROM general_fund_data $whereClause
-                UNION ALL
-                SELECT 'Burial Fee', SUM(Burial_Fees) FROM general_fund_data $whereClause
-                UNION ALL
-                SELECT 'Correction of Entry', SUM(Correction_of_Entry) FROM general_fund_data $whereClause
-                UNION ALL
-                SELECT 'Fishing Permit Fee', SUM(Fishing_Permit_Fee) FROM general_fund_data $whereClause
-                UNION ALL
-                SELECT 'Sale of Agri. Prod', SUM(Sale_of_Agri_Prod) FROM general_fund_data $whereClause
-                UNION ALL
-                SELECT 'Sale of Acct Form', SUM(Sale_of_Acct_Form) FROM general_fund_data $whereClause
-                UNION ALL
-                SELECT 'Overall Total', SUM(
-                    Mayors_Permit +
-                    Weighs_Measure +
-                    Tricycle_Operators +
-                    Occupation_Tax +
-                    Cert_of_Ownership +
-                    Cert_of_Transfer +
-                    Cockpit_Prov_Share +
-                    Cockpit_Local_Share +
-                    Docking_Mooring_Fee +
-                    Sultadas +
-                    Miscellaneous_Fee +
-                    Reg_of_Birth +
-                    Marriage_Fees +
-                    Burial_Fees +
-                    Correction_of_Entry +
-                    Fishing_Permit_Fee +
-                    Sale_of_Agri_Prod +
-                    Sale_of_Acct_Form
-                ) FROM general_fund_data $whereClause
-            ";
+            $overall = array_reduce($items, fn ($sum, $item) => $sum + $item['Total'], 0.0);
+            $items[] = ['Taxes' => 'Overall Total', 'Total' => $overall];
 
-            // Execute with bindings
-            $results = DB::select($sql, $bindings);
-
-            return response()->json($results);
+            return response()->json($items);
         } catch (\Exception $e) {
             Log::error('Error fetching General Fund Regulatory Fees Report: ' . $e->getMessage());
             return response()->json(['error' => 'Internal Server Error'], 500);

@@ -8,12 +8,12 @@ import PropTypes from 'prop-types';
 import TrustFundReport from "../../../../../FRONTEND/components/ABSTRACT/TF/TableData/components/Table/DivingFee";
 
 
-function TrustFundDialogPopupDF({ open, onClose }) {
+function TrustFundDialogPopupDF({ open, onClose, month, year }) {
   return (
      <Dialog open={open} onClose={onClose} maxWidth="md" fullWidth>
       <DialogTitle>
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-          Building Permit Report
+          Diving Fee Report
           <Button onClick={onClose} color="secondary">
             <Tooltip title="Close">
               <CloseIcon fontSize="large"/>
@@ -22,7 +22,7 @@ function TrustFundDialogPopupDF({ open, onClose }) {
         </div>
       </DialogTitle>
       <DialogContent>
-        <TrustFundReport/>
+        <TrustFundReport month={month} year={year} />
       </DialogContent>
     </Dialog>
   )
@@ -31,6 +31,8 @@ function TrustFundDialogPopupDF({ open, onClose }) {
 TrustFundDialogPopupDF.propTypes = {
   open: PropTypes.bool.isRequired,
   onClose: PropTypes.func.isRequired,
+  month: PropTypes.string,
+  year: PropTypes.string,
 };
 
 
