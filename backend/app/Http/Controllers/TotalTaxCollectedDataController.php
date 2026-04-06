@@ -22,44 +22,23 @@ class TotalTaxCollectedDataController extends Controller
                 ->whereMonth('DATEISSUED', $month)
                 ->sum('TOTALAMOUNTPAID');
 
-            $general = DB::table('payment as p')
-                ->join('paymentdetail as pd', 'pd.PAYMENT_ID', '=', 'p.PAYMENT_ID')
-                ->whereYear('p.PAYMENTDATE', $year)
-                ->whereMonth('p.PAYMENTDATE', $month)
-                ->where('pd.FUNDTYPE_CT', 'GF')
+            $general = DB::table('general_fund_payment')
+                ->whereYear('PAYMENTDATE', $year)
+                ->whereMonth('PAYMENTDATE', $month)
                 ->where(function ($query) {
-                    $query->whereNull('p.VOID_BV')->orWhere('p.VOID_BV', 0);
+                    $query->whereNull('VOID_BV')->orWhere('VOID_BV', 0);
                 })
-                ->whereNotIn('p.AFTYPE', ['CTC', 'AF56'])
-                ->where(function ($query) {
-                    $query->whereNull('p.STATUS_CT')->orWhere('p.STATUS_CT', '<>', 'CNL');
-                })
-                ->where(function ($query) {
-                    $query->whereNull('pd.STATUS_CT')->orWhere('pd.STATUS_CT', '<>', 'CNL');
-                })
-                ->sum('pd.AMOUNTPAID');
+                ->sum('AMOUNTPAID');
 
             $real = RealPropertyTaxQueryHelper::applyActiveFilter(DB::table('real_property_tax_payment'))
                 ->whereYear('DATE', $year)
                 ->whereMonth('DATE', $month)
                 ->sum('BASIC_AND_SEF');
 
-            $trust = DB::table('payment as p')
-                ->join('paymentdetail as pd', 'pd.PAYMENT_ID', '=', 'p.PAYMENT_ID')
-                ->whereYear('p.PAYMENTDATE', $year)
-                ->whereMonth('p.PAYMENTDATE', $month)
-                ->where('pd.FUNDTYPE_CT', 'TF')
-                ->where(function ($query) {
-                    $query->whereNull('p.VOID_BV')->orWhere('p.VOID_BV', 0);
-                })
-                ->whereNotIn('p.AFTYPE', ['CTC', 'AF56'])
-                ->where(function ($query) {
-                    $query->whereNull('p.STATUS_CT')->orWhere('p.STATUS_CT', '<>', 'CNL');
-                })
-                ->where(function ($query) {
-                    $query->whereNull('pd.STATUS_CT')->orWhere('pd.STATUS_CT', '<>', 'CNL');
-                })
-                ->sum('pd.AMOUNTPAID');
+            $trust = DB::table('trust_fund_payment')
+                ->whereYear('DATE', $year)
+                ->whereMonth('DATE', $month)
+                ->sum('TOTAL');
 
             return [
                 'month' => date('M', mktime(0, 0, 0, $month, 1)),
@@ -68,5 +47,76 @@ class TotalTaxCollectedDataController extends Controller
         });
 
         return response()->json($result);
+    }
+
+    public function yearlyBreakdown(Request $request)
+    {
+        $year = (int) $request->query('year', now()->year);
+
+        $cedula = DB::table('community_tax_certificate_payment');
+        CommunityTaxCertificateQueryHelper::applyActiveFilter($cedula);
+        $cedulaTotal = (float) $cedula
+            ->whereYear('DATEISSUED', $year)
+            ->sum('TOTALAMOUNTPAID');
+
+        $generalTotal = (float) DB::table('general_fund_payment')
+            ->whereYear('PAYMENTDATE', $year)
+            ->where(function ($query) {
+                $query->whereNull('VOID_BV')->orWhere('VOID_BV', 0);
+            })
+            ->sum('AMOUNTPAID');
+
+        $realTotal = (float) RealPropertyTaxQueryHelper::applyActiveFilter(DB::table('real_property_tax_payment'))
+            ->whereYear('DATE', $year)
+            ->sum('BASIC_AND_SEF');
+
+        $trustTotal = (float) DB::table('trust_fund_payment')
+            ->whereYear('DATE', $year)
+            ->sum('TOTAL');
+
+        return response()->json([
+            ['label' => 'RPT', 'value' => round($realTotal, 2)],
+            ['label' => 'Cedula', 'value' => round($cedulaTotal, 2)],
+            ['label' => 'GF', 'value' => round($generalTotal, 2)],
+            ['label' => 'TF', 'value' => round($trustTotal, 2)],
+        ]);
+    }
+
+    public function topTaxpayers(Request $request)
+    {
+        $year = (int) $request->query('year', now()->year);
+
+        $general = DB::table('general_fund_payment_main_view')
+            ->whereYear('date', $year)
+            ->selectRaw("COALESCE(NULLIF(TRIM(name), ''), 'Unknown') AS taxpayer, COALESCE(total, 0) AS amount");
+
+        $trust = DB::table('trust_fund_payment')
+            ->whereYear('DATE', $year)
+            ->selectRaw("COALESCE(NULLIF(TRIM(NAME), ''), 'Unknown') AS taxpayer, COALESCE(TOTAL, 0) AS amount");
+
+        $cedula = DB::table('community_tax_certificate_payment');
+        CommunityTaxCertificateQueryHelper::applyActiveFilter($cedula);
+        $cedula = $cedula
+            ->whereYear('DATEISSUED', $year)
+            ->selectRaw("COALESCE(NULLIF(TRIM(OWNERNAME), ''), 'Unknown') AS taxpayer, COALESCE(TOTALAMOUNTPAID, 0) AS amount");
+
+        $rpt = RealPropertyTaxQueryHelper::applyActiveFilter(DB::table('real_property_tax_payment'))
+            ->whereYear('DATE', $year)
+            ->selectRaw("COALESCE(NULLIF(TRIM(NAME_OF_TAXPAYER), ''), 'Unknown') AS taxpayer, COALESCE(BASIC_AND_SEF, 0) AS amount");
+
+        $union = $general
+            ->unionAll($trust)
+            ->unionAll($cedula)
+            ->unionAll($rpt);
+
+        $rows = DB::query()
+            ->fromSub($union, 'tax_collections')
+            ->selectRaw('taxpayer, ROUND(SUM(amount), 2) AS amount')
+            ->groupBy('taxpayer')
+            ->orderByDesc('amount')
+            ->limit(10)
+            ->get();
+
+        return response()->json($rows);
     }
 }

@@ -1,5 +1,4 @@
-import AssignmentIndIcon from "@mui/icons-material/AssignmentInd";
-import CalendarMonthRoundedIcon from "@mui/icons-material/CalendarMonthRounded";
+import GroupsRoundedIcon from "@mui/icons-material/GroupsRounded";
 import TrendingUpRoundedIcon from "@mui/icons-material/TrendingUpRounded";
 import { Box, Chip, Fade, Skeleton, Typography } from "@mui/material";
 import { BarChart } from "@mui/x-charts";
@@ -12,52 +11,52 @@ const toNumber = (value) => {
   return Number.isFinite(parsed) ? parsed : 0;
 };
 
-const taxpayerColors = [
-  "#1e88e5",
-  "#26a69a",
-  "#7cb342",
-  "#f9a825",
-  "#fb8c00",
-  "#ef5350",
-  "#ab47bc",
-  "#5c6bc0",
-  "#29b6f6",
-  "#8d6e63",
+const collectorColors = [
+  "#ef4444",
+  "#f59e0b",
+  "#10b981",
+  "#06b6d4",
+  "#3b82f6",
+  "#8b5cf6",
+  "#ec4899",
 ];
 
 const shorten = (value) => {
   const text = String(value || "");
-  return text.length > 16 ? `${text.slice(0, 16)}...` : text;
+  return text.length > 14 ? `${text.slice(0, 14)}...` : text;
 };
 
-function CedulaCollected({ year }) {
-  const [chartData, setChartData] = useState([]);
+function CollectorYearlyChart({ year }) {
+  const [rows, setRows] = useState([]);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
     setLoading(true);
     axiosInstance
-      .get("/tax/top-taxpayers", {
-        params: { year },
+      .get("/dashboard/collector-yearly", { params: { year } })
+      .then((response) => setRows(Array.isArray(response.data) ? response.data : []))
+      .catch((error) => {
+        console.error("Failed to load collector yearly chart:", error);
+        setRows([]);
       })
-      .then((res) => {
-        const values = (Array.isArray(res.data) ? res.data : []).map((item) => ({
-          taxpayer: item?.taxpayer ?? "Unknown",
-          shortTaxpayer: shorten(item?.taxpayer ?? "Unknown"),
-          amount: toNumber(item?.amount),
-        }));
-        setChartData(values);
-      })
-      .catch((err) => console.error("API error:", err))
       .finally(() => setLoading(false));
   }, [year]);
 
-  const total = useMemo(
-    () => chartData.reduce((sum, item) => sum + toNumber(item.amount), 0),
-    [chartData]
+  const chartRows = useMemo(
+    () =>
+      rows.map((row) => ({
+        collector: row?.collector ?? "Unknown",
+        shortCollector: shorten(row?.collector),
+        amount: toNumber(row?.amount),
+      })),
+    [rows]
   );
 
-  const topTaxpayer = useMemo(() => chartData[0] ?? null, [chartData]);
+  const topCollector = chartRows[0] ?? null;
+  const total = useMemo(
+    () => chartRows.reduce((sum, row) => sum + row.amount, 0),
+    [chartRows]
+  );
 
   return (
     <Box
@@ -87,29 +86,28 @@ function CedulaCollected({ year }) {
               borderRadius: 2,
               display: "grid",
               placeItems: "center",
-              background: "linear-gradient(135deg, #0f7b8c 0%, #18a0b6 100%)",
+              background: "linear-gradient(135deg, #5b21b6 0%, #7c3aed 100%)",
             }}
           >
-            <AssignmentIndIcon sx={{ color: "#fff", fontSize: 22 }} />
+            <GroupsRoundedIcon sx={{ color: "#fff", fontSize: 22 }} />
           </Box>
           <Box>
             <Typography variant="h6" sx={{ fontWeight: 800, color: "#102a43" }}>
-              Top 10 Taxpayer
+              Collector Total Collection
             </Typography>
             <Typography variant="body2" sx={{ color: "#627d98" }}>
-              Highest taxpayers across the LGU for the selected year
+              Whole-year total collections by collector
             </Typography>
           </Box>
         </Box>
 
         <Chip
-          icon={<CalendarMonthRoundedIcon />}
           label={`Year ${year}`}
           sx={{
-            bgcolor: "#eef7fb",
-            color: "#102a43",
+            bgcolor: "#f4efff",
+            color: "#4c1d95",
             fontWeight: 700,
-            border: "1px solid #d9e2ec",
+            border: "1px solid #ddd6fe",
           }}
         />
       </Box>
@@ -127,36 +125,31 @@ function CedulaCollected({ year }) {
             p: 2,
             borderRadius: 3,
             border: "1px solid #d9e2ec",
-            bgcolor: "#fbfdff",
+            bgcolor: "#fbfaff",
             minHeight: 360,
             display: "flex",
             alignItems: "center",
           }}
         >
           {loading ? (
-            <Skeleton
-              variant="rectangular"
-              width="100%"
-              height={300}
-              sx={{ borderRadius: 2.5, bgcolor: "#eef2f6" }}
-            />
-          ) : chartData.length === 0 ? (
+            <Skeleton variant="rectangular" width="100%" height={300} sx={{ borderRadius: 2.5 }} />
+          ) : chartRows.length === 0 ? (
             <Typography variant="body2" color="text.secondary">
-              No taxpayer collection data found for {year}.
+              No collector totals found for {year}.
             </Typography>
           ) : (
             <Fade in={!loading} timeout={350}>
               <Box sx={{ width: "100%" }}>
                 <BarChart
-                  dataset={chartData}
+                  dataset={chartRows}
                   xAxis={[
                     {
                       scaleType: "band",
-                      dataKey: "shortTaxpayer",
+                      dataKey: "shortCollector",
                       colorMap: {
                         type: "ordinal",
-                        values: chartData.map((item) => item.shortTaxpayer),
-                        colors: taxpayerColors,
+                        values: chartRows.map((row) => row.shortCollector),
+                        colors: collectorColors,
                       },
                     },
                   ]}
@@ -164,12 +157,8 @@ function CedulaCollected({ year }) {
                     {
                       valueFormatter: (value) => {
                         const amount = toNumber(value);
-                        if (amount >= 1000000) {
-                          return `${(amount / 1000000).toFixed(1)}M`;
-                        }
-                        if (amount >= 1000) {
-                          return `${Math.round(amount / 1000)}K`;
-                        }
+                        if (amount >= 1000000) return `${(amount / 1000000).toFixed(1)}M`;
+                        if (amount >= 1000) return `${Math.round(amount / 1000)}K`;
                         return String(amount);
                       },
                     },
@@ -177,8 +166,8 @@ function CedulaCollected({ year }) {
                   series={[
                     {
                       dataKey: "amount",
-                      label: "Tax Paid",
-                      color: "#18a0b6",
+                      label: "Collector Total",
+                      color: "#7c3aed",
                       valueFormatter: (value) =>
                         `PHP ${toNumber(value).toLocaleString("en-PH", {
                           minimumFractionDigits: 2,
@@ -189,11 +178,9 @@ function CedulaCollected({ year }) {
                   ]}
                   height={320}
                   borderRadius={8}
-                  margin={{ top: 24, right: 24, bottom: 36, left: 72 }}
+                  margin={{ top: 24, right: 24, bottom: 40, left: 72 }}
                   grid={{ horizontal: true }}
-                  slotProps={{
-                    legend: { hidden: true },
-                  }}
+                  slotProps={{ legend: { hidden: true } }}
                 />
               </Box>
             </Fade>
@@ -205,19 +192,19 @@ function CedulaCollected({ year }) {
             sx={{
               p: 2,
               borderRadius: 3,
-              background: "linear-gradient(135deg, #0f7b8c 0%, #18a0b6 100%)",
+              background: "linear-gradient(135deg, #5b21b6 0%, #7c3aed 100%)",
               color: "#ffffff",
             }}
           >
             <Typography sx={{ fontSize: 13, fontWeight: 700, opacity: 0.9 }}>
-              Top Taxpayer
+              Top Collector
             </Typography>
             <Typography sx={{ mt: 1, fontSize: { xs: 22, md: 28 }, fontWeight: 900 }}>
-              {topTaxpayer?.taxpayer ?? "No data"}
+              {topCollector?.collector ?? "No data"}
             </Typography>
             <Typography sx={{ mt: 0.8, fontSize: 13, opacity: 0.88 }}>
               PHP{" "}
-              {toNumber(topTaxpayer?.amount).toLocaleString("en-PH", {
+              {toNumber(topCollector?.amount).toLocaleString("en-PH", {
                 minimumFractionDigits: 2,
                 maximumFractionDigits: 2,
               })}
@@ -233,9 +220,9 @@ function CedulaCollected({ year }) {
             }}
           >
             <Box sx={{ display: "flex", alignItems: "center", gap: 1, mb: 1 }}>
-              <TrendingUpRoundedIcon sx={{ color: "#18a0b6", fontSize: 20 }} />
+              <TrendingUpRoundedIcon sx={{ color: "#7c3aed", fontSize: 20 }} />
               <Typography sx={{ fontWeight: 800, color: "#102a43" }}>
-                Top 10 Total
+                Total for Top Collectors
               </Typography>
             </Box>
             <Typography sx={{ fontSize: 22, fontWeight: 800, color: "#102a43" }}>
@@ -246,7 +233,7 @@ function CedulaCollected({ year }) {
               })}
             </Typography>
             <Typography sx={{ mt: 0.4, color: "#486581", fontWeight: 600 }}>
-              Combined amount of the visible top taxpayers across all modules
+              Combined total of the visible collectors
             </Typography>
           </Box>
         </Box>
@@ -255,8 +242,8 @@ function CedulaCollected({ year }) {
   );
 }
 
-CedulaCollected.propTypes = {
+CollectorYearlyChart.propTypes = {
   year: PropTypes.oneOfType([PropTypes.number, PropTypes.string]).isRequired,
 };
 
-export default CedulaCollected;
+export default CollectorYearlyChart;

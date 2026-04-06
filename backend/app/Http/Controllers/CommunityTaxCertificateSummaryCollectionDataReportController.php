@@ -47,4 +47,25 @@ class CommunityTaxCertificateSummaryCollectionDataReportController extends Contr
 
         return response()->json($rows);
     }
+
+    public function topTaxpayers(Request $request)
+    {
+        $year = (int) $request->query('year', now()->year);
+
+        $query = DB::table('community_tax_certificate_payment');
+        CommunityTaxCertificateQueryHelper::applyActiveFilter($query);
+
+        $rows = $query
+            ->whereYear('DATEISSUED', $year)
+            ->selectRaw("
+                COALESCE(NULLIF(TRIM(OWNERNAME), ''), 'Unknown') AS taxpayer,
+                ROUND(COALESCE(SUM(TOTALAMOUNTPAID), 0), 2) AS amount
+            ")
+            ->groupByRaw("COALESCE(NULLIF(TRIM(OWNERNAME), ''), 'Unknown')")
+            ->orderByDesc('amount')
+            ->limit(10)
+            ->get();
+
+        return response()->json($rows);
+    }
 }

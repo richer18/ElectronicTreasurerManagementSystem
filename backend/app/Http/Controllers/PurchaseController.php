@@ -91,6 +91,13 @@ class PurchaseController extends Controller
         $query->whereYear('purchase_date', (int) request()->year);
     }
 
+    if (request()->filled('form_type')) {
+        $formTypes = array_filter(array_map('trim', explode(',', (string) request()->form_type)));
+        if (!empty($formTypes)) {
+            $query->whereIn('Form_Type', $formTypes);
+        }
+    }
+
     $purchases = $query->orderBy('purchase_date', 'desc')->get();
 
     return response()->json($purchases);

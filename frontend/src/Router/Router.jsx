@@ -37,6 +37,7 @@ import BusinessReviewDataNew from "../FRONTEND/components/BUSINESS/BusinessRegis
 import EbikeTrisikad from "../FRONTEND/components/BUSINESS/E-BIKE_TRISIKAD/ebiketrisikad";
 import Mch from "../FRONTEND/components/BUSINESS/MCH/mch";
 import Collection from "../FRONTEND/components/REPORT/Collection/collection";
+import DivingReport from "../FRONTEND/components/REPORT/DivingReport/DivingReport";
 import RCD from "../FRONTEND/components/RCD/ReportCollectionDeposit";
 import UserManagement from "../FRONTEND/components/ADMIN/UserManagement";
 
@@ -132,6 +133,7 @@ const routeAliases = [
   { from: "/full-report", to: "/my-app/full-report" },
   { from: "/esre", to: "/my-app/esre" },
   { from: "/collection", to: "/my-app/collection" },
+  { from: "/diving-report", to: "/my-app/diving-report" },
   { from: "/register-user", to: "/my-app/register-user" },
   { from: "/new-application", to: "/my-app/new-application" },
   { from: "/renew-application", to: "/my-app/renew-application" },
@@ -215,6 +217,10 @@ function Routers() {
             <Route
               path="collection"
               element={<PermissionRoute permissions={["reports.view"]} element={<Collection />} />}
+            />
+            <Route
+              path="diving-report"
+              element={<PermissionRoute permissions={["reports.view"]} element={<DivingReport />} />}
             />
 
             <Route

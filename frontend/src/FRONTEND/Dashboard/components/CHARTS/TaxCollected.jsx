@@ -2,7 +2,7 @@ import AccountBalanceIcon from "@mui/icons-material/AccountBalance";
 import CalendarMonthRoundedIcon from "@mui/icons-material/CalendarMonthRounded";
 import TrendingUpRoundedIcon from "@mui/icons-material/TrendingUpRounded";
 import { Box, Chip, Fade, Skeleton, Typography } from "@mui/material";
-import { LineChart } from "@mui/x-charts";
+import { pieArcLabelClasses, PieChart } from "@mui/x-charts";
 import PropTypes from "prop-types";
 import { useEffect, useMemo, useState } from "react";
 import axiosInstance from "../../../../api/axiosInstance";
@@ -16,20 +16,19 @@ function TaxCollected({ year }) {
   const [chartData, setChartData] = useState([]);
   const [loading, setLoading] = useState(true);
 
-  const months = useMemo(
-    () => ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"],
-    []
-  );
-
   useEffect(() => {
     setLoading(true);
     axiosInstance
-      .get("/tax/monthly", {
+      .get("/tax/yearly-breakdown", {
         params: { year },
       })
       .then((res) => {
         const values = Array.isArray(res.data)
-          ? res.data.map((item) => toNumber(item?.value))
+          ? res.data.map((item, index) => ({
+              id: index,
+              label: item?.label ?? `Series ${index + 1}`,
+              value: toNumber(item?.value),
+            }))
           : [];
         setChartData(values);
       })
@@ -38,32 +37,42 @@ function TaxCollected({ year }) {
   }, [year]);
 
   const total = useMemo(
-    () => chartData.reduce((sum, value) => sum + toNumber(value), 0),
+    () => chartData.reduce((sum, item) => sum + toNumber(item?.value), 0),
     [chartData]
   );
 
-  const average = useMemo(
-    () => (chartData.length ? total / chartData.length : 0),
-    [chartData, total]
-  );
+  const average = useMemo(() => (chartData.length ? total / chartData.length : 0), [chartData, total]);
 
   const peak = useMemo(() => {
     if (!chartData.length) return { month: "No data", value: 0 };
     let bestIndex = 0;
-    let bestValue = chartData[0] ?? 0;
+    let bestValue = toNumber(chartData[0]?.value);
 
-    chartData.forEach((value, index) => {
-      if (value > bestValue) {
-        bestValue = value;
+    chartData.forEach((item, index) => {
+      const currentValue = toNumber(item?.value);
+      if (currentValue > bestValue) {
+        bestValue = currentValue;
         bestIndex = index;
       }
     });
 
     return {
-      month: months[bestIndex] || "N/A",
+      month: chartData[bestIndex]?.label || "N/A",
       value: bestValue,
     };
-  }, [chartData, months]);
+  }, [chartData]);
+
+  const totalValue = useMemo(
+    () => chartData.reduce((sum, item) => sum + toNumber(item?.value), 0),
+    [chartData]
+  );
+
+  const getArcLabel = (item) => {
+    const value = toNumber(item?.value);
+    if (!value || !totalValue) return "";
+    const percent = Math.round((value / totalValue) * 100);
+    return `${item?.label} ${percent}%`;
+  };
 
   return (
     <Box
@@ -103,7 +112,7 @@ function TaxCollected({ year }) {
               Tax Collection Trend
             </Typography>
             <Typography variant="body2" sx={{ color: "#627d98" }}>
-              Combined collections across RPT, Cedula, General Fund, and Trust Fund
+              Whole-year collection breakdown across RPT, Cedula, General Fund, and Trust Fund
             </Typography>
           </Box>
         </Box>
@@ -123,7 +132,7 @@ function TaxCollected({ year }) {
       <Box
         sx={{
           display: "grid",
-          gridTemplateColumns: { xs: "1fr", lg: "minmax(0, 2.2fr) minmax(240px, 0.8fr)" },
+          gridTemplateColumns: { xs: "1fr", xl: "minmax(0, 2.6fr) minmax(240px, 0.7fr)" },
           gap: 2,
           alignItems: "stretch",
         }}
@@ -146,36 +155,48 @@ function TaxCollected({ year }) {
               height={300}
               sx={{ borderRadius: 2.5, bgcolor: "#eef2f6" }}
             />
+          ) : chartData.every((item) => toNumber(item?.value) === 0) ? (
+            <Typography variant="body2" color="text.secondary">
+              No tax collection data found for {year}.
+            </Typography>
           ) : (
             <Fade in={!loading} timeout={350}>
-              <Box sx={{ width: "100%" }}>
-                <LineChart
-                  xAxis={[
-                    {
-                      scaleType: "point",
-                      data: months,
-                    },
-                  ]}
+              <Box sx={{ width: "100%", display: "flex", justifyContent: "center" }}>
+                <PieChart
+                  width={520}
                   series={[
                     {
                       data: chartData,
-                      label: "Tax Collection",
-                      color: "#1565c0",
-                      curve: "monotoneX",
-                      area: true,
-                      showMark: true,
+                      innerRadius: 72,
+                      outerRadius: 138,
+                      arcLabel: getArcLabel,
+                      arcLabelMinAngle: 8,
+                      arcLabelRadius: "112%",
+                      paddingAngle: 2,
+                      cornerRadius: 4,
+                      highlightScope: { fade: "global", highlight: "item" },
+                      highlighted: { additionalRadius: 10 },
+                      faded: { additionalRadius: -4, color: "#dce6f2" },
+                      cx: 220,
+                      cy: 160,
                       valueFormatter: (value) =>
-                        `PHP ${toNumber(value).toLocaleString("en-PH", {
+                        `PHP ${toNumber(value?.value).toLocaleString("en-PH", {
                           minimumFractionDigits: 2,
                           maximumFractionDigits: 2,
                         })}`,
                     },
                   ]}
-                  height={320}
-                  margin={{ top: 24, right: 24, bottom: 24, left: 64 }}
-                  grid={{ horizontal: true }}
+                  height={340}
+                  margin={{ top: 20, right: 60, bottom: 20, left: 60 }}
                   slotProps={{
                     legend: { hidden: true },
+                  }}
+                  sx={{
+                    [`& .${pieArcLabelClasses.root}`]: {
+                      fill: "#102a43",
+                      fontSize: 12,
+                      fontWeight: 700,
+                    },
                   }}
                 />
               </Box>
@@ -218,7 +239,7 @@ function TaxCollected({ year }) {
             <Box sx={{ display: "flex", alignItems: "center", gap: 1, mb: 1 }}>
               <TrendingUpRoundedIcon sx={{ color: "#1565c0", fontSize: 20 }} />
               <Typography sx={{ fontWeight: 800, color: "#102a43" }}>
-                Peak Month
+                Top Collection Source
               </Typography>
             </Box>
             <Typography sx={{ fontSize: 22, fontWeight: 800, color: "#102a43" }}>
@@ -240,8 +261,8 @@ function TaxCollected({ year }) {
               bgcolor: "#f8fbff",
             }}
           >
-            <Typography sx={{ fontWeight: 800, color: "#102a43", mb: 0.8 }}>
-              Monthly Average
+              <Typography sx={{ fontWeight: 800, color: "#102a43", mb: 0.8 }}>
+                Average Per Source
             </Typography>
             <Typography sx={{ color: "#486581", fontWeight: 700 }}>
               PHP {toNumber(average).toLocaleString("en-PH", {

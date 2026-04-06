@@ -22,7 +22,6 @@ import ImportExportRoundedIcon from "@mui/icons-material/ImportExportRounded";
 import InboxRoundedIcon from "@mui/icons-material/InboxRounded";
 import PersonRoundedIcon from "@mui/icons-material/PersonRounded";
 // import ReceiptLongIcon from "@mui/icons-material/ReceiptLong";
-import ScubaDivingRoundedIcon from "@mui/icons-material/ScubaDivingRounded";
 import SecurityRoundedIcon from "@mui/icons-material/SecurityRounded";
 import SellRoundedIcon from "@mui/icons-material/SellRounded";
 import SendRoundedIcon from "@mui/icons-material/SendRounded";
@@ -37,6 +36,7 @@ import Link from "@mui/material/Link";
 import Paper from "@mui/material/Paper";
 import Button from "@mui/material/Button";
 import ReceiptLongRoundedIcon from "@mui/icons-material/ReceiptLongRounded";
+import ScubaDivingRoundedIcon from "@mui/icons-material/ScubaDivingRounded";
 import Avatar from "@mui/material/Avatar";
 import Badge from "@mui/material/Badge";
 import IconButton from "@mui/material/IconButton";
@@ -66,6 +66,8 @@ import { hasAnyPermission } from "../../auth/permissions";
 import { Outlet, useLocation, useNavigate } from "react-router-dom";
 import TaxCollected from "./components/CHARTS/TaxCollected";
 import CedulaCollected from "./components/CHARTS/CedulaCollected";
+import CollectorYearlyChart from "./components/CHARTS/CollectorYearlyChart";
+import DivingTicketTopChart from "./components/CHARTS/DivingTicketTopChart";
 // import GeneralFundCollected from "./components/CHARTS/GeneralFundCollected";
 import "./system.css";
 // import TrustFundCollected from "./components/CHARTS/TrustFundCollected";
@@ -161,22 +163,6 @@ const NAVIGATION = [
         segment: "e-bike-trisikad",
         title: "E-Bike / Trisikad",
         icon: <ElectricRickshawRoundedIcon sx={navIconMuted} />,
-      },
-    ],
-  },
-  {
-    title: "Tickets",
-    icon: <BookOnlineRoundedIcon sx={navIconAccent} />,
-    children: [
-      {
-        segment: "dive-ticket",
-        title: "Diving Ticket",
-        icon: <ScubaDivingRoundedIcon sx={navIconMuted} />,
-      },
-      {
-        segment: "cash-ticket",
-        title: "Cash Ticket",
-        icon: <SellRoundedIcon sx={navIconMuted} />,
       },
     ],
   },
@@ -328,6 +314,11 @@ const NAVIGATION = [
         segment: "collection",
         title: "Summary of Collection",
         icon: <SummarizeRoundedIcon sx={navIconMuted} />,
+      },
+      {
+        segment: "diving-report",
+        title: "Diving Report",
+        icon: <ScubaDivingRoundedIcon sx={navIconMuted} />,
       },
     ],
   },
@@ -1694,6 +1685,44 @@ function DashboardHome() {
               Cedula Collection Trend
             </Typography>
             <CedulaCollected year={year} />
+          </Paper>
+        </Grid>
+        <Grid item xs={12}>
+          <Paper
+            sx={{
+              p: 1.5,
+              borderRadius: 3,
+              border: "1px solid #d9e2ec",
+              boxShadow: "0 6px 18px rgba(15,39,71,0.05)",
+              height: "100%",
+            }}
+          >
+            <Typography
+              variant="subtitle1"
+              sx={{ fontWeight: 800, color: "#102a43", px: 1, pt: 0.5, mb: 1 }}
+            >
+              Diving Ticket Best Sales
+            </Typography>
+            <DivingTicketTopChart year={year} />
+          </Paper>
+        </Grid>
+        <Grid item xs={12}>
+          <Paper
+            sx={{
+              p: 1.5,
+              borderRadius: 3,
+              border: "1px solid #d9e2ec",
+              boxShadow: "0 6px 18px rgba(15,39,71,0.05)",
+              height: "100%",
+            }}
+          >
+            <Typography
+              variant="subtitle1"
+              sx={{ fontWeight: 800, color: "#102a43", px: 1, pt: 0.5, mb: 1 }}
+            >
+              Collector Total Collection
+            </Typography>
+            <CollectorYearlyChart year={year} />
           </Paper>
         </Grid>
 

@@ -132,6 +132,9 @@ use App\Http\Controllers\IssuedFormController;
 use App\Http\Controllers\RcdEntryController;
 use App\Http\Controllers\AccountableFormReturnController;
 use App\Http\Controllers\AccountabilityLogController;
+use App\Http\Controllers\DivingReportController;
+use App\Http\Controllers\DashboardDivingTicketTopController;
+use App\Http\Controllers\DashboardCollectorYearlyController;
 use App\Http\Controllers\UserManagementController;
 
 
@@ -264,10 +267,13 @@ Route::get('/getCedulaComments/{date}', [CommunityTaxCertificateGetCedulaComment
 Route::get('/commentCedulaCounts', [CommunityTaxCertificateCommentCedulaCountsController::class, 'index']);
 Route::get('/cedulaSummaryCollectionDataReport', [CommunityTaxCertificateSummaryCollectionDataReportController::class, 'index']);
 Route::get('/cedula/monthly', [CommunityTaxCertificateSummaryCollectionDataReportController::class, 'monthlyTrend']);
+Route::get('/cedula/top-taxpayers', [CommunityTaxCertificateSummaryCollectionDataReportController::class, 'topTaxpayers']);
 Route::post('/saveCedulaData', [CommunityTaxCertificateSaveCedulaDataController::class, 'store']);
 Route::put('/updateCedulaData/{ctcno}', [CommunityTaxCertificateUpdateCedulaDataController::class, 'update']);
 
 Route::get('/tax/monthly', [TotalTaxCollectedDataController::class, 'monthlyData']);
+Route::get('/tax/yearly-breakdown', [TotalTaxCollectedDataController::class, 'yearlyBreakdown']);
+Route::get('/tax/top-taxpayers', [TotalTaxCollectedDataController::class, 'topTaxpayers']);
 Route::get('/TaxOnBusinessBreakdown', [TaxOnBusinessBreakdownDataController::class, 'index']);
 Route::get('/ServiceUserChargesBreakdown', [ServiceUserChargesBreakdownDataController::class, 'index']);
 Route::get('/RegulatoryFeesAndChargesBreakdown', [RegulatoryFeesAndChargesBreakdownDataController::class, 'index']);
@@ -358,4 +364,7 @@ Route::delete('/rcd-entries/{id}', [RcdEntryController::class, 'destroy']);
 Route::get('/rcd-batches', [RcdBatchController::class, 'index']);
 Route::patch('/rcd-batches/{id}/status', [RcdBatchController::class, 'updateStatus']);
 Route::get('/rcd/suggested-collections', [RcdSuggestedCollectionController::class, 'index']);
+Route::get('/diving-report', [DivingReportController::class, 'index']);
+Route::get('/dashboard/diving-ticket-top', [DashboardDivingTicketTopController::class, 'index']);
+Route::get('/dashboard/collector-yearly', [DashboardCollectorYearlyController::class, 'index']);
 });

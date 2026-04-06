@@ -1,63 +1,67 @@
-import AssignmentIndIcon from "@mui/icons-material/AssignmentInd";
-import CalendarMonthRoundedIcon from "@mui/icons-material/CalendarMonthRounded";
+import ScubaDivingRoundedIcon from "@mui/icons-material/ScubaDivingRounded";
 import TrendingUpRoundedIcon from "@mui/icons-material/TrendingUpRounded";
 import { Box, Chip, Fade, Skeleton, Typography } from "@mui/material";
-import { BarChart } from "@mui/x-charts";
+import { PieChart } from "@mui/x-charts";
 import PropTypes from "prop-types";
 import { useEffect, useMemo, useState } from "react";
 import axiosInstance from "../../../../api/axiosInstance";
 
-const toNumber = (value) => {
-  const parsed = Number(value);
-  return Number.isFinite(parsed) ? parsed : 0;
-};
+const monthLabels = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
 
-const taxpayerColors = [
-  "#1e88e5",
-  "#26a69a",
-  "#7cb342",
-  "#f9a825",
-  "#fb8c00",
-  "#ef5350",
-  "#ab47bc",
-  "#5c6bc0",
-  "#29b6f6",
-  "#8d6e63",
-];
-
-const shorten = (value) => {
-  const text = String(value || "");
-  return text.length > 16 ? `${text.slice(0, 16)}...` : text;
-};
-
-function CedulaCollected({ year }) {
-  const [chartData, setChartData] = useState([]);
+function DivingTicketTopChart({ year }) {
+  const [rows, setRows] = useState([]);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
     setLoading(true);
     axiosInstance
-      .get("/tax/top-taxpayers", {
-        params: { year },
+      .get("/dashboard/diving-ticket-top", { params: { year } })
+      .then((response) => setRows(Array.isArray(response.data) ? response.data : []))
+      .catch((error) => {
+        console.error("Failed to load diving ticket chart:", error);
+        setRows([]);
       })
-      .then((res) => {
-        const values = (Array.isArray(res.data) ? res.data : []).map((item) => ({
-          taxpayer: item?.taxpayer ?? "Unknown",
-          shortTaxpayer: shorten(item?.taxpayer ?? "Unknown"),
-          amount: toNumber(item?.amount),
-        }));
-        setChartData(values);
-      })
-      .catch((err) => console.error("API error:", err))
       .finally(() => setLoading(false));
   }, [year]);
 
-  const total = useMemo(
-    () => chartData.reduce((sum, item) => sum + toNumber(item.amount), 0),
-    [chartData]
+  const chartRows = useMemo(() => {
+    const mapped = new Map(
+      rows.map((row) => [Number(row?.month_number || 0), Number(row?.amount || 0)])
+    );
+
+    return monthLabels.map((label, index) => ({
+      label,
+      fullLabel: label,
+      amount: mapped.get(index + 1) ?? 0,
+    }));
+  }, [rows]);
+
+  const pieRows = useMemo(
+    () =>
+      chartRows
+        .filter((row) => row.amount > 0)
+        .map((row, index) => ({
+          id: index,
+          label: row.label,
+          value: row.amount,
+        })),
+    [chartRows]
   );
 
-  const topTaxpayer = useMemo(() => chartData[0] ?? null, [chartData]);
+  const topEntry = useMemo(
+    () =>
+      chartRows.reduce((best, row) => {
+        if (!best || row.amount > best.amount) {
+          return row;
+        }
+        return best;
+      }, null),
+    [chartRows]
+  );
+  const total = useMemo(
+    () => chartRows.reduce((sum, row) => sum + row.amount, 0),
+    [chartRows]
+  );
 
   return (
     <Box
@@ -87,29 +91,28 @@ function CedulaCollected({ year }) {
               borderRadius: 2,
               display: "grid",
               placeItems: "center",
-              background: "linear-gradient(135deg, #0f7b8c 0%, #18a0b6 100%)",
+              background: "linear-gradient(135deg, #00695c 0%, #26a69a 100%)",
             }}
           >
-            <AssignmentIndIcon sx={{ color: "#fff", fontSize: 22 }} />
+            <ScubaDivingRoundedIcon sx={{ color: "#fff", fontSize: 22 }} />
           </Box>
           <Box>
             <Typography variant="h6" sx={{ fontWeight: 800, color: "#102a43" }}>
-              Top 10 Taxpayer
+              Diving Ticket Best Sales
             </Typography>
             <Typography variant="body2" sx={{ color: "#627d98" }}>
-              Highest taxpayers across the LGU for the selected year
+              Monthly diving ticket sales for the selected year
             </Typography>
           </Box>
         </Box>
 
         <Chip
-          icon={<CalendarMonthRoundedIcon />}
           label={`Year ${year}`}
           sx={{
-            bgcolor: "#eef7fb",
-            color: "#102a43",
+            bgcolor: "#eef9f7",
+            color: "#0f5132",
             fontWeight: 700,
-            border: "1px solid #d9e2ec",
+            border: "1px solid #cce9e4",
           }}
         />
       </Box>
@@ -117,7 +120,7 @@ function CedulaCollected({ year }) {
       <Box
         sx={{
           display: "grid",
-          gridTemplateColumns: { xs: "1fr", lg: "minmax(0, 2.2fr) minmax(240px, 0.8fr)" },
+          gridTemplateColumns: { xs: "1fr", lg: "minmax(0, 2fr) minmax(220px, 0.9fr)" },
           gap: 2,
           alignItems: "stretch",
         }}
@@ -127,72 +130,48 @@ function CedulaCollected({ year }) {
             p: 2,
             borderRadius: 3,
             border: "1px solid #d9e2ec",
-            bgcolor: "#fbfdff",
+            bgcolor: "#fbfffe",
             minHeight: 360,
             display: "flex",
             alignItems: "center",
           }}
         >
           {loading ? (
-            <Skeleton
-              variant="rectangular"
-              width="100%"
-              height={300}
-              sx={{ borderRadius: 2.5, bgcolor: "#eef2f6" }}
-            />
-          ) : chartData.length === 0 ? (
+            <Skeleton variant="rectangular" width="100%" height={300} sx={{ borderRadius: 2.5 }} />
+          ) : pieRows.length === 0 ? (
             <Typography variant="body2" color="text.secondary">
-              No taxpayer collection data found for {year}.
+              No diving ticket sales found for the selected year.
             </Typography>
           ) : (
             <Fade in={!loading} timeout={350}>
               <Box sx={{ width: "100%" }}>
-                <BarChart
-                  dataset={chartData}
-                  xAxis={[
-                    {
-                      scaleType: "band",
-                      dataKey: "shortTaxpayer",
-                      colorMap: {
-                        type: "ordinal",
-                        values: chartData.map((item) => item.shortTaxpayer),
-                        colors: taxpayerColors,
-                      },
-                    },
-                  ]}
-                  yAxis={[
-                    {
-                      valueFormatter: (value) => {
-                        const amount = toNumber(value);
-                        if (amount >= 1000000) {
-                          return `${(amount / 1000000).toFixed(1)}M`;
-                        }
-                        if (amount >= 1000) {
-                          return `${Math.round(amount / 1000)}K`;
-                        }
-                        return String(amount);
-                      },
-                    },
-                  ]}
+                <PieChart
                   series={[
                     {
-                      dataKey: "amount",
-                      label: "Tax Paid",
-                      color: "#18a0b6",
+                      data: pieRows,
+                      innerRadius: 55,
+                      outerRadius: 110,
+                      paddingAngle: 2,
+                      cornerRadius: 4,
+                      highlightScope: { fade: "global", highlight: "item" },
+                      highlighted: { additionalRadius: 10 },
+                      faded: { additionalRadius: -4, color: "#dce9e6" },
+                      cx: 170,
+                      cy: 150,
                       valueFormatter: (value) =>
-                        `PHP ${toNumber(value).toLocaleString("en-PH", {
+                        `PHP ${Number(value?.value || 0).toLocaleString("en-PH", {
                           minimumFractionDigits: 2,
                           maximumFractionDigits: 2,
                         })}`,
-                      highlightScope: { highlight: "item", fade: "global" },
                     },
                   ]}
                   height={320}
-                  borderRadius={8}
-                  margin={{ top: 24, right: 24, bottom: 36, left: 72 }}
-                  grid={{ horizontal: true }}
+                  margin={{ top: 24, right: 180, bottom: 24, left: 24 }}
                   slotProps={{
-                    legend: { hidden: true },
+                    legend: {
+                      direction: "column",
+                      position: { vertical: "middle", horizontal: "right" },
+                    },
                   }}
                 />
               </Box>
@@ -205,19 +184,19 @@ function CedulaCollected({ year }) {
             sx={{
               p: 2,
               borderRadius: 3,
-              background: "linear-gradient(135deg, #0f7b8c 0%, #18a0b6 100%)",
+              background: "linear-gradient(135deg, #00695c 0%, #26a69a 100%)",
               color: "#ffffff",
             }}
           >
             <Typography sx={{ fontSize: 13, fontWeight: 700, opacity: 0.9 }}>
-              Top Taxpayer
+              Best Sale Month
             </Typography>
             <Typography sx={{ mt: 1, fontSize: { xs: 22, md: 28 }, fontWeight: 900 }}>
-              {topTaxpayer?.taxpayer ?? "No data"}
+              {topEntry?.fullLabel ?? "No data"}
             </Typography>
             <Typography sx={{ mt: 0.8, fontSize: 13, opacity: 0.88 }}>
               PHP{" "}
-              {toNumber(topTaxpayer?.amount).toLocaleString("en-PH", {
+              {Number(topEntry?.amount || 0).toLocaleString("en-PH", {
                 minimumFractionDigits: 2,
                 maximumFractionDigits: 2,
               })}
@@ -233,9 +212,9 @@ function CedulaCollected({ year }) {
             }}
           >
             <Box sx={{ display: "flex", alignItems: "center", gap: 1, mb: 1 }}>
-              <TrendingUpRoundedIcon sx={{ color: "#18a0b6", fontSize: 20 }} />
+              <TrendingUpRoundedIcon sx={{ color: "#00897b", fontSize: 20 }} />
               <Typography sx={{ fontWeight: 800, color: "#102a43" }}>
-                Top 10 Total
+                Yearly Diving Sales
               </Typography>
             </Box>
             <Typography sx={{ fontSize: 22, fontWeight: 800, color: "#102a43" }}>
@@ -246,7 +225,7 @@ function CedulaCollected({ year }) {
               })}
             </Typography>
             <Typography sx={{ mt: 0.4, color: "#486581", fontWeight: 600 }}>
-              Combined amount of the visible top taxpayers across all modules
+              Combined sales across 12 calendar months
             </Typography>
           </Box>
         </Box>
@@ -255,8 +234,8 @@ function CedulaCollected({ year }) {
   );
 }
 
-CedulaCollected.propTypes = {
+DivingTicketTopChart.propTypes = {
   year: PropTypes.oneOfType([PropTypes.number, PropTypes.string]).isRequired,
 };
 
-export default CedulaCollected;
+export default DivingTicketTopChart;
