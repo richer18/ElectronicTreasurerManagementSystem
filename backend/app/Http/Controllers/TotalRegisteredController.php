@@ -2,29 +2,23 @@
 
 namespace App\Http\Controllers;
 
-use Illuminate\Http\Request;
+use App\Helpers\BploStatusQueryHelper;
 use Illuminate\Support\Facades\DB;
 
 class TotalRegisteredController extends Controller
 {
-    // ✅ Returns overall total registered count
     public function index()
     {
-        $bplo = DB::connection('bplo'); // Use BPLO DB
-
-        $overallTotal = $bplo->table('bplo_records')->count('MCH_NO');
+        $overallTotal = BploStatusQueryHelper::table()->count('MCH_NO');
 
         return response()->json([
-            'overall_registered' => $overallTotal
+            'overall_registered' => (int) $overallTotal,
         ]);
     }
 
-    // ✅ Returns detailed list of all registered records
     public function list()
     {
-        $bplo = DB::connection('bplo'); // Use BPLO DB
-
-        $records = $bplo->table('bplo_records')
+        $records = BploStatusQueryHelper::table()
             ->select(
                 'DATE as DATE_REGISTERED',
                 DB::raw("CONCAT(FNAME, ' ', COALESCE(MNAME, ''), ' ', LNAME) as NAME"),

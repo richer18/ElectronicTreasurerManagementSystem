@@ -2,6 +2,7 @@
 
 namespace App\Models;
 
+use App\Helpers\BploStatusQueryHelper;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 
@@ -66,9 +67,6 @@ class BploRecord extends Model
     // ✅ Auto-compute STATUS dynamically
     public function getStatusAttribute($value)
     {
-        if (!empty($this->RENEW_TO)) {
-            return now()->lte($this->RENEW_TO) ? 'ACTIVE' : 'EXPIRED';
-        }
-        return $value ?? 'PENDING';
+        return BploStatusQueryHelper::resolveStatus($this->RENEW_TO);
     }
 }

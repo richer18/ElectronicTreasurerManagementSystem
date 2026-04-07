@@ -17,6 +17,7 @@ import { alpha } from "@mui/material/styles";
 import { useMemo, useState } from "react";
 import RealPropertyTaxAgricultural from "./component/RealPropertyTaxAgricultural";
 import RealPropertyTaxResidential from "./component/RealPropertyTaxResidential";
+import OtherTaxes from "./component/OtherTaxesDialogContent";
 import EconomicEnterprise from "./component/ReceiptsFromEconomicEnterprisesDialogContent.js";
 import RegulatoryFeesAndCharges from "./component/RegulatoryFeeAndChargesDialogContent.js";
 import ServiceUserCharges from "./component/ServiceUserChargesDialogContent.js";
@@ -26,8 +27,9 @@ const REPORT_TYPES = [
   "Real Property Tax - Agricultural",
   "Real Property Tax - Residential",
   "Tax on Business",
-  "Receipt from Economic Enterprise",
   "Service/User Charges",
+  "Receipt from Economic Enterprise",
+  "Other Taxes",
   "Regulatory Fees and Charges",
 ];
 
@@ -61,6 +63,8 @@ const getReportComponent = (type, quarter, year) => {
       return <RealPropertyTaxResidential quarter={quarter} year={year} />;
     case "Tax on Business":
       return <TaxOnBusiness quarter={quarter} year={year} />;
+    case "Other Taxes":
+      return <OtherTaxes quarter={quarter} year={year} />;
     case "Receipt from Economic Enterprise":
       return <EconomicEnterprise quarter={quarter} year={year} />;
     case "Service/User Charges":
@@ -76,22 +80,39 @@ function Esre() {
   const [selectedReport, setSelectedReport] = useState("");
   const [selectedQuarter, setSelectedQuarter] = useState("");
   const [selectedYear, setSelectedYear] = useState(new Date().getFullYear());
+  const [appliedFilters, setAppliedFilters] = useState(null);
 
   const resolvedQuarter = QUARTER_LABELS[selectedQuarter];
   const currentYear = new Date().getFullYear();
   const yearOptions = Array.from({ length: 11 }, (_, i) => currentYear - 5 + i);
 
-  const reportReady = Boolean(selectedReport && resolvedQuarter && selectedYear);
+  const formReady = Boolean(selectedReport && resolvedQuarter && selectedYear);
+  const reportReady =
+    Boolean(appliedFilters) &&
+    appliedFilters.report === selectedReport &&
+    appliedFilters.quarter === resolvedQuarter &&
+    appliedFilters.year === selectedYear;
 
   const summaryLabel = useMemo(() => {
     if (!reportReady) return "Choose a report, quarter, and year";
     return `${selectedReport} | ${resolvedQuarter} | ${selectedYear}`;
   }, [reportReady, resolvedQuarter, selectedReport, selectedYear]);
 
+  const handleViewReport = () => {
+    if (!formReady) return;
+
+    setAppliedFilters({
+      report: selectedReport,
+      quarter: resolvedQuarter,
+      year: selectedYear,
+    });
+  };
+
   const handleReset = () => {
     setSelectedReport("");
     setSelectedQuarter("");
     setSelectedYear(currentYear);
+    setAppliedFilters(null);
   };
 
   return (
@@ -305,6 +326,8 @@ function Esre() {
             <Button
               variant="contained"
               startIcon={<AssessmentIcon />}
+              onClick={handleViewReport}
+              disabled={!formReady}
               sx={{
                 borderRadius: "12px",
                 textTransform: "none",
@@ -399,10 +422,14 @@ function Esre() {
                 Ready State
               </Typography>
             </Box>
-            <Typography variant="body1" sx={{ fontWeight: 800 }}>
-              {reportReady ? "Ready to display" : "Waiting for filter selection"}
-            </Typography>
-          </Card>
+              <Typography variant="body1" sx={{ fontWeight: 800 }}>
+                {reportReady
+                  ? "Report loaded"
+                  : formReady
+                    ? "Ready to display"
+                    : "Waiting for filter selection"}
+              </Typography>
+            </Card>
         </Box>
 
         <Paper
@@ -447,7 +474,8 @@ function Esre() {
               </Typography>
               <Typography variant="body2" sx={{ mt: 0.75, maxWidth: 520 }}>
                 Choose the report type, quarter, and year from the filter panel
-                above to load the appropriate ESRE report view.
+                above, then click View Report to load the appropriate ESRE
+                report view.
               </Typography>
             </Box>
           )}

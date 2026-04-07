@@ -1,4 +1,4 @@
-import {
+﻿import {
   Alert,
   Box,
   CircularProgress,
@@ -13,7 +13,7 @@ const CATEGORY_MAPPING = [
   { label: "TRICYCLE PERMIT FEE", fields: ["Tricycle_Operators"] },
   { label: "OCCUPATION TAX", fields: ["Occupation_Tax"] },
   {
-    label: "OTHER PERMITS AND LICENSE", // ✅ added "S"
+    label: "OTHER PERMITS AND LICENSE", // âœ… added "S"
     fields: [
       "Docking_Mooring_Fee",
       "Cockpit_Prov_Share",
@@ -44,8 +44,8 @@ const CATEGORY_MAPPING = [
     label: "BUILDING PERMITS",
     fields: ["BUILDING_PERMIT_FEE", "ELECTRICAL_FEE"],
   },
-  { label: "BUSINESS PERMITS", fields: ["Mayors_Permit"] },
-  { label: "ZONING/LOCATION PERMIT FEES", fields: ["ZONING_FEE"] }, // ✅ fixed spelling
+  { label: "BUINESS PERMITS", fields: ["Mayors_Permit"] },
+  { label: "ZONING/LOCATION PERMIT FEES", fields: ["ZONING_FEE"] },
 ];
 
 const convertQuarterToMonths = (quarter) => {
@@ -61,7 +61,7 @@ const convertQuarterToMonths = (quarter) => {
 const formatCurrency = (value) => {
   const number = Number(value);
   return isNaN(number)
-    ? "₱ 0.00"
+    ? "PHP 0.00"
     : new Intl.NumberFormat("en-PH", {
         style: "currency",
         currency: "PHP",
@@ -73,7 +73,7 @@ export default function RegulatoryFeeAndChargesDialogContent({
   year,
 }) {
   const [breakdownData, setBreakdownData] = useState([]);
-  const [total, setTotal] = useState("₱ 0");
+  const [total, setTotal] = useState("PHP 0.00");
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
 
@@ -98,19 +98,19 @@ export default function RegulatoryFeeAndChargesDialogContent({
 
         const data = response.data;
 
-        // ✅ Transform API response (array) into object keyed by category
+        // âœ… Transform API response (array) into object keyed by category
         const categoryMap = {};
         (data.breakdown || []).forEach((item) => {
           categoryMap[item.category] = item.total_amount;
         });
 
-        // ✅ Map into the format required for your chart/table
+        // âœ… Map into the format required for your chart/table
         const transformedData = CATEGORY_MAPPING.map(({ label }) => ({
           label,
           value: formatCurrency(categoryMap[label] || 0),
         }));
 
-        // ✅ Calculate total
+        // âœ… Calculate total
         const calculatedTotal = transformedData.reduce(
           (sum, item) => sum + Number(item.value.replace(/[^0-9.-]+/g, "")),
           0
@@ -192,3 +192,4 @@ export default function RegulatoryFeeAndChargesDialogContent({
     </Box>
   );
 }
+

@@ -102,7 +102,7 @@ class RegulatoryFeesAndChargesBreakdownDataController extends Controller
                         ($tfRow->ELECTRICAL_FEE ?? 0)
                     ),
                 ],
-                ['category' => 'BUSINESS PERMITS', 'total_amount' => (float) ($gfRow->Mayors_Permit ?? 0)],
+                ['category' => 'BUINESS PERMITS', 'total_amount' => (float) ($gfRow->Mayors_Permit ?? 0)],
                 ['category' => 'ZONING/LOCATION PERMIT FEES', 'total_amount' => (float) ($tfRow->ZONING_FEE ?? 0)],
             ];
 

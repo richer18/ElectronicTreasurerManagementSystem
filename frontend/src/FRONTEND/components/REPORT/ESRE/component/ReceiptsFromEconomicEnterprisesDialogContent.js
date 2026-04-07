@@ -1,4 +1,4 @@
-import {
+﻿import {
   Alert,
   Box,
   CircularProgress,
@@ -31,7 +31,7 @@ const convertQuarterToMonths = (quarter) => {
 const formatCurrency = (value) => {
   const number = Number(value);
   return isNaN(number)
-    ? "₱ 0.00"
+    ? "PHP 0.00"
     : new Intl.NumberFormat("en-PH", {
         style: "currency",
         currency: "PHP",
@@ -41,7 +41,7 @@ const formatCurrency = (value) => {
 
 function ReceiptsFromEconomicEnterprisesDialogContent({ quarter, year }) {
   const [breakdownData, setBreakdownData] = useState([]);
-  const [total, setTotal] = useState("₱ 0");
+  const [total, setTotal] = useState("PHP 0.00");
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
 
@@ -116,7 +116,7 @@ function ReceiptsFromEconomicEnterprisesDialogContent({ quarter, year }) {
         mb={2}
       >
         <Typography variant="h6" fontWeight="bold">
-          Tax on Business Breakdown
+          Receipt from Economic Enterprise Breakdown
         </Typography>
         <Typography variant="h6" color="text.secondary">
           {year} Total
@@ -154,3 +154,4 @@ function ReceiptsFromEconomicEnterprisesDialogContent({ quarter, year }) {
 }
 
 export default ReceiptsFromEconomicEnterprisesDialogContent;
+

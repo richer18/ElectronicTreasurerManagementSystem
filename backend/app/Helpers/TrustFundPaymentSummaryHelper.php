@@ -34,11 +34,27 @@ class TrustFundPaymentSummaryHelper
 
     public static function applyDateFilters(Builder $query, Request $request, string $column = 'DATE'): Builder
     {
+        $months = collect(explode(',', (string) $request->input('month', '')))
+            ->map(fn ($month) => (int) trim($month))
+            ->filter(fn ($month) => $month >= 1 && $month <= 12)
+            ->values()
+            ->all();
+
         if ($request->filled('year')) {
             $year = (int) $request->year;
 
-            if ($request->filled('month')) {
-                $month = (int) $request->month;
+            if (count($months) > 1) {
+                $query->whereYear($column, $year)->whereIn(\DB::raw("MONTH({$column})"), $months);
+
+                if ($request->filled('day')) {
+                    $query->whereDay($column, (int) $request->day);
+                }
+
+                return $query;
+            }
+
+            if (count($months) === 1) {
+                $month = $months[0];
 
                 if ($request->filled('day')) {
                     $start = Carbon::create($year, $month, (int) $request->day)->startOfDay();
@@ -57,8 +73,10 @@ class TrustFundPaymentSummaryHelper
                 ->where($column, '<', $end->toDateString());
         }
 
-        if ($request->filled('month')) {
-            $query->whereMonth($column, $request->month);
+        if (count($months) > 1) {
+            $query->whereIn(\DB::raw("MONTH({$column})"), $months);
+        } elseif (count($months) === 1) {
+            $query->whereMonth($column, $months[0]);
         }
 
         if ($request->filled('day')) {

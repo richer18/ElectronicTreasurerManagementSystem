@@ -1,4 +1,4 @@
-import {
+﻿import {
   Alert,
   Box,
   CircularProgress,
@@ -8,14 +8,15 @@ import {
 import { useEffect, useState } from "react";
 import axiosInstance from "../../../../../api/axiosInstance";
 
-// 👇 Category keys must match those from backend 'category'
+// ðŸ‘‡ Category keys must match those from backend 'category'
 const CATEGORY_MAPPING = [
+  { label: "Police Clearance" },
   { label: "Secretaries Fee" },
   { label: "Garbage Fees" },
   { label: "Med./Lab Fees" },
 ];
 
-// 👇 Convert quarter label into list of months
+// ðŸ‘‡ Convert quarter label into list of months
 const convertQuarterToMonths = (quarter) => {
   const map = {
     "Q1 - Jan, Feb, Mar": [1, 2, 3],
@@ -26,11 +27,11 @@ const convertQuarterToMonths = (quarter) => {
   return map[quarter] || [];
 };
 
-// 👇 PHP currency formatting
+// ðŸ‘‡ PHP currency formatting
 const formatCurrency = (value) => {
   const num = Number(value);
   return isNaN(num)
-    ? "₱ 0.00"
+    ? "PHP 0.00"
     : new Intl.NumberFormat("en-PH", {
         style: "currency",
         currency: "PHP",
@@ -40,7 +41,7 @@ const formatCurrency = (value) => {
 
 function ServiceUserChargesDialogContent({ quarter, year }) {
   const [breakdownData, setBreakdownData] = useState([]);
-  const [total, setTotal] = useState("₱ 0.00");
+  const [total, setTotal] = useState("PHP 0.00");
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
 
@@ -66,13 +67,13 @@ function ServiceUserChargesDialogContent({ quarter, year }) {
         const data = response.data;
         const breakdown = data.breakdown || [];
 
-        // 🔍 Transform response array into object keyed by category
+        // ðŸ” Transform response array into object keyed by category
         const categoryMap = {};
         breakdown.forEach((item) => {
           categoryMap[item.category] = item.total_amount;
         });
 
-        // 🔄 Map to chart-friendly format
+        // ðŸ”„ Map to chart-friendly format
         const transformed = CATEGORY_MAPPING.map(({ label }) => ({
           label,
           value: formatCurrency(categoryMap[label] || 0),
@@ -159,3 +160,4 @@ function ServiceUserChargesDialogContent({ quarter, year }) {
 }
 
 export default ServiceUserChargesDialogContent;
+

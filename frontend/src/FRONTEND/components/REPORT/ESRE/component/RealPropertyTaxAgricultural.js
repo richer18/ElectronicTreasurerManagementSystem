@@ -1,4 +1,4 @@
-import {
+﻿import {
   Alert,
   Box,
   CircularProgress,
@@ -27,7 +27,7 @@ const convertQuarterToMonths = (quarter) => {
 const formatCurrency = (value) => {
   const number = Number(value);
   return isNaN(number)
-    ? "₱ 0.00"
+    ? "PHP 0.00"
     : new Intl.NumberFormat("en-PH", {
         style: "currency",
         currency: "PHP",
@@ -59,8 +59,8 @@ const calculateTotal = (dataArr) =>
 function RealPropertyTaxBasicDialogContent({ quarter, year }) {
   const [landData, setLandData] = useState([]);
   const [bldgData, setBldgData] = useState([]);
-  const [landTotal, setLandTotal] = useState("₱ 0.00");
-  const [bldgTotal, setBldgTotal] = useState("₱ 0.00");
+  const [landTotal, setLandTotal] = useState("PHP 0.00");
+  const [bldgTotal, setBldgTotal] = useState("PHP 0.00");
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
 
@@ -69,7 +69,7 @@ function RealPropertyTaxBasicDialogContent({ quarter, year }) {
       const response = await axiosInstance.get(url, {
         params: {
           year,
-          month: months.join(","), // ✅ send all months
+          month: months.join(","), // âœ… send all months
           _: Date.now(), // Cache busting
         },
       });
@@ -189,3 +189,4 @@ function RealPropertyTaxBasicDialogContent({ quarter, year }) {
 }
 
 export default RealPropertyTaxBasicDialogContent;
+

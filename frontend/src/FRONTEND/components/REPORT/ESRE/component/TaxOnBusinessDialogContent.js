@@ -1,4 +1,4 @@
-import {
+﻿import {
   Alert,
   Box,
   CircularProgress,
@@ -11,7 +11,7 @@ const CATEGORY_MAPPING = [
   { label: "Manufacturing", field: "Manufacturing" },
   { label: "Distributor", field: "Distributor" },
   { label: "Retailing", field: "Retailing" },
-  { label: "Banks & Other Financial", field: "Financial" },
+  { label: "Banks & Other Financial Int.", field: "Financial" },
   { label: "Other Business Tax", field: "Other_Business_Tax" },
   { label: "Fines & Penalties", field: "Fines_Penalties" },
   { label: "Sand & Gravel", field: "Sand_Gravel" },
@@ -30,7 +30,7 @@ const convertQuarterToMonths = (quarter) => {
 const formatCurrency = (value) => {
   const number = Number(value);
   return isNaN(number)
-    ? "₱ 0.00"
+    ? "PHP 0.00"
     : new Intl.NumberFormat("en-PH", {
         style: "currency",
         currency: "PHP",
@@ -39,7 +39,7 @@ const formatCurrency = (value) => {
 };
 export default function TaxOnBusinessDialogContent({ quarter, year }) {
   const [breakdownData, setBreakdownData] = useState([]);
-  const [total, setTotal] = useState("₱ 0");
+  const [total, setTotal] = useState("PHP 0.00");
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
 
@@ -147,3 +147,4 @@ export default function TaxOnBusinessDialogContent({ quarter, year }) {
     </Box>
   );
 }
+

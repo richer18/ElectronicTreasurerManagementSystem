@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers;
 
+use App\Helpers\BploStatusQueryHelper;
 use Illuminate\Http\Request;
 use App\Models\BploRecord;
 use Carbon\Carbon;
@@ -65,10 +66,7 @@ class BploRecordController extends Controller
         }
 
         // 🔹 Auto compute STATUS
-        $today = now()->format('Y-m-d');
-        $validated['STATUS'] = isset($validated['RENEW_TO']) && $today <= $validated['RENEW_TO']
-            ? 'ACTIVE'
-            : 'EXPIRED';
+        $validated['STATUS'] = BploStatusQueryHelper::resolveStatus($validated['RENEW_TO'] ?? null);
 
         // 🔹 Save to database
         $record = BploRecord::create($validated);
@@ -108,10 +106,7 @@ class BploRecordController extends Controller
             $data['RENEW_TO'] = Carbon::parse($data['RENEW_FROM'])->addYear()->format('Y-m-d');
         }
 
-        $today = now()->format('Y-m-d');
-        $data['STATUS'] = isset($data['RENEW_TO']) && $today <= $data['RENEW_TO']
-            ? 'ACTIVE'
-            : 'EXPIRED';
+        $data['STATUS'] = BploStatusQueryHelper::resolveStatus($data['RENEW_TO'] ?? null);
 
         $record->update($data);
 

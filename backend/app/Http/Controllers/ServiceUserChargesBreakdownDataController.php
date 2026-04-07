@@ -43,6 +43,7 @@ class ServiceUserChargesBreakdownDataController extends Controller
                 ->first();
 
             $breakdown = [
+                ['category' => 'Police Clearance', 'total_amount' => 0.0],
                 ['category' => 'Secretaries Fee', 'total_amount' => (float) (($row->Secretaries_Fee ?? 0) + ($row->Police_Report_Clearance ?? 0))],
                 ['category' => 'Garbage Fees', 'total_amount' => (float) ($row->Garbage_Fees ?? 0)],
                 ['category' => 'Med./Lab Fees', 'total_amount' => (float) ($row->Med_Dent_Lab_Fees ?? 0)],

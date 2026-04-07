@@ -1,4 +1,4 @@
-import {
+﻿import {
   Alert,
   Box,
   CircularProgress,
@@ -6,7 +6,7 @@ import {
   Typography,
 } from "@mui/material";
 import { useEffect, useState } from "react";
-import axiosInstance from "../../../../../api/axiosInstance"; // ✅ Make sure this path is correct
+import axiosInstance from "../../../../../api/axiosInstance"; // âœ… Make sure this path is correct
 
 const CATEGORY_MAPPING = [
   { label: "Current" },
@@ -27,7 +27,7 @@ const convertQuarterToMonths = (quarter) => {
 const formatCurrency = (value) => {
   const number = Number(value);
   return isNaN(number)
-    ? "₱ 0.00"
+    ? "PHP 0.00"
     : new Intl.NumberFormat("en-PH", {
         style: "currency",
         currency: "PHP",
@@ -59,18 +59,18 @@ const calculateTotal = (dataArr) =>
 function RealPropertyTaxResidential({ quarter, year }) {
   const [landData, setLandData] = useState([]);
   const [sefbldgData, setSefBldgData] = useState([]);
-  const [landTotal, setLandTotal] = useState("₱ 0.00");
-  const [sefbldgTotal, setSefBldgTotal] = useState("₱ 0.00");
+  const [landTotal, setLandTotal] = useState("PHP 0.00");
+  const [sefbldgTotal, setSefBldgTotal] = useState("PHP 0.00");
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
 
-  // ✅ Refactored to use axiosInstance and send multiple months
+  // âœ… Refactored to use axiosInstance and send multiple months
   const fetchBreakdown = async (url, year, months) => {
     try {
       const response = await axiosInstance.get(url, {
         params: {
           year,
-          month: months.join(","), // ✅ Send all months as comma-separated string
+          month: months.join(","), // âœ… Send all months as comma-separated string
           _: Date.now(), // optional cache buster
         },
       });
@@ -189,3 +189,4 @@ function RealPropertyTaxResidential({ quarter, year }) {
 }
 
 export default RealPropertyTaxResidential;
+
