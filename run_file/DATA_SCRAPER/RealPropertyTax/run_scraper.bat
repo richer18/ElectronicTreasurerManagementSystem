@@ -1,4 +1,4 @@
 @echo off
 setlocal
-python "%~dp0scraper.py" %*
+call "%~dp0run_full_process.bat" %*
 exit /b %errorlevel%

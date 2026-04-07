@@ -22,7 +22,7 @@ import {
   TextField,
   Typography,
 } from '@mui/material';
-import { format, isValid, parse, parseISO } from "date-fns";
+import { eachDayOfInterval, endOfMonth, format, isValid, parse, parseISO, startOfMonth } from "date-fns";
 import PropTypes from 'prop-types';
 import { useEffect, useMemo, useState } from 'react';
 import axios from "../../../../../api/axiosInstance";
@@ -101,9 +101,6 @@ const normalizeRptClassification = (value) => {
     case "BLDG-COMML":
     case "BUILDING-COMMERCIAL":
       return "bldgComm";
-    case "BLDG-AGRI":
-    case "BUILDING-AGRICULTURAL":
-      return "bldgAgri";
     case "MACHINERY":
     case "MACHINERIES":
     case "MACHINERIES-AGRICULTURAL":
@@ -126,6 +123,55 @@ const formatMoney = (value) =>
     minimumFractionDigits: 2,
     maximumFractionDigits: 2,
   }).format(Number(value || 0));
+
+const shouldIncludeRptReportRow = (row) => {
+  const includeInReport = row?.include_in_report ?? row?.INCLUDE_IN_REPORT;
+  if (includeInReport !== undefined && includeInReport !== null) {
+    return Number(includeInReport) !== 0;
+  }
+
+  const isVoid = row?.is_void ?? row?.IS_VOID;
+  if (Number(isVoid || 0) === 1) {
+    return false;
+  }
+
+  const isCancelled = row?.is_cancelled ?? row?.IS_CANCELLED;
+  if (Number(isCancelled || 0) === 1) {
+    return false;
+  }
+
+  const paymentStatus = (row?.payment_status_ct ?? row?.PAYMENT_STATUS_CT ?? "")
+    .toString()
+    .trim()
+    .toUpperCase();
+
+  return paymentStatus !== "CNL";
+};
+
+const createEmptyDailyRow = (dateKey) => ({
+  date: dateKey,
+  landComm: 0,
+  landAgri: 0,
+  landRes: 0,
+  bldgRes: 0,
+  bldgComm: 0,
+  machinery: 0,
+  bldgIndus: 0,
+  special: 0,
+  total: 0,
+  comments: "",
+});
+
+const buildMonthDays = (month, year) => {
+  if (!month || !year) return [];
+
+  const monthStart = startOfMonth(new Date(Number(year), Number(month) - 1, 1));
+  return eachDayOfInterval({
+    start: monthStart,
+    end: endOfMonth(monthStart),
+  })
+    .map((date) => format(date, "yyyy-MM-dd"));
+};
 
 DailyTable.propTypes = {
   month: PropTypes.string,
@@ -175,7 +221,9 @@ function DailyTable({
       try {
         const response = await axios.get("/allData");
         if (response.status === 200) {
-          const adjustedData = response.data.map((item, index) => ({
+          const adjustedData = response.data
+            .filter(shouldIncludeRptReportRow)
+            .map((item, index) => ({
             id: item.id !== undefined ? item.id : index,
             date: item.date ? parseISO(item.date) : null,
             name: item.name ?? "",
@@ -284,47 +332,30 @@ function DailyTable({
 
   const filteredData = useMemo(() => {
     const filtered = data.filter((row) => {
-      // Validate date first
       const dateObj = row.date ? new Date(row.date) : null;
       const isValidDate = dateObj && !isNaN(dateObj.getTime());
 
-      if (!isValidDate) return false; // Skip invalid dates
+      if (!isValidDate) return false;
 
       const rowMonth = format(dateObj, "M");
       const rowYear = format(dateObj, "yyyy");
-      return (
-        (month ? rowMonth === month : true) && (year ? rowYear === year : true)
-      );
+      return (month ? rowMonth === month : true) && (year ? rowYear === year : true);
     });
 
     const dataByDate = {};
 
     filtered.forEach((row) => {
-      // Handle invalid dates consistently
       const dateObj = row.date ? new Date(row.date) : null;
       const isValidDate = dateObj && !isNaN(dateObj.getTime());
-      const dateKey = isValidDate
-        ? format(dateObj, "yyyy-MM-dd")
-        : "Invalid Date";
+      if (!isValidDate) return;
+
+      const dateKey = format(dateObj, "yyyy-MM-dd");
 
       if (!dataByDate[dateKey]) {
-        dataByDate[dateKey] = {
-          date: dateKey,
-          landComm: 0,
-          landAgri: 0,
-          landRes: 0,
-          bldgRes: 0,
-          bldgComm: 0,
-          bldgAgri: 0,
-          machinery: 0,
-          bldgIndus: 0,
-          special: 0,
-          total: 0,
-          comments: "",
-        };
+        dataByDate[dateKey] = createEmptyDailyRow(dateKey);
       }
 
-      const amount = parseFloat(row.total) || 0;
+      const amount = parseFloat(row.gfTotal ?? row.gf_total) || parseFloat(row.total) || 0;
       dataByDate[dateKey].total += amount;
 
       const bucket = normalizeRptClassification(row.status);
@@ -332,14 +363,20 @@ function DailyTable({
         dataByDate[dateKey][bucket] += amount;
       }
 
-      // Update the comments for the date
-      dataByDate[dateKey].comments = row.comments || "";
+      if (row.comments) {
+        dataByDate[dateKey].comments = row.comments;
+      }
     });
 
-    const sortedData = Object.values(dataByDate).sort(
+    if (month && year) {
+      return buildMonthDays(month, year).map(
+        (dateKey) => dataByDate[dateKey] ?? createEmptyDailyRow(dateKey)
+      );
+    }
+
+    return Object.values(dataByDate).sort(
       (a, b) => new Date(a.date) - new Date(b.date)
     );
-    return sortedData;
   }, [data, month, year]);
 
   const totalAmount = useMemo(() => {
@@ -532,7 +569,6 @@ function DailyTable({
               <StyledTableCell>LAND-RES</StyledTableCell>
               <StyledTableCell>BLDG-RES</StyledTableCell>
               <StyledTableCell>BLDG-COMML</StyledTableCell>
-              <StyledTableCell>BLDG-AGRI</StyledTableCell>
               <StyledTableCell>MACHINERIES</StyledTableCell>
               <StyledTableCell>BLDG-INDUS</StyledTableCell>
               <StyledTableCell>SPECIAL</StyledTableCell>
@@ -550,7 +586,6 @@ function DailyTable({
                 <CenteredTableCell>{formatMoney(row.landRes)}</CenteredTableCell>
                 <CenteredTableCell>{formatMoney(row.bldgRes)}</CenteredTableCell>
                 <CenteredTableCell>{formatMoney(row.bldgComm)}</CenteredTableCell>
-                <CenteredTableCell>{formatMoney(row.bldgAgri)}</CenteredTableCell>
                 <CenteredTableCell>{formatMoney(row.machinery)}</CenteredTableCell>
                 <CenteredTableCell>{formatMoney(row.bldgIndus)}</CenteredTableCell>
                 <CenteredTableCell>{formatMoney(row.special)}</CenteredTableCell>
@@ -606,7 +641,7 @@ function DailyTable({
               </StyledTableRow>
             ))}
             <StyledTableRow>
-              <RightAlignedTableCell colSpan={10}>
+              <RightAlignedTableCell colSpan={9}>
                 <Typography fontWeight="bold">TOTAL</Typography>
               </RightAlignedTableCell>
               <RightAlignedTableCell colSpan={3}>

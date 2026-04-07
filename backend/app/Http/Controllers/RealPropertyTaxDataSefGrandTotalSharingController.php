@@ -15,9 +15,7 @@ class RealPropertyTaxDataSefGrandTotalSharingController extends Controller
         try {
             $landQuery = RealPropertyTaxQueryHelper::applyActiveFilter(DB::table(RealPropertyTaxQueryHelper::table()))
                 ->selectRaw('
-                    SUM(IFNULL(SEF_CURRENT_YEAR, 0) - IFNULL(SEF_DISCOUNTS, 0)) AS current,
-                    SUM(IFNULL(SEF_PRECEDING_YEAR, 0) + IFNULL(SEF_PRIOR_YEARS, 0)) AS prior,
-                    SUM(IFNULL(SEF_CURRENT_PENALTIES, 0) + IFNULL(SEF_PRECEDING_PENALTIES, 0) + IFNULL(SEF_PRIOR_PENALTIES, 0)) AS penalties
+                    SUM(IFNULL(SEF_TOTAL, 0)) AS total_amount
                 ')
                 ->whereIn(
                     RealPropertyTaxQueryHelper::classificationColumn(),
@@ -26,9 +24,7 @@ class RealPropertyTaxDataSefGrandTotalSharingController extends Controller
 
             $buildingQuery = RealPropertyTaxQueryHelper::applyActiveFilter(DB::table(RealPropertyTaxQueryHelper::table()))
                 ->selectRaw('
-                    SUM(IFNULL(SEF_CURRENT_YEAR, 0) - IFNULL(SEF_DISCOUNTS, 0)) AS current,
-                    SUM(IFNULL(SEF_PRECEDING_YEAR, 0) + IFNULL(SEF_PRIOR_YEARS, 0)) AS prior,
-                    SUM(IFNULL(SEF_CURRENT_PENALTIES, 0) + IFNULL(SEF_PRECEDING_PENALTIES, 0) + IFNULL(SEF_PRIOR_PENALTIES, 0)) AS penalties
+                    SUM(IFNULL(SEF_TOTAL, 0)) AS total_amount
                 ')
                 ->whereIn(
                     RealPropertyTaxQueryHelper::classificationColumn(),
@@ -50,20 +46,15 @@ class RealPropertyTaxDataSefGrandTotalSharingController extends Controller
             $buildingData = (array) $buildingQuery->first();
 
             $land = [
-                'current' => $landData['current'] ?? 0,
-                'prior' => $landData['prior'] ?? 0,
-                'penalties' => $landData['penalties'] ?? 0,
+                'total_amount' => $landData['total_amount'] ?? 0,
             ];
 
             $building = [
-                'current' => $buildingData['current'] ?? 0,
-                'prior' => $buildingData['prior'] ?? 0,
-                'penalties' => $buildingData['penalties'] ?? 0,
+                'total_amount' => $buildingData['total_amount'] ?? 0,
             ];
 
             $grandTotal =
-                $land['current'] + $land['prior'] + $land['penalties'] +
-                $building['current'] + $building['prior'] + $building['penalties'];
+                $land['total_amount'] + $building['total_amount'];
 
             $result = [
                 'category' => 'TOTAL',

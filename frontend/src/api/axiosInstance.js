@@ -55,8 +55,15 @@ axiosInstance.interceptors.response.use(
   (response) => response,
   (error) => {
     const status = error?.response?.status;
+    const requestUrl = String(error?.config?.url || "");
+    const normalizedUrl = requestUrl.replace(/^https?:\/\/[^/]+\//, "");
+    const isAuthSessionRequest =
+      normalizedUrl === "api/user" ||
+      normalizedUrl === "user" ||
+      normalizedUrl === "api/logout" ||
+      normalizedUrl === "logout";
 
-    if (status === 401) {
+    if (status === 401 && isAuthSessionRequest) {
       clearAuthStorage();
 
       if (

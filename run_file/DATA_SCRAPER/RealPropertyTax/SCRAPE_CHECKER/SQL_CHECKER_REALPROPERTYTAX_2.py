@@ -1,3 +1,4 @@
+import os
 import re
 import subprocess
 from datetime import datetime
@@ -12,11 +13,12 @@ LOG_FILE = MODULE_DIR / "Logs" / "real_property_tax_payment_checker_2.log.txt"
 
 MYSQL_EXE = Path(r"C:\xampp\mysql\bin\mysql.exe")
 MYSQL_EXE_FALLBACK = Path(r"D:\WINDOWS_INSTALLED\xampp\mysql\bin\mysql.exe")
-MYSQL_HOST = "192.168.101.109"
-MYSQL_PORT = "3307"
-MYSQL_DB = "zamboanguita_taxpayer"
-MYSQL_USER = "root"
-MYSQL_PASSWORD = ""
+MYSQL_EXE_OVERRIDE = os.environ.get("ETMS_MYSQL_EXE")
+MYSQL_HOST = os.environ.get("ETMS_MYSQL_HOST", "127.0.0.1")
+MYSQL_PORT = os.environ.get("ETMS_MYSQL_PORT", "3306")
+MYSQL_DB = os.environ.get("ETMS_MYSQL_DB", "zamboanguita_taxpayer")
+MYSQL_USER = os.environ.get("ETMS_MYSQL_USER", "root")
+MYSQL_PASSWORD = os.environ.get("ETMS_MYSQL_PASSWORD", "")
 
 PAYMENT_KEY_PATTERN = re.compile(
     r"INSERT INTO real_property_tax_payment \((?P<columns>.+)\) VALUES \((?P<values>.+)\);",
@@ -55,6 +57,12 @@ def log(message: str) -> None:
 
 
 def resolve_mysql_exe() -> Path:
+    if MYSQL_EXE_OVERRIDE:
+        override_path = Path(MYSQL_EXE_OVERRIDE).expanduser()
+        if override_path.exists():
+            return override_path
+        raise FileNotFoundError(f"MySQL executable not found: {override_path}")
+
     if MYSQL_EXE.exists():
         return MYSQL_EXE
     if MYSQL_EXE_FALLBACK.exists():
@@ -135,6 +143,9 @@ def import_to_mysql(sql_path: Path) -> None:
         + import_sql
         + "\n"
         + RESTORE_RPT_TRIGGERS_SQL
+    )
+    log(
+        f"Importing to MySQL with exe={mysql_exe} host={MYSQL_HOST} port={MYSQL_PORT} db={MYSQL_DB} user={MYSQL_USER}"
     )
     subprocess.run(command, input=payload.encode("utf-8"), check=True, capture_output=True)
 

@@ -19,7 +19,7 @@ class RealPropertyTaxDataLandDataController extends Controller
                 $query = RealPropertyTaxQueryHelper::applyActiveFilter(DB::table(RealPropertyTaxQueryHelper::table()))
                     ->selectRaw('? AS category', [$label])
                     ->selectRaw('IFNULL(SUM(BASIC_CURRENT_YEAR), 0) AS current')
-                    ->selectRaw('IFNULL(SUM(BASIC_DISCOUNTS), 0) AS discount')
+                    ->selectRaw('IFNULL(ABS(SUM(IFNULL(BASIC_TOTAL, 0) - IFNULL(BASIC_CURRENT_YEAR, 0) - IFNULL(BASIC_CURRENT_PENALTIES, 0) - IFNULL(BASIC_PRECEDING_YEAR, 0) - IFNULL(BASIC_PRECEDING_PENALTIES, 0) - IFNULL(BASIC_PRIOR_YEARS, 0) - IFNULL(BASIC_PRIOR_PENALTIES, 0))), 0) AS discount')
                     ->selectRaw('IFNULL(SUM(BASIC_PRECEDING_YEAR), 0) + IFNULL(SUM(BASIC_PRIOR_YEARS), 0) AS prior')
                     ->selectRaw('IFNULL(SUM(BASIC_CURRENT_PENALTIES), 0) AS penaltiesCurrent')
                     ->selectRaw('IFNULL(SUM(BASIC_PRECEDING_PENALTIES), 0) + IFNULL(SUM(BASIC_PRIOR_PENALTIES), 0) AS penaltiesPrior')

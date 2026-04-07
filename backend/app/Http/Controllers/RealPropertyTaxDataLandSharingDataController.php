@@ -26,7 +26,7 @@ class RealPropertyTaxDataLandSharingDataController extends Controller
             );
 
             $breakdowns = [
-                'Current' => "SUM(IFNULL(BASIC_CURRENT_YEAR, 0) - IFNULL(BASIC_DISCOUNTS, 0))",
+                'Current' => "SUM(IFNULL(BASIC_CURRENT_YEAR, 0) + (IFNULL(BASIC_TOTAL, 0) - IFNULL(BASIC_CURRENT_YEAR, 0) - IFNULL(BASIC_CURRENT_PENALTIES, 0) - IFNULL(BASIC_PRECEDING_YEAR, 0) - IFNULL(BASIC_PRECEDING_PENALTIES, 0) - IFNULL(BASIC_PRIOR_YEARS, 0) - IFNULL(BASIC_PRIOR_PENALTIES, 0)))",
                 'Prior' => "SUM(IFNULL(BASIC_PRECEDING_YEAR, 0) + IFNULL(BASIC_PRIOR_YEARS, 0))",
                 'Penalties' => "SUM(IFNULL(BASIC_CURRENT_PENALTIES, 0) + IFNULL(BASIC_PRECEDING_PENALTIES, 0) + IFNULL(BASIC_PRIOR_PENALTIES, 0))",
             ];
@@ -43,11 +43,7 @@ class RealPropertyTaxDataLandSharingDataController extends Controller
                     ->first();
             }
 
-            $totalExpression = "SUM(
-                (IFNULL(BASIC_CURRENT_YEAR, 0) - IFNULL(BASIC_DISCOUNTS, 0)) +
-                (IFNULL(BASIC_PRECEDING_YEAR, 0) + IFNULL(BASIC_PRIOR_YEARS, 0)) +
-                (IFNULL(BASIC_CURRENT_PENALTIES, 0) + IFNULL(BASIC_PRECEDING_PENALTIES, 0) + IFNULL(BASIC_PRIOR_PENALTIES, 0))
-            )";
+            $totalExpression = "SUM(IFNULL(BASIC_TOTAL, 0))";
 
             $results[] = (clone $query)
                 ->selectRaw("'TOTAL' AS category")

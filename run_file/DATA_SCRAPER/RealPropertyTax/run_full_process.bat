@@ -11,7 +11,7 @@ echo REAL PROPERTY TAX DATA SCRAPER FULL PROCESS
 echo ==========================================
 echo.
 
-echo [1/4] Running scraper...
+echo [1/3] Running scraper...
 python "%SCRAPER%" %*
 if errorlevel 1 (
     echo.
@@ -20,7 +20,7 @@ if errorlevel 1 (
 )
 
 echo.
-echo [2/4] Running SQL_CHECKER_REALPROPERTYTAX...
+echo [2/3] Running SQL_CHECKER_REALPROPERTYTAX...
 python "%CHECKER1%"
 if errorlevel 1 (
     echo.
@@ -29,11 +29,11 @@ if errorlevel 1 (
 )
 
 echo.
-echo [3/4] Running SQL_CHECKER_REALPROPERTYTAX_2...
+echo [3/3] Running SQL_CHECKER_REALPROPERTYTAX_2 and MySQL import...
 python "%CHECKER2%"
 if errorlevel 1 (
     echo.
-    echo Failed at step 3/4: SQL_CHECKER_REALPROPERTYTAX_2 or MySQL import
+    echo Failed at step 3: SQL_CHECKER_REALPROPERTYTAX_2 or MySQL import
     exit /b 1
 )
 

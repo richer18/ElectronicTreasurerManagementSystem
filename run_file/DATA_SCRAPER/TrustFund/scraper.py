@@ -25,10 +25,44 @@ LOGS_DIR = MODULE_DIR / "Logs"
 OUTPUT_FILE = SCRAPE_SAVE_DIR / "trust_fund_payment.sql"
 LOG_FILE = LOGS_DIR / "trust_fund_payment.log.txt"
 
-FIREBIRD_CLIENT = Path(r"C:\Program Files\Firebird\Firebird_2_5\bin\fbclient.dll")
-FIREBIRD_ROOT = FIREBIRD_CLIENT.parent.parent
-
 DEFAULT_FDB = Path(r"E:\ZAMBOANGUITA.FDB")
+
+
+def resolve_firebird_client() -> tuple[Path, Path]:
+    env_value = os.environ.get("FIREBIRD_CLIENT")
+    if env_value:
+        candidate = Path(env_value).expanduser()
+        if candidate.exists():
+            return candidate.parent, candidate
+
+    candidates = [
+        (ROOT / ".tools" / "firebird-2.5.9", ROOT / ".tools" / "firebird-2.5.9" / "fbembed.dll"),
+        (ROOT / ".tools" / "firebird-5.0.3", ROOT / ".tools" / "firebird-5.0.3" / "fbclient.dll"),
+        (
+            Path(r"D:\WINDOWS_INSTALLED\ElectronicTreasurerManagementSystem\.tools\firebird-2.5.9"),
+            Path(r"D:\WINDOWS_INSTALLED\ElectronicTreasurerManagementSystem\.tools\firebird-2.5.9\fbembed.dll"),
+        ),
+        (
+            Path(r"D:\WINDOWS_INSTALLED\ElectronicTreasurerManagementSystem\.tools\firebird-5.0.3"),
+            Path(r"D:\WINDOWS_INSTALLED\ElectronicTreasurerManagementSystem\.tools\firebird-5.0.3\fbclient.dll"),
+        ),
+        (
+            Path(r"C:\Program Files\Firebird\Firebird_2_5\bin"),
+            Path(r"C:\Program Files\Firebird\Firebird_2_5\bin\fbclient.dll"),
+        ),
+        (
+            Path(r"C:\Program Files\Firebird\Firebird_3_0"),
+            Path(r"C:\Program Files\Firebird\Firebird_3_0\fbclient.dll"),
+        ),
+    ]
+
+    for root_path, client_path in candidates:
+        if client_path.exists():
+            return root_path, client_path
+
+    raise FileNotFoundError(
+        "Firebird Client Library not found. Set FIREBIRD_CLIENT or install fbclient.dll in .tools."
+    )
 
 
 def log(message: str) -> None:
@@ -41,10 +75,16 @@ def log(message: str) -> None:
 
 
 def load_firebird_client() -> None:
-    os.environ["FIREBIRD"] = str(FIREBIRD_ROOT)
+    firebird_root, firebird_client = resolve_firebird_client()
     os.environ["FIREBIRD_LOCK"] = str(ROOT / ".tools" / "firebird-lock")
     os.environ["FIREBIRD_TMP"] = str(ROOT / ".tools" / "firebird-tmp")
-    fdb.load_api(str(FIREBIRD_CLIENT))
+    os.environ["FIREBIRD"] = str(firebird_root)
+    fdb.load_api(str(firebird_client))
+    log(f"Using Firebird client: {firebird_client}")
+
+
+def build_firebird_dsn(fdb_path: Path) -> str:
+    return str(fdb_path) if fdb_path.exists() else f"localhost:{fdb_path}"
 
 
 def sql_value(value) -> str:
@@ -95,8 +135,9 @@ def main() -> int:
     try:
         load_firebird_client()
         query = build_query(args.start_date, args.end_date)
-        log(f"Connecting to Firebird: localhost:{args.fdb}")
-        con = fdb.connect(dsn=f"localhost:{args.fdb}", user=args.fdb_user, password=args.fdb_password, charset="UTF8")
+        dsn = build_firebird_dsn(args.fdb)
+        log(f"Connecting to Firebird: {dsn}")
+        con = fdb.connect(dsn=dsn, user=args.fdb_user, password=args.fdb_password, charset="UTF8")
         try:
             cur = con.cursor()
             cur.execute(query)

@@ -1,6 +1,6 @@
 {
   "xampp_apache_script": "C:\\xampp\\apache_stop.bat",
   "xampp_mysql_script": "C:\\xampp\\mysql_stop.bat",
-  "backend": 9064,
-  "frontend": 15432
+  "backend": 12884,
+  "frontend": 9744
 }

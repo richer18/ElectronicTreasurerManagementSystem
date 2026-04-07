@@ -8,13 +8,11 @@ import SearchIcon from "@mui/icons-material/Search";
 import {
   Autocomplete,
   Card,
-  Checkbox,
   Dialog,
   DialogActions,
   DialogContent,
   DialogContentText,
   DialogTitle,
-  FormControlLabel,
   TextField,
   Tooltip,
 } from "@mui/material";
@@ -110,6 +108,30 @@ const formatMoney = (value, options = {}) => {
     minimumFractionDigits: 2,
     maximumFractionDigits: 2,
   }).format(normalized);
+};
+
+const shouldIncludeRptReportRow = (row) => {
+  const includeInReport = row?.include_in_report ?? row?.INCLUDE_IN_REPORT;
+  if (includeInReport !== undefined && includeInReport !== null) {
+    return Number(includeInReport) !== 0;
+  }
+
+  const isVoid = row?.is_void ?? row?.IS_VOID;
+  if (Number(isVoid || 0) === 1) {
+    return false;
+  }
+
+  const isCancelled = row?.is_cancelled ?? row?.IS_CANCELLED;
+  if (Number(isCancelled || 0) === 1) {
+    return false;
+  }
+
+  const paymentStatus = (row?.payment_status_ct ?? row?.PAYMENT_STATUS_CT ?? "")
+    .toString()
+    .trim()
+    .toUpperCase();
+
+  return paymentStatus !== "CNL";
 };
 
 const initialFormData = {
@@ -591,7 +613,6 @@ function RealPropertyTax() {
   const [downloadDialogOpen, setDownloadDialogOpen] = useState(false);
   const [downloadMonth, setDownloadMonth] = useState(null);
   const [downloadYear, setDownloadYear] = useState(null);
-  const [downloadIncludeCancelled, setDownloadIncludeCancelled] = useState(false);
 
   const [reportDialog, setReportDialog] = useState({
     open: false,
@@ -735,8 +756,11 @@ function RealPropertyTax() {
     const fetchData = async () => {
       try {
         const response = await axios.get("/allData");
-        setData(response.data);
-        setFilteredData(response.data);
+        const rows = Array.isArray(response.data)
+          ? response.data.filter(shouldIncludeRptReportRow)
+          : [];
+        setData(rows);
+        setFilteredData(rows);
       } catch (error) {
         console.error("Error fetching data:", error);
       }
@@ -821,7 +845,7 @@ function RealPropertyTax() {
       return [];
     }
 
-    let newFiltered = rows;
+    let newFiltered = rows.filter(shouldIncludeRptReportRow);
 
     if (searchQuery) {
       const q = searchQuery.toLowerCase();
@@ -851,7 +875,6 @@ function RealPropertyTax() {
   const handleDownload = () => {
     setDownloadMonth(month);
     setDownloadYear(year);
-    setDownloadIncludeCancelled(false);
     setDownloadDialogOpen(true);
   };
 
@@ -868,11 +891,7 @@ function RealPropertyTax() {
     let filteredExportData = [];
 
     try {
-      const response = await axios.get("/allData", {
-        params: {
-          include_cancelled: downloadIncludeCancelled ? 1 : undefined,
-        },
-      });
+      const response = await axios.get("/allData");
 
       filteredExportData = applyClientFilters(
         Array.isArray(response.data) ? response.data : [],
@@ -1551,16 +1570,6 @@ function RealPropertyTax() {
                 sx={{ minWidth: 220, flex: 1 }}
               />
             </Box>
-            <FormControlLabel
-              sx={{ mt: 2 }}
-              control={
-                <Checkbox
-                  checked={downloadIncludeCancelled}
-                  onChange={(e) => setDownloadIncludeCancelled(e.target.checked)}
-                />
-              }
-              label="Include cancelled payments"
-            />
           </DialogContent>
           <DialogActions>
             <Button onClick={() => setDownloadDialogOpen(false)}>Cancel</Button>

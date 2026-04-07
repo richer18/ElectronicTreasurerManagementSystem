@@ -15,11 +15,7 @@ class RealPropertyTaxDataOverAllTotalBasicAndSEFSharingController extends Contro
         try {
             $landBasicQuery = RealPropertyTaxQueryHelper::applyActiveFilter(DB::table(RealPropertyTaxQueryHelper::table()))
                 ->selectRaw('
-                    SUM(
-                        IFNULL(BASIC_CURRENT_YEAR, 0) - IFNULL(BASIC_DISCOUNTS, 0) +
-                        IFNULL(BASIC_PRECEDING_YEAR, 0) + IFNULL(BASIC_PRIOR_YEARS, 0) +
-                        IFNULL(BASIC_CURRENT_PENALTIES, 0) + IFNULL(BASIC_PRECEDING_PENALTIES, 0) + IFNULL(BASIC_PRIOR_PENALTIES, 0)
-                    ) AS total_amount
+                    SUM(IFNULL(BASIC_TOTAL, 0)) AS total_amount
                 ')
                 ->whereIn(
                     RealPropertyTaxQueryHelper::classificationColumn(),
@@ -34,11 +30,7 @@ class RealPropertyTaxDataOverAllTotalBasicAndSEFSharingController extends Contro
 
             $bldgBasicQuery = RealPropertyTaxQueryHelper::applyActiveFilter(DB::table(RealPropertyTaxQueryHelper::table()))
                 ->selectRaw('
-                    SUM(
-                        IFNULL(BASIC_CURRENT_YEAR, 0) - IFNULL(BASIC_DISCOUNTS, 0) +
-                        IFNULL(BASIC_PRECEDING_YEAR, 0) + IFNULL(BASIC_PRIOR_YEARS, 0) +
-                        IFNULL(BASIC_CURRENT_PENALTIES, 0) + IFNULL(BASIC_PRECEDING_PENALTIES, 0) + IFNULL(BASIC_PRIOR_PENALTIES, 0)
-                    ) AS total_amount
+                    SUM(IFNULL(BASIC_TOTAL, 0)) AS total_amount
                 ')
                 ->whereIn(
                     RealPropertyTaxQueryHelper::classificationColumn(),
@@ -53,11 +45,7 @@ class RealPropertyTaxDataOverAllTotalBasicAndSEFSharingController extends Contro
 
             $landSEFQuery = RealPropertyTaxQueryHelper::applyActiveFilter(DB::table(RealPropertyTaxQueryHelper::table()))
                 ->selectRaw('
-                    SUM(
-                        IFNULL(SEF_CURRENT_YEAR, 0) - IFNULL(SEF_DISCOUNTS, 0) +
-                        IFNULL(SEF_PRECEDING_YEAR, 0) + IFNULL(SEF_PRIOR_YEARS, 0) +
-                        IFNULL(SEF_CURRENT_PENALTIES, 0) + IFNULL(SEF_PRECEDING_PENALTIES, 0) + IFNULL(SEF_PRIOR_PENALTIES, 0)
-                    ) AS total_amount
+                    SUM(IFNULL(SEF_TOTAL, 0)) AS total_amount
                 ')
                 ->whereIn(
                     RealPropertyTaxQueryHelper::classificationColumn(),
@@ -72,11 +60,7 @@ class RealPropertyTaxDataOverAllTotalBasicAndSEFSharingController extends Contro
 
             $bldgSEFQuery = RealPropertyTaxQueryHelper::applyActiveFilter(DB::table(RealPropertyTaxQueryHelper::table()))
                 ->selectRaw('
-                    SUM(
-                        IFNULL(SEF_CURRENT_YEAR, 0) - IFNULL(SEF_DISCOUNTS, 0) +
-                        IFNULL(SEF_PRECEDING_YEAR, 0) + IFNULL(SEF_PRIOR_YEARS, 0) +
-                        IFNULL(SEF_CURRENT_PENALTIES, 0) + IFNULL(SEF_PRECEDING_PENALTIES, 0) + IFNULL(SEF_PRIOR_PENALTIES, 0)
-                    ) AS total_amount
+                    SUM(IFNULL(SEF_TOTAL, 0)) AS total_amount
                 ')
                 ->whereIn(
                     RealPropertyTaxQueryHelper::classificationColumn(),

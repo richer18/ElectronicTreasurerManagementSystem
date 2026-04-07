@@ -13,10 +13,7 @@ class RealPropertyTaxController extends Controller
     {
         try {
             $query = DB::table('real_property_tax_payment');
-
-            if (! $request->boolean('include_cancelled')) {
-                RealPropertyTaxQueryHelper::applyActiveFilter($query);
-            }
+            RealPropertyTaxQueryHelper::applyActiveFilter($query);
 
             $results = $query
                 ->selectRaw("
