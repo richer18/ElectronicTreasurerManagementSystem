@@ -212,6 +212,7 @@ class AuthorizeModulePermission
             'reports' => [
                 'patterns' => [
                     'api/fetch-report',
+                    'api/procurement*',
                     'api/tax/monthly',
                     'api/TaxOnBusinessBreakdown',
                     'api/ServiceUserChargesBreakdown',
@@ -233,6 +234,7 @@ class AuthorizeModulePermission
                 'patterns' => [
                     'api/datapsic',
                     'api/bplo*',
+                    'api/bpls*',
                     'api/total-registered/list',
                     'api/total-renew',
                     'api/total-renew/list',

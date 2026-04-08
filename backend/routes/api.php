@@ -117,6 +117,8 @@ use App\Http\Controllers\WaterWorksAccountNumberJSONDataController;
 use App\Http\Controllers\WaterWorksAccountNumberPaymentJSONDataController;
 
 use App\Http\Controllers\BploRecordController;
+use App\Http\Controllers\BplsDashboardController;
+use App\Http\Controllers\BplsImportController;
 use App\Http\Controllers\TotalRevenueController;
 use App\Http\Controllers\RcdBatchController;
 use App\Http\Controllers\RcdSuggestedCollectionController;
@@ -127,6 +129,7 @@ use App\Http\Controllers\TotalExpiredController;
 
 use App\Http\Controllers\TotalSummaryController;
 use App\Http\Controllers\PurchaseController;
+use App\Http\Controllers\ProcurementDocumentController;
 use App\Http\Controllers\FormTypeController;
 use App\Http\Controllers\AssignFormController;
 use App\Http\Controllers\IssuedFormController;
@@ -327,6 +330,10 @@ Route::get("/test-save", [WaterWorksRegisterJSONDataController::class, "testSave
 
 //MCH
 Route::get('bplo/registered-mch', [BploRecordController::class, 'registeredMch']);
+Route::get('/bpls/applications', [BplsDashboardController::class, 'index']);
+Route::get('/bpls/summary', [BplsDashboardController::class, 'summary']);
+Route::post('/bpls/import/master-list', [BplsImportController::class, 'importApplications']);
+Route::post('/bpls/import/collections', [BplsImportController::class, 'importCollections']);
 Route::get('/total-renew/list', [TotalRenewController::class, 'list']);
 Route::apiResource('bplo', BploRecordController::class);
 Route::get('/bplo', [BploRecordController::class, 'index']);      // All records
@@ -349,6 +356,12 @@ Route::get('/TotalExpired', [TotalExpiredController::class, 'index']);
 Route::get('/TotalSummary', [TotalSummaryController::class, 'index']);
 
 Route::get('/purchases', [PurchaseController::class, 'index']);
+Route::get('/procurement/{type}/summary', [ProcurementDocumentController::class, 'summary']);
+Route::get('/procurement/{type}', [ProcurementDocumentController::class, 'index']);
+Route::post('/procurement/{type}', [ProcurementDocumentController::class, 'store']);
+Route::get('/procurement/{type}/{id}', [ProcurementDocumentController::class, 'show']);
+Route::put('/procurement/{type}/{id}', [ProcurementDocumentController::class, 'update']);
+Route::delete('/procurement/{type}/{id}', [ProcurementDocumentController::class, 'destroy']);
 Route::get('/purchases/{id}', [PurchaseController::class, 'show']);
 Route::post('/purchases', [PurchaseController::class, 'store']);
 Route::get('/form-types', [FormTypeController::class, 'index']);

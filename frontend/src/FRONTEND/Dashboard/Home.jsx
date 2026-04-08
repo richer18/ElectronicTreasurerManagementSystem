@@ -106,6 +106,62 @@ const NAVIGATION = [
     icon: <CalendarMonthRoundedIcon sx={navIconPrimary} />,
   },
   {
+    title: "Procurement Portal",
+    icon: <DescriptionRoundedIcon sx={navIconAccent} />,
+    children: [
+      {
+        segment: "procurement-portal",
+        title: "Overview",
+        icon: <DescriptionRoundedIcon sx={navIconPrimary} />,
+      },
+      {
+        segment: "procurement-portal/disbursement-vouchers",
+        title: "Disbursement Voucher",
+        icon: <DescriptionRoundedIcon sx={navIconMuted} />,
+      },
+      {
+        segment: "procurement-portal/obligation-requests",
+        title: "Obligation Request",
+        icon: <DescriptionRoundedIcon sx={navIconMuted} />,
+      },
+      {
+        segment: "procurement-portal/requisition-issue-slips",
+        title: "Requisition and Issue Slip",
+        icon: <DescriptionRoundedIcon sx={navIconMuted} />,
+      },
+      {
+        segment: "procurement-portal/purchase-requests",
+        title: "Purchase Request",
+        icon: <DescriptionRoundedIcon sx={navIconMuted} />,
+      },
+      {
+        segment: "procurement-portal/purchase-orders",
+        title: "Purchase Order",
+        icon: <DescriptionRoundedIcon sx={navIconMuted} />,
+      },
+      {
+        segment: "procurement-portal/job-orders",
+        title: "Job Order",
+        icon: <DescriptionRoundedIcon sx={navIconMuted} />,
+      },
+      {
+        segment: "procurement-portal/job-order-requests",
+        title: "Job Order Request",
+        icon: <DescriptionRoundedIcon sx={navIconMuted} />,
+      },
+      {
+        segment: "procurement-portal/abstract-of-canvass",
+        title: "Abstract of Canvass",
+        icon: <DescriptionRoundedIcon sx={navIconMuted} />,
+      },
+      {
+        segment: "procurement-portal/pr-recommendations",
+        title: "PR Recommendation",
+        icon: <DescriptionRoundedIcon sx={navIconMuted} />,
+      },
+    ],
+  },
+  {
     kind: "divider",
   },
   {
@@ -214,11 +270,6 @@ const NAVIGATION = [
     requiredPermissions: ["reports.export"],
     icon: <DescriptionRoundedIcon sx={navIconAccent} />,
     children: [
-      {
-        segment: "email-inbox",
-        title: "Voucher",
-        icon: <DescriptionRoundedIcon sx={navIconPrimary} />,
-      },
       {
         segment: "email-sent-rcd-gf",
         title: "RCD GF",

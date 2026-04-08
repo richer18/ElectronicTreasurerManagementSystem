@@ -38,6 +38,16 @@ import EbikeTrisikad from "../FRONTEND/components/BUSINESS/E-BIKE_TRISIKAD/ebike
 import Mch from "../FRONTEND/components/BUSINESS/MCH/mch";
 import Collection from "../FRONTEND/components/REPORT/Collection/collection";
 import DivingReport from "../FRONTEND/components/REPORT/DivingReport/DivingReport";
+import ProcurementPortal from "../FRONTEND/components/PROCUREMENT/ProcurementPortal";
+import DisbursementVoucherPage from "../FRONTEND/components/PROCUREMENT/DisbursementVoucherPage";
+import ObligationRequestPage from "../FRONTEND/components/PROCUREMENT/ObligationRequestPage";
+import RequisitionIssueSlipPage from "../FRONTEND/components/PROCUREMENT/RequisitionIssueSlipPage";
+import PurchaseRequestPage from "../FRONTEND/components/PROCUREMENT/PurchaseRequestPage";
+import PurchaseOrderPage from "../FRONTEND/components/PROCUREMENT/PurchaseOrderPage";
+import JobOrderPage from "../FRONTEND/components/PROCUREMENT/JobOrderPage";
+import JobOrderRequestPage from "../FRONTEND/components/PROCUREMENT/JobOrderRequestPage";
+import AbstractOfCanvassPage from "../FRONTEND/components/PROCUREMENT/AbstractOfCanvassPage";
+import PrRecommendationPage from "../FRONTEND/components/PROCUREMENT/PrRecommendationPage";
 import RCD from "../FRONTEND/components/RCD/ReportCollectionDeposit";
 import UserManagement from "../FRONTEND/components/ADMIN/UserManagement";
 
@@ -134,6 +144,17 @@ const routeAliases = [
   { from: "/esre", to: "/my-app/esre" },
   { from: "/collection", to: "/my-app/collection" },
   { from: "/diving-report", to: "/my-app/diving-report" },
+  { from: "/procurement-portal", to: "/my-app/procurement-portal" },
+  { from: "/disbursement-vouchers", to: "/my-app/procurement-portal/disbursement-vouchers" },
+  { from: "/obligation-requests", to: "/my-app/procurement-portal/obligation-requests" },
+  { from: "/requisition-issue-slips", to: "/my-app/procurement-portal/requisition-issue-slips" },
+  { from: "/purchase-requests", to: "/my-app/procurement-portal/purchase-requests" },
+  { from: "/purchase-orders", to: "/my-app/procurement-portal/purchase-orders" },
+  { from: "/job-orders", to: "/my-app/procurement-portal/job-orders" },
+  { from: "/job-order-requests", to: "/my-app/procurement-portal/job-order-requests" },
+  { from: "/abstract-of-canvass", to: "/my-app/procurement-portal/abstract-of-canvass" },
+  { from: "/pr-recommendations", to: "/my-app/procurement-portal/pr-recommendations" },
+  { from: "/disbursement-voucher", to: "/my-app/procurement-portal/disbursement-vouchers" },
   { from: "/register-user", to: "/my-app/register-user" },
   { from: "/new-application", to: "/my-app/new-application" },
   { from: "/renew-application", to: "/my-app/renew-application" },
@@ -198,6 +219,96 @@ function Routers() {
             {/* <Route path="dive-ticket" element={<DiveTicket />} /> */}
             {/* <Route path="cash-ticket" element={<CashTicket />} /> */}
 
+            <Route
+              path="procurement-portal"
+              element={
+                <PermissionRoute
+                  permissions={["reports.view"]}
+                  element={<ProcurementPortal />}
+                />
+              }
+            />
+            <Route
+              path="procurement-portal/disbursement-vouchers"
+              element={
+                <PermissionRoute
+                  permissions={["reports.view"]}
+                  element={<DisbursementVoucherPage />}
+                />
+              }
+            />
+            <Route
+              path="procurement-portal/obligation-requests"
+              element={
+                <PermissionRoute
+                  permissions={["reports.view"]}
+                  element={<ObligationRequestPage />}
+                />
+              }
+            />
+            <Route
+              path="procurement-portal/requisition-issue-slips"
+              element={
+                <PermissionRoute
+                  permissions={["reports.view"]}
+                  element={<RequisitionIssueSlipPage />}
+                />
+              }
+            />
+            <Route
+              path="procurement-portal/purchase-requests"
+              element={
+                <PermissionRoute
+                  permissions={["reports.view"]}
+                  element={<PurchaseRequestPage />}
+                />
+              }
+            />
+            <Route
+              path="procurement-portal/purchase-orders"
+              element={
+                <PermissionRoute
+                  permissions={["reports.view"]}
+                  element={<PurchaseOrderPage />}
+                />
+              }
+            />
+            <Route
+              path="procurement-portal/job-orders"
+              element={
+                <PermissionRoute
+                  permissions={["reports.view"]}
+                  element={<JobOrderPage />}
+                />
+              }
+            />
+            <Route
+              path="procurement-portal/job-order-requests"
+              element={
+                <PermissionRoute
+                  permissions={["reports.view"]}
+                  element={<JobOrderRequestPage />}
+                />
+              }
+            />
+            <Route
+              path="procurement-portal/abstract-of-canvass"
+              element={
+                <PermissionRoute
+                  permissions={["reports.view"]}
+                  element={<AbstractOfCanvassPage />}
+                />
+              }
+            />
+            <Route
+              path="procurement-portal/pr-recommendations"
+              element={
+                <PermissionRoute
+                  permissions={["reports.view"]}
+                  element={<PrRecommendationPage />}
+                />
+              }
+            />
             <Route
               path="business-card"
               element={<PermissionRoute permissions={["reports.view"]} element={<BusinessCard />} />}
