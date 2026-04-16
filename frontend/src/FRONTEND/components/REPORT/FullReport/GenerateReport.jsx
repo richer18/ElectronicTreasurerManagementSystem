@@ -211,7 +211,7 @@ function GenerateReport({ open, onClose }) {
 
     const link = document.createElement("a");
     link.href = url;
-    link.setAttribute("GeneralFundReport", `report-${Date.now()}.csv`);
+    link.setAttribute("download", `receipt-lookup-${Date.now()}.csv`);
     document.body.appendChild(link);
     link.click();
     document.body.removeChild(link);
@@ -252,7 +252,7 @@ function GenerateReport({ open, onClose }) {
           <Box display="flex" alignItems="center">
             <DescriptionOutlined sx={{ mr: 1.5, fontSize: 28 }} />
             <Typography variant="h5" fontWeight="500">
-              Generate Financial Report
+              Receipt Lookup
             </Typography>
           </Box>
           <IconButton onClick={handleClose} sx={{ color: "white" }}>
@@ -464,8 +464,8 @@ function GenerateReport({ open, onClose }) {
                 }
               >
                 {status === "loading"
-                  ? "Generating Report..."
-                  : "Generate Report"}
+                  ? "Running Lookup..."
+                  : "Run Lookup"}
               </Button>
             </Col>
           </Row>
@@ -626,7 +626,7 @@ function GenerateReport({ open, onClose }) {
                     }}
                     startIcon={<DownloadIcon />}
                   >
-                    Download CSV
+                    Download Results CSV
                   </Button>
                   <TablePagination
                     rowsPerPageOptions={[5, 10, 25]}

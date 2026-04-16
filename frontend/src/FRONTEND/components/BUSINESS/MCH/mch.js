@@ -98,6 +98,18 @@ const getStatusChipProps = (status) => {
   }
 };
 
+const getEffectiveStatus = (record) => {
+  const rawStatus = String(record?.STATUS || "PENDING").trim().toUpperCase() || "PENDING";
+  const renewTo = dayjs(record?.RENEW_TO);
+  const today = dayjs().startOf("day");
+
+  if (renewTo.isValid() && renewTo.endOf("day").isBefore(today)) {
+    return "EXPIRED";
+  }
+
+  return rawStatus;
+};
+
 function FrontPage() {
   const [controller] = useMaterialUIController();
   const { darkMode } = controller;
@@ -429,9 +441,7 @@ function FrontPage() {
         ? ["EXPIRED", "EXPIRE"]
         : ["ACTIVE", "RENEW"];
 
-    return filteredRecords.filter((record) =>
-      allowedStatuses.includes(String(record.STATUS || "").trim().toUpperCase())
-    );
+    return filteredRecords.filter((record) => allowedStatuses.includes(getEffectiveStatus(record)));
   };
 
   const buildExportRows = () =>
@@ -445,9 +455,9 @@ function FrontPage() {
       "Renew From": formatDate(record.RENEW_FROM),
       "Renew To": formatDate(record.RENEW_TO),
       Status:
-        downloadType === "Renew" && String(record.STATUS || "").trim().toUpperCase() === "ACTIVE"
+        downloadType === "Renew" && getEffectiveStatus(record) === "ACTIVE"
           ? "RENEW"
-          : record.STATUS || "PENDING",
+          : getEffectiveStatus(record),
     }));
 
   const getExportFileName = (extension) => {
@@ -650,7 +660,7 @@ function FrontPage() {
             ["Total Pay", viewRecord.AMOUNT ? `PHP ${Number(viewRecord.AMOUNT).toLocaleString()}` : ""],
             ["Renew From", formatDate(viewRecord.RENEW_FROM)],
             ["Renew To", formatDate(viewRecord.RENEW_TO)],
-            ["Status", viewRecord.STATUS],
+            ["Status", getEffectiveStatus(viewRecord)],
             ["Mayor's Permit No.", viewRecord.MAYORS_PERMIT_NO],
             ["License No.", viewRecord.LICENSE_NO],
             ["License Valid Date", formatDate(viewRecord.LICENSE_VALID_DATE)],
@@ -914,7 +924,7 @@ function FrontPage() {
             {filteredRecords
               .slice(page * rowsPerPage, page * rowsPerPage + rowsPerPage)
               .map((record) => {
-                const chip = getStatusChipProps(record.STATUS);
+                const chip = getStatusChipProps(getEffectiveStatus(record));
 
                 return (
                   <TableRow key={record.ID} hover>

@@ -37,9 +37,9 @@ import BusinessReviewDataNew from "../FRONTEND/components/BUSINESS/BusinessRegis
 import EbikeTrisikad from "../FRONTEND/components/BUSINESS/E-BIKE_TRISIKAD/ebiketrisikad";
 import Mch from "../FRONTEND/components/BUSINESS/MCH/mch";
 import Collection from "../FRONTEND/components/REPORT/Collection/collection";
+import DisbursementVoucherReport from "../FRONTEND/components/REPORT/DisbursementVoucher/DisbursementVoucher";
 import DivingReport from "../FRONTEND/components/REPORT/DivingReport/DivingReport";
 import ProcurementPortal from "../FRONTEND/components/PROCUREMENT/ProcurementPortal";
-import DisbursementVoucherPage from "../FRONTEND/components/PROCUREMENT/DisbursementVoucherPage";
 import ObligationRequestPage from "../FRONTEND/components/PROCUREMENT/ObligationRequestPage";
 import RequisitionIssueSlipPage from "../FRONTEND/components/PROCUREMENT/RequisitionIssueSlipPage";
 import PurchaseRequestPage from "../FRONTEND/components/PROCUREMENT/PurchaseRequestPage";
@@ -228,15 +228,15 @@ function Routers() {
                 />
               }
             />
-            <Route
-              path="procurement-portal/disbursement-vouchers"
-              element={
-                <PermissionRoute
-                  permissions={["reports.view"]}
-                  element={<DisbursementVoucherPage />}
-                />
-              }
-            />
+              <Route
+                path="procurement-portal/disbursement-vouchers"
+                element={
+                  <PermissionRoute
+                    permissions={["reports.view"]}
+                    element={<DisbursementVoucherReport />}
+                  />
+                }
+              />
             <Route
               path="procurement-portal/obligation-requests"
               element={

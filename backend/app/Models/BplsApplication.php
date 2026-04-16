@@ -17,6 +17,7 @@ class BplsApplication extends Model
     protected $casts = [
         'imported_at' => 'datetime',
         'birth_date' => 'date',
+        'date_issued' => 'date',
         'transaction_date' => 'date',
         'payment_date' => 'date',
         'or_date' => 'date',
@@ -28,5 +29,7 @@ class BplsApplication extends Model
         'annual_amount' => 'decimal:2',
         'amount_paid' => 'decimal:2',
         'balance' => 'decimal:2',
+        'male_employees' => 'integer',
+        'female_employees' => 'integer',
     ];
 }

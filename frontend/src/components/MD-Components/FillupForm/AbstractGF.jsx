@@ -1,6 +1,5 @@
 import "bootstrap/dist/css/bootstrap.min.css";
 import dayjs from "dayjs";
-import PropTypes from "prop-types";
 import { useCallback, useEffect, useMemo, useState } from "react";
 import {
   Alert,
@@ -34,15 +33,6 @@ const cashier = [
   "AMABELLA",
 ];
 
-const filterOptions = (options, inputValue) => {
-  if (!inputValue) return options;
-  return options.filter((option) =>
-    String(option?.description || "")
-      .toLowerCase()
-      .includes(String(inputValue).toLowerCase())
-  );
-};
-
 const uiColors = {
   navy: "#0f2747",
   navyHover: "#0b1e38",
@@ -60,9 +50,9 @@ const inputStyle = {
   borderColor: uiColors.border,
   boxShadow: "none",
 };
+const AUTO_RECEIPT_PATTERN = /^00\d{8}$/;
 
-function AbstractGF({ data, mode }) {
-  // State variables
+function AbstractGF() {
   const [selectedDate, setSelectedDate] = useState("");
   const [taxpayerName, setTaxpayerName] = useState("");
   const [receiptNumber, setReceiptNumber] = useState("");
@@ -89,60 +79,29 @@ function AbstractGF({ data, mode }) {
     return map;
   }, [rateOptions]);
 
-  // Auto-generate receipt number
-  const autoGenerateReceipt = async () => {
-    try {
-      const lastReceipt = "000000";
-      const newReceiptNum = String(parseInt(lastReceipt, 10) + 1).padStart(
-        6,
-        "0"
-      );
-      setReceiptNumber(newReceiptNum);
-    } catch (error) {
-      console.error("Error generating receipt:", error);
+  const buildCashTicketsReceiptNumber = useCallback((dateValue) => {
+    const parsedDate = dayjs(dateValue);
+    if (!parsedDate.isValid()) {
+      return "";
     }
-  };
 
-  // Prefill data in edit mode
-  useEffect(() => {
-    if (mode === "edit" && data) {
-      setSelectedDate(data.date || "");
-      setTaxpayerName(data.name || "");
-      setReceiptNumber(data.receipt_no || "");
-      setTypeReceipt(data.type_receipt || "");
-      setSelectedCashier(data.cashier || "");
+    return `00${parsedDate.format("YYYYMMDD")}`;
+  }, []);
 
-      const newFields = [];
-      const newFieldValues = {};
-
-      ([]).forEach((fieldKey) => {
-        const rawValue = data[fieldKey];
-
-        // 🔑 Cast to number and filter out exact 0, including "0", "0.00", etc.
-        const numericValue = parseFloat(rawValue);
-
-        if (!isNaN(numericValue) && numericValue !== 0) {
-          newFields.push(fieldKey);
-          newFieldValues[fieldKey] = rawValue.toString();
+  const autoGenerateReceipt = useCallback(
+    (dateValue = selectedDate) => {
+      try {
+        const newReceiptNum = buildCashTicketsReceiptNumber(dateValue);
+        if (newReceiptNum) {
+          setReceiptNumber(newReceiptNum);
         }
-      });
+      } catch (error) {
+        console.error("Error generating receipt:", error);
+      }
+    },
+    [buildCashTicketsReceiptNumber, selectedDate]
+  );
 
-      setFields([]);
-      setFieldValues({});
-      setShowSelect(true);
-    } else if (mode === "add") {
-      setSelectedDate("");
-      setTaxpayerName("");
-      setReceiptNumber("");
-      setTypeReceipt("");
-      setSelectedCashier("");
-      setFields([]);
-      setFieldValues({});
-      setShowSelect(true);
-    }
-  }, [data, mode]);
-
-  // Load payment rate options from T_OTHERPAYMENTRATE (General Fund)
   useEffect(() => {
     const fetchRates = async () => {
       try {
@@ -174,7 +133,23 @@ function AbstractGF({ data, mode }) {
     fetchReceiptTypes();
   }, []);
 
-  // Calculate total
+  const getFieldLabel = useCallback(
+    (fieldId) => {
+      const key = String(fieldId);
+      return rateById.get(key)?.description || key;
+    },
+    [rateById]
+  );
+
+  const isCashTicketsSelected = useMemo(
+    () =>
+      fields.some(
+        (fieldId) =>
+          getFieldLabel(fieldId).trim().toLowerCase() === "cash tickets"
+      ),
+    [fields, getFieldLabel]
+  );
+
   useEffect(() => {
     const totalSum = Object.values(fieldValues).reduce(
       (acc, value) => acc + parseFloat(value || 0),
@@ -183,59 +158,87 @@ function AbstractGF({ data, mode }) {
     setTotal(totalSum);
   }, [fieldValues]);
 
-  const getFieldLabel = useCallback((fieldId) => {
-    const key = String(fieldId);
-    return rateById.get(key)?.description || key;
-  }, [rateById]);
+  useEffect(() => {
+    if (!isCashTicketsSelected) {
+      return;
+    }
 
-  // Field handlers
+    if (!selectedDate) {
+      if (!receiptNumber || AUTO_RECEIPT_PATTERN.test(receiptNumber)) {
+        setReceiptNumber("");
+      }
+      return;
+    }
+
+    const generatedReceipt = buildCashTicketsReceiptNumber(selectedDate);
+    if (
+      generatedReceipt &&
+      (!receiptNumber || AUTO_RECEIPT_PATTERN.test(receiptNumber)) &&
+      receiptNumber !== generatedReceipt
+    ) {
+      setReceiptNumber(generatedReceipt);
+    }
+  }, [
+    buildCashTicketsReceiptNumber,
+    isCashTicketsSelected,
+    receiptNumber,
+    selectedDate,
+  ]);
+
   const handleFieldChange = (field, value) => {
     setFieldValues((prev) => ({ ...prev, [field]: value }));
   };
 
   const handleRemoveField = (removedField) => {
-    const updatedFields = fields.filter((f) => f !== removedField);
-    setFields(updatedFields);
+    setFields((prev) => prev.filter((field) => field !== removedField));
 
     setFieldValues((prev) => {
       const updatedValues = { ...prev };
       delete updatedValues[removedField];
       return updatedValues;
     });
+
+    setSelectedField("");
+    setShowSelect(true);
   };
 
   const handleFieldSelect = (event) => {
     const newSelectedField = String(event.target.value || "").trim();
 
-    if (newSelectedField && !fields.includes(newSelectedField)) {
-      setFields([...fields, newSelectedField]);
-      setFieldValues({ ...fieldValues, [newSelectedField]: "" });
-      setSelectedField("");
-      setShowSelect(false);
+    if (!newSelectedField || fields.includes(newSelectedField)) {
+      return;
+    }
 
-      if (getFieldLabel(newSelectedField).toLowerCase() === "cash tickets") {
-        autoGenerateReceipt();
-      }
+    setFields((prev) => [...prev, newSelectedField]);
+    setFieldValues((prev) => ({ ...prev, [newSelectedField]: "" }));
+    setSelectedField("");
+    setShowSelect(false);
+
+    if (getFieldLabel(newSelectedField).toLowerCase() === "cash tickets") {
+      autoGenerateReceipt();
     }
   };
 
-  // Reset form
   const handleClearFields = useCallback(() => {
     setSelectedDate("");
     setTaxpayerName("");
     setReceiptNumber("");
     setTypeReceipt("");
     setSelectedCashier("");
+    setSelectedField("");
+    setShowSelect(true);
     setFieldValues({});
     setFields([]);
+    setAlertMessage("");
+    setAlertVariant("info");
+    setLoading(false);
+    setProgress(0);
   }, []);
 
-  // Save/update data
   const handleSave = useCallback(
     async (e) => {
       e.preventDefault();
 
-      // 🔍 Validation
       if (
         !selectedDate ||
         !taxpayerName ||
@@ -256,14 +259,6 @@ function AbstractGF({ data, mode }) {
         }
       }
 
-      const formattedDate = dayjs(selectedDate).format("YYYY-MM-DD");
-
-      if (mode === "edit") {
-        setAlertMessage("Use the Edit action to update an existing payment.");
-        setAlertVariant("warning");
-        return;
-      }
-
       if (!fields.length) {
         setAlertMessage("Please add at least one payment item.");
         setAlertVariant("danger");
@@ -271,7 +266,7 @@ function AbstractGF({ data, mode }) {
       }
 
       const payload = {
-        date: formattedDate,
+        date: dayjs(selectedDate).format("YYYY-MM-DD"),
         name: taxpayerName,
         receipt_no: receiptNumber,
         type_receipt: typeReceipt,
@@ -284,49 +279,39 @@ function AbstractGF({ data, mode }) {
 
       try {
         setLoading(true);
+        setProgress(0);
 
-        if (false) {
-          // ✅ UPDATE
-          await axiosInstance.put(`updateGeneralFundData/${data.id}`, payload);
-          setAlertMessage("Data updated successfully.");
-        } else {
-          // ✅ ADD
-          await axiosInstance.post("generalFundPayment", payload);
-          setAlertMessage("Payment saved successfully.");
-        }
+        await axiosInstance.post("generalFundPayment", payload);
 
+        setAlertMessage("Payment saved successfully.");
         setAlertVariant("success");
 
         setTimeout(() => {
           handleClearFields();
-          setLoading(false);
-          window.location.reload(); // Optional: refresh UI
+          window.location.reload();
         }, 2000);
       } catch (error) {
-        console.error("❌ Operation failed:", error);
-        const message =
-          error.response?.data?.message ||
-          "Failed to save payment.";
-        setAlertMessage(message);
+        console.error("Operation failed:", error);
+        setAlertMessage(
+          error.response?.data?.message || "Failed to save payment."
+        );
         setAlertVariant("danger");
         setLoading(false);
       }
     },
     [
-      mode,
-      selectedDate,
-      taxpayerName,
-      receiptNumber,
-      typeReceipt,
-      selectedCashier,
       fields,
       fieldValues,
       getFieldLabel,
       handleClearFields,
+      receiptNumber,
+      selectedCashier,
+      selectedDate,
+      taxpayerName,
+      typeReceipt,
     ]
   );
 
-  // Progress animation
   useEffect(() => {
     let timer;
     if (loading) {
@@ -340,8 +325,7 @@ function AbstractGF({ data, mode }) {
     return () => clearInterval(timer);
   }, [loading]);
 
-  const filteredOptions = filterOptions(rateOptions);
-  const availableOptions = filteredOptions.filter(
+  const availableOptions = rateOptions.filter(
     (option) => !fields.includes(String(option?.oprate_id))
   );
 
@@ -353,8 +337,11 @@ function AbstractGF({ data, mode }) {
         boxShadow: "none",
       }}
     >
-      <h4 className="mb-4 text-center" style={{ color: uiColors.navy, fontWeight: 800 }}>
-        General Fund Abstracts ({mode === "edit" ? "Edit" : "Add"})
+      <h4
+        className="mb-4 text-center"
+        style={{ color: uiColors.navy, fontWeight: 800 }}
+      >
+        General Fund Abstracts
       </h4>
 
       <Form
@@ -454,7 +441,6 @@ function AbstractGF({ data, mode }) {
             </Form.Group>
           </Col>
 
-          {/* Dynamic Fields */}
           {fields.map((field) => (
             <Col md={12} key={field}>
               <Form.Group controlId={`form-${field}`}>
@@ -521,7 +507,7 @@ function AbstractGF({ data, mode }) {
                 backgroundColor: uiColors.navy,
                 borderColor: uiColors.navy,
                 fontWeight: 700,
-                textTransform: "none"
+                textTransform: "none",
               }}
             >
               <FaPlus style={{ marginRight: 8 }} />
@@ -530,7 +516,10 @@ function AbstractGF({ data, mode }) {
           </Col>
 
           <Col md={12}>
-            <h5 className="mt-3" style={{ color: uiColors.navy, fontWeight: 700 }}>
+            <h5
+              className="mt-3"
+              style={{ color: uiColors.navy, fontWeight: 700 }}
+            >
               <FaCashRegister style={{ marginRight: 8 }} />
               Total: PHP {total.toFixed(2)}
             </h5>
@@ -586,7 +575,7 @@ function AbstractGF({ data, mode }) {
             }}
           >
             <FaSave style={{ marginRight: 8 }} />
-            {mode === "edit" ? "Update" : "Save"}
+            Save
           </Button>
         </div>
       </Form>
@@ -594,18 +583,4 @@ function AbstractGF({ data, mode }) {
   );
 }
 
-AbstractGF.propTypes = {
-  data: PropTypes.shape({
-    id: PropTypes.oneOfType([PropTypes.string, PropTypes.number]),
-    date: PropTypes.string,
-    name: PropTypes.string,
-    receipt_no: PropTypes.string,
-    type_receipt: PropTypes.string,
-    cashier: PropTypes.string,
-    // Include other known dynamic fields if needed
-  }),
-  mode: PropTypes.oneOf(["edit", "add"]).isRequired,
-};
-
 export default AbstractGF;
-

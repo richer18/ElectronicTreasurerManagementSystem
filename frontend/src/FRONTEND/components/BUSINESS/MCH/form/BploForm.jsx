@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from "react";
+import React, { useEffect, useMemo, useState } from "react";
 import {
   Autocomplete,
   Box,
@@ -97,15 +97,15 @@ const initialFormState = {
   MNAME: "",
   LNAME: "",
   EXTNAME: "",
-  GENDER: "",
+  GENDER: "MALE",
   STREET: "",
-  BARANGAY: "",
+  BARANGAY: BARANGAY_OPTIONS[0],
   MUNICIPALITY: "Zamboanguita",
   PROVINCE: "Negros Oriental",
   CELLPHONE: "",
   MCH_NO: "",
   FRANCHISE_NO: "",
-  MAKE: "",
+  MAKE: DEFAULT_MAKE_OPTIONS[0],
   MOTOR_NO: "",
   CHASSIS_NO: "",
   PLATE: "",
@@ -121,7 +121,7 @@ const initialFormState = {
   CEDULA_DATE: "",
   RENEW_FROM: "",
   RENEW_TO: "",
-  STATUS: "",
+  STATUS: "PENDING",
   MAYORS_PERMIT_NO: "",
   LICENSE_NO: "",
   LICENSE_VALID_DATE: "",
@@ -141,7 +141,7 @@ const getStatusChipColor = (status) => {
   }
 };
 
-export default function BploForm({ editData }) {
+export default function BploForm({ editData, onClose }) {
   const [expanded, setExpanded] = useState({
     owner: true,
     vehicle: true,
@@ -151,8 +151,16 @@ export default function BploForm({ editData }) {
   });
   const [editId, setEditId] = useState(null);
   const [form, setForm] = useState(initialFormState);
-  const [makes, setMakes] = useState([]);
+  const [makes, setMakes] = useState(DEFAULT_MAKE_OPTIONS);
   const [registeredMchNumbers, setRegisteredMchNumbers] = useState([]);
+
+  const makeOptions = useMemo(
+    () =>
+      Array.from(
+        new Set([...(makes.length ? makes : DEFAULT_MAKE_OPTIONS), form.MAKE].filter(Boolean))
+      ),
+    [form.MAKE, makes]
+  );
 
   const toggleExpand = (section) =>
     setExpanded((prev) => ({ ...prev, [section]: !prev[section] }));
@@ -161,7 +169,7 @@ export default function BploForm({ editData }) {
     const fetchMakes = async () => {
       try {
         const { data } = await axiosInstance.get("/bplo/makes");
-        setMakes(data.length ? data : DEFAULT_MAKE_OPTIONS);
+        setMakes(Array.isArray(data) && data.length ? data : DEFAULT_MAKE_OPTIONS);
       } catch (err) {
         console.error("Failed to fetch makes:", err);
         setMakes(DEFAULT_MAKE_OPTIONS);
@@ -230,7 +238,14 @@ export default function BploForm({ editData }) {
 
   const handleSubmit = async (e) => {
     e.preventDefault();
-    const payload = { ...form };
+    const payload = {
+      ...form,
+      GENDER: form.GENDER || "MALE",
+      BARANGAY: form.BARANGAY || BARANGAY_OPTIONS[0],
+      MAKE: form.MAKE || DEFAULT_MAKE_OPTIONS[0],
+      STATUS: form.STATUS || "PENDING",
+    };
+
     if (!payload.DATE) payload.DATE = dayjs().format("YYYY-MM-DD");
 
     try {
@@ -241,10 +256,17 @@ export default function BploForm({ editData }) {
         await axiosInstance.post("/bplo", payload);
         alert("Record saved successfully!");
       }
+
       resetForm();
+      onClose?.();
     } catch (err) {
       console.error("Save failed", err);
-      alert("Failed to save record. Check console.");
+      const validationErrors = err?.response?.data?.errors;
+      const firstError = validationErrors
+        ? Object.values(validationErrors).flat().find(Boolean)
+        : null;
+
+      alert(firstError || "Failed to save record. Check console.");
     }
   };
 
@@ -326,7 +348,7 @@ export default function BploForm({ editData }) {
                 <Autocomplete
                   disableClearable
                   options={["MALE", "FEMALE"]}
-                  value={form.GENDER || "MALE"}
+                  value={form.GENDER}
                   onChange={(e, value) => setForm((prev) => ({ ...prev, GENDER: value }))}
                   renderInput={(params) => <TextField {...params} label="Gender" fullWidth />}
                 />
@@ -341,7 +363,7 @@ export default function BploForm({ editData }) {
                 <Autocomplete
                   disableClearable
                   options={BARANGAY_OPTIONS}
-                  value={form.BARANGAY || BARANGAY_OPTIONS[0]}
+                  value={form.BARANGAY}
                   onChange={(e, value) => setForm((prev) => ({ ...prev, BARANGAY: value }))}
                   renderInput={(params) => <TextField {...params} label="Barangay" fullWidth />}
                 />
@@ -417,8 +439,8 @@ export default function BploForm({ editData }) {
 
                 <Autocomplete
                   disableClearable
-                  options={makes.length ? makes : DEFAULT_MAKE_OPTIONS}
-                  value={form.MAKE || (makes[0] || DEFAULT_MAKE_OPTIONS[0])}
+                  options={makeOptions}
+                  value={form.MAKE}
                   onChange={(e, value) => setForm((prev) => ({ ...prev, MAKE: value }))}
                   renderInput={(params) => <TextField {...params} label="Make" fullWidth />}
                 />

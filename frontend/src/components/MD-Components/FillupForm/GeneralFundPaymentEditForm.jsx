@@ -11,7 +11,13 @@ const cashierOptions = [
   { label: "AMABELLA", value: "amabella" },
 ];
 
-function GeneralFundPaymentEditForm({ data }) {
+function GeneralFundPaymentEditForm({
+  data,
+  endpointBase = "generalFundPaymentEdit",
+  title = "Edit General Fund Payment",
+  enableReceiptTypeEdit = true,
+  onSaved,
+}) {
   const paymentId = data?.payment_id ?? data?.id;
   const [receiptTypeOptions, setReceiptTypeOptions] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -40,6 +46,10 @@ function GeneralFundPaymentEditForm({ data }) {
   };
 
   useEffect(() => {
+    if (!enableReceiptTypeEdit) {
+      return undefined;
+    }
+
     const fetchReceiptTypes = async () => {
       try {
         const response = await axiosInstance.get("form-types");
@@ -50,14 +60,15 @@ function GeneralFundPaymentEditForm({ data }) {
     };
 
     fetchReceiptTypes();
-  }, []);
+    return undefined;
+  }, [enableReceiptTypeEdit]);
 
   useEffect(() => {
     const fetchEditData = async () => {
       if (!paymentId) return;
       try {
         setLoading(true);
-        const response = await axiosInstance.get(`generalFundPaymentEdit/${paymentId}`);
+        const response = await axiosInstance.get(`${endpointBase}/${paymentId}`);
         const payment = response.data?.payment || {};
         const rows = Array.isArray(response.data?.details) ? response.data.details : [];
         const normalizedDate = String(payment.PAYMENTDATE || "")
@@ -86,7 +97,7 @@ function GeneralFundPaymentEditForm({ data }) {
     };
 
     fetchEditData();
-  }, [paymentId]);
+  }, [endpointBase, paymentId]);
 
   const total = useMemo(
     () => details.reduce((sum, row) => sum + Number(row.amount || 0), 0),
@@ -114,7 +125,7 @@ function GeneralFundPaymentEditForm({ data }) {
     try {
       setSaving(true);
       setMessage({ type: "", text: "" });
-      await axiosInstance.put(`generalFundPaymentEdit/${paymentId}`, {
+      await axiosInstance.put(`${endpointBase}/${paymentId}`, {
         ...form,
         cashier: toCashierValue(form.cashier),
         details: details.map((row) => ({
@@ -123,7 +134,11 @@ function GeneralFundPaymentEditForm({ data }) {
         })),
       });
       setMessage({ type: "success", text: "Payment updated successfully." });
-      setTimeout(() => window.location.reload(), 800);
+      if (typeof onSaved === "function") {
+        setTimeout(() => onSaved(), 500);
+      } else {
+        setTimeout(() => window.location.reload(), 800);
+      }
     } catch (error) {
       setMessage({
         type: "error",
@@ -145,7 +160,7 @@ function GeneralFundPaymentEditForm({ data }) {
   return (
     <Box>
       <Typography variant="h5" fontWeight={700} sx={{ mb: 2 }}>
-        Edit General Fund Payment
+        {title}
       </Typography>
 
       <Box sx={{ display: "grid", gap: 2, gridTemplateColumns: { xs: "1fr", md: "1fr 1fr" }, mb: 2 }}>
@@ -184,21 +199,30 @@ function GeneralFundPaymentEditForm({ data }) {
             </option>
           ))}
         </TextField>
-        <TextField
-          label="Type of Receipt"
-          select
-          value={form.type_receipt}
-          onChange={(e) => setForm((prev) => ({ ...prev, type_receipt: e.target.value }))}
-          fullWidth
-          SelectProps={{ native: true }}
-        >
-          <option value="">Select receipt type</option>
-          {receiptTypeOptions.map((option) => (
-            <option key={option.code || option.id} value={option.code}>
-              {option.description || option.name || option.code}
-            </option>
-          ))}
-        </TextField>
+        {enableReceiptTypeEdit ? (
+          <TextField
+            label="Type of Receipt"
+            select
+            value={form.type_receipt}
+            onChange={(e) => setForm((prev) => ({ ...prev, type_receipt: e.target.value }))}
+            fullWidth
+            SelectProps={{ native: true }}
+          >
+            <option value="">Select receipt type</option>
+            {receiptTypeOptions.map((option) => (
+              <option key={option.code || option.id} value={option.code}>
+                {option.description || option.name || option.code}
+              </option>
+            ))}
+          </TextField>
+        ) : (
+          <TextField
+            label="Type of Receipt"
+            value={form.type_receipt}
+            onChange={(e) => setForm((prev) => ({ ...prev, type_receipt: e.target.value }))}
+            fullWidth
+          />
+        )}
       </Box>
 
       <TableContainer component={Paper} sx={{ borderRadius: 2, border: "1px solid #d8e2ee" }}>
@@ -266,6 +290,10 @@ GeneralFundPaymentEditForm.propTypes = {
     id: PropTypes.oneOfType([PropTypes.string, PropTypes.number]),
     payment_id: PropTypes.oneOfType([PropTypes.string, PropTypes.number]),
   }),
+  endpointBase: PropTypes.string,
+  title: PropTypes.string,
+  enableReceiptTypeEdit: PropTypes.bool,
+  onSaved: PropTypes.func,
 };
 
 export default GeneralFundPaymentEditForm;

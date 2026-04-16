@@ -183,7 +183,7 @@ function Landing() {
           </Stack>
 
           <Grid container spacing={4} alignItems="center" sx={{ mt: { xs: 4, md: 6 } }}>
-            <Grid item xs={12} lg={4.5}>
+            <Grid size={{ xs: 12, lg: 4.5 }}>
               <Stack spacing={2.8}>
                 <Stack direction="row" spacing={1.2} alignItems="center">
                   <Box
@@ -268,7 +268,7 @@ function Landing() {
               </Stack>
             </Grid>
 
-            <Grid item xs={12} lg={7.5}>
+            <Grid size={{ xs: 12, lg: 7.5 }}>
               <Box sx={{ position: "relative", minHeight: { xs: 280, md: 560 } }}>
                 <Box
                   sx={{
@@ -319,7 +319,7 @@ function Landing() {
         <Container maxWidth="lg">
           <Grid container spacing={3}>
             {modules.map((item) => (
-              <Grid item xs={12} md={4} key={item.title}>
+              <Grid size={{ xs: 12, md: 4 }} key={item.title}>
                 <ModuleCard
                   title={item.title}
                   description={item.description}
@@ -341,7 +341,7 @@ function Landing() {
             }}
           >
             <Grid container spacing={3} alignItems="center">
-              <Grid item xs={12} md={7}>
+              <Grid size={{ xs: 12, md: 7 }}>
                 <Typography
                   sx={{
                     color: uiColors.blue,
@@ -378,7 +378,7 @@ function Landing() {
                 </Typography>
               </Grid>
 
-              <Grid item xs={12} md={5}>
+              <Grid size={{ xs: 12, md: 5 }}>
                 <Stack spacing={1.3}>
                   {[
                     "Revenue monitoring and receipt checking",

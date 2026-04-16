@@ -36,6 +36,7 @@ class BploRecordController extends Controller
             'LTO_ORIGINAL_RECEIPT' => 'nullable|string|max:100',
             'LTO_CERTIFICATE_REGISTRATION' => 'nullable|string|max:100',
             'LTO_MV_FILE_NO' => 'nullable|string|max:100',
+            'DRIVER' => 'nullable|string|max:100',
 
             'ORIGINAL_RECEIPT_PAYMENT' => 'nullable|string|max:100',
             'PAYMENT_DATE' => 'nullable|date',
@@ -145,5 +146,20 @@ class BploRecordController extends Controller
     // ✅ Always return an array — even if no record exists
     return response()->json($takenMch);
 }
+
+    public function makes()
+    {
+        $makes = BploRecord::query()
+            ->whereNotNull('MAKE')
+            ->where('MAKE', '!=', '')
+            ->pluck('MAKE')
+            ->map(fn ($make) => strtoupper(trim($make)))
+            ->filter()
+            ->unique()
+            ->sort()
+            ->values();
+
+        return response()->json($makes);
+    }
 
 }

@@ -37,6 +37,8 @@ import {
 import { alpha, useTheme } from "@mui/material/styles";
 import React, { useCallback, useEffect, useMemo, useState } from "react";
 import axiosInstance from "../../../../api/axiosInstance";
+import { useAuth } from "../../../../auth/AuthContext";
+import { hasPermission } from "../../../../auth/permissions";
 import GenerateReport from "./GenerateReport";
 
 // Add this near the top of your component, with other constants
@@ -62,19 +64,13 @@ function FullReport() {
   const [editableRow, setEditableRow] = useState(null);
   const [updatedDueFrom, setUpdatedDueFrom] = useState({});
   const [comments, setComments] = useState({});
-  const [showButtons, setShowButtons] = useState(false); // Track button visibility
-
-  // editingField was unused (setter never called). Use `editableRow` to control
-  // row-level editing instead of an unused per-cell state to avoid linter warnings.
-  // If you prefer per-cell editing in future, implement setEditingField on cell events.
-  const [editingField] = useState(null);
-  const [inputValues, setInputValues] = useState({}); // Temporary input values
 
   const [reportDialogOpen, setReportDialogOpen] = useState(false);
   const [isGeneratingReport, setIsGeneratingReport] = useState(false);
 
   // Track which row (by date) is currently being saved to disable its save button
   const [savingRow, setSavingRow] = useState(null);
+  const { user } = useAuth();
 
   // Then inside your component:
   const theme = useTheme();
@@ -99,6 +95,10 @@ function FullReport() {
       ],
     }),
     []
+  );
+  const canExportReports = useMemo(
+    () => hasPermission(user, "reports.export"),
+    [user]
   );
 
   // Dialog state
@@ -194,6 +194,8 @@ function FullReport() {
 
   const handleEditClick = useCallback(
     (rowIndex) => {
+      if (!canExportReports) return;
+
       const selectedRow = filteredData[rowIndex];
 
       if (!selectedRow) {
@@ -207,9 +209,8 @@ function FullReport() {
         ...prev,
         [selectedRow.date]: selectedRow.dueFrom ?? 0,
       }));
-      setShowButtons(true);
     },
-    [filteredData]
+    [canExportReports, filteredData]
   );
 
   useEffect(() => {
@@ -222,6 +223,8 @@ function FullReport() {
   }, [filteredData]);
 
   const handleSaveClick = async (rowIndex) => {
+    if (!canExportReports) return;
+
     const controller = new AbortController();
     const signal = controller.signal;
 
@@ -261,10 +264,8 @@ function FullReport() {
       console.log("✅ Update Successful:", response.data.message || response.data);
 
       // close edit mode for the row
-      setShowButtons(false);
       setEditableRow(null);
-
-      window.location.reload();
+      await fetchData();
     } catch (error) {
       if (error.name === "CanceledError") {
         console.warn("⚠️ Request Aborted");
@@ -298,14 +299,6 @@ function FullReport() {
     0
   );
   const totalCollections = totalRcd - totalDueFrom;
-  const formatCurrency = useCallback(
-    (value) =>
-      `₱${Number(value || 0).toLocaleString("en-PH", {
-        minimumFractionDigits: 2,
-        maximumFractionDigits: 2,
-      })}`,
-    []
-  );
 
   // Open dialog for input
   // const openDialog = (rowIndex, field, isIncrement) => {
@@ -317,6 +310,8 @@ function FullReport() {
   // };
 
   const handleUnderClick = (index, field) => {
+    if (!canExportReports) return;
+
     setDialogField(field);
     setIsAdding(true); // "Under" means adding
     setSelectedDate(filteredData[index].date); // Store selected row's date
@@ -343,6 +338,8 @@ function FullReport() {
 
   // Opens the dialog with the proper field and adjustment type (isAdding=false means "Over")
   const handleOverClick = (index, field) => {
+    if (!canExportReports) return;
+
     setDialogField(field);
     setIsAdding(false); // "Over" means subtracting
     setSelectedDate(filteredData[index].date);
@@ -413,6 +410,8 @@ function FullReport() {
 
   // Confirm and apply changes from dialog
   const handleDialogConfirm = async () => {
+    if (!canExportReports) return;
+
     const controller = new AbortController();
     const signal = controller.signal;
 
@@ -461,7 +460,9 @@ function FullReport() {
 
       console.log("✅ Adjustment saved successfully!", response.data);
       alert("Adjustment saved successfully!");
-      window.location.reload();
+      setDialogOpen(false);
+      setDialogInputValue("");
+      await fetchData();
     } catch (error) {
       if (error.name === "CanceledError") {
         console.warn("⚠️ Request Aborted");
@@ -475,47 +476,29 @@ function FullReport() {
     } finally {
       controller.abort();
     }
-
-    setDialogOpen(false);
-    setDialogInputValue("");
   };
-  // Handle manual input change in table fields
-  // Accept a stable row key (date) instead of an index from the filtered array.
-  const handleInputChange = (rowDate, field, value) => {
-    if (/^\d*\.?\d*$/.test(value)) {
-      // Allow only numbers and decimal points
-      setInputValues((prev) => ({ ...prev, [`${rowDate}-${field}`]: value }));
-      setData((prevData) =>
-        prevData.map((item) =>
-          item?.date === rowDate
-            ? { ...item, [field]: parseFloat(value) || 0 }
-            : item
-        )
-      );
-    }
-  };
-
-  const handleGenerateFullReport = useCallback(async () => {
+  const handleRefreshSummary = useCallback(async () => {
     setIsGeneratingReport(true);
     try {
       await fetchData();
     } catch (error) {
-      console.error("Failed to generate full report:", error);
+      console.error("Failed to refresh report summary:", error);
     } finally {
       setIsGeneratingReport(false);
     }
   }, [fetchData]);
 
-  const handleCheckReceipt = useCallback(() => {
+  const handleOpenReceiptLookup = useCallback(() => {
+    if (!canExportReports) return;
     setReportDialogOpen(true);
-  }, []);
+  }, [canExportReports]);
 
   const handleCloseDialog = useCallback(() => {
     setReportDialogOpen(false);
   }, []);
 
   const handleExportCSV = () => {
-    if (!filteredData.length) return;
+    if (!canExportReports || !filteredData.length) return;
 
     const headers = [
       "Date",
@@ -808,6 +791,14 @@ function FullReport() {
               >
                 {filteredData.length} row{filteredData.length === 1 ? "" : "s"} matched
               </Typography>
+              {!canExportReports && (
+                <Typography
+                  variant="caption"
+                  sx={{ color: theme.palette.text.secondary, mt: 0.4 }}
+                >
+                  Edit, lookup, and export actions require report export permission.
+                </Typography>
+              )}
             </Box>
           </Box>
 
@@ -834,7 +825,7 @@ function FullReport() {
                   <AssessmentIcon />
                 )
               }
-              onClick={handleGenerateFullReport}
+              onClick={handleRefreshSummary}
               disabled={isGeneratingReport}
               sx={{
                 borderRadius: "12px",
@@ -848,14 +839,15 @@ function FullReport() {
                 },
               }}
             >
-              {isGeneratingReport ? "Generating Full Report..." : "Generate Full Report"}
+              {isGeneratingReport ? "Refreshing Summary..." : "Refresh Summary"}
             </Button>
             <Button
               type="button"
               variant="contained"
               color="inherit"
               startIcon={<ReceiptLongIcon />}
-              onClick={handleCheckReceipt}
+              onClick={handleOpenReceiptLookup}
+              disabled={!canExportReports}
               sx={{
                 borderRadius: "12px",
                 textTransform: "none",
@@ -863,13 +855,17 @@ function FullReport() {
                 color: "#fff",
                 backgroundColor: uiColors.teal,
                 boxShadow: "0 10px 22px rgba(15, 107, 98, 0.18)",
+                "&.Mui-disabled": {
+                  color: alpha("#ffffff", 0.72),
+                  backgroundColor: alpha(uiColors.teal, 0.45),
+                },
                 "&:hover": {
                   backgroundColor: uiColors.tealHover,
                   boxShadow: "0 14px 26px rgba(15, 107, 98, 0.24)",
                 },
               }}
             >
-              Check Receipt
+              Receipt Lookup
             </Button>
 
             <Button
@@ -878,6 +874,7 @@ function FullReport() {
               color="primary"
               startIcon={<FileDownloadOutlined />}
               onClick={handleExportCSV}
+              disabled={!canExportReports || !filteredData.length}
               sx={{
                 borderRadius: "12px",
                 textTransform: "none",
@@ -886,6 +883,11 @@ function FullReport() {
                 borderColor: alpha(theme.palette.warning.main, 0.35),
                 backgroundColor: alpha(theme.palette.warning.main, 0.08),
                 borderWidth: "1px",
+                "&.Mui-disabled": {
+                  color: alpha(uiColors.amber, 0.55),
+                  borderColor: alpha(theme.palette.warning.main, 0.22),
+                  backgroundColor: alpha(theme.palette.warning.main, 0.04),
+                },
                 "&:hover": {
                   borderColor: alpha(theme.palette.warning.main, 0.45),
                   backgroundColor: alpha(theme.palette.warning.main, 0.14),
@@ -1001,135 +1003,114 @@ function FullReport() {
                             minWidth: 120,
                           }}
                         >
-                          {editingField?.row === index &&
-                          editingField?.field === field ? (
-                            <TextField
-                              value={inputValues[`${row.date}-${field}`] || ""}
-                              onChange={(e) =>
-                                handleInputChange(row.date, field, e.target.value)
-                              }
-                              size="small"
-                              type="number"
-                              sx={{
-                                width: 100,
-                                "& .MuiInputBase-input": {
-                                  fontWeight: 500,
-                                  textAlign: "center",
-                                  py: 0.5,
-                                },
-                              }}
-                              autoFocus
-                            />
-                          ) : (
+                          <Box
+                            sx={{
+                              display: "flex",
+                              flexDirection: "column",
+                              alignItems: "center",
+                              justifyContent: "center",
+                              gap: 0.75,
+                            }}
+                          >
                             <Box
                               sx={{
                                 display: "flex",
-                                flexDirection: "column",
                                 alignItems: "center",
                                 justifyContent: "center",
-                                gap: 0.75,
+                                gap: 0.5,
+                                flexWrap: "wrap",
                               }}
                             >
-                              <Box
-                                sx={{
-                                  display: "flex",
-                                  alignItems: "center",
-                                  justifyContent: "center",
-                                  gap: 0.5,
-                                  flexWrap: "wrap",
-                                }}
-                              >
-                                <span style={{ fontWeight: 600 }}>
-                                  {"\u20B1"}
-                                  {Number(row[field] || 0).toLocaleString("en-PH", {
-                                    minimumFractionDigits: 2,
-                                    maximumFractionDigits: 2,
-                                  })}
-                                </span>
-
-                                {(Number(row.adjustments?.[field]?.under || 0) > 0 ||
-                                  Number(row.adjustments?.[field]?.over || 0) > 0) && (
-                                  <Tooltip title="This amount has manual under/over adjustments">
-                                    <ErrorIcon
-                                      sx={{
-                                        fontSize: 16,
-                                        color: theme.palette.warning.main,
-                                      }}
-                                    />
-                                  </Tooltip>
-                                )}
-                              </Box>
+                              <span style={{ fontWeight: 600 }}>
+                                {"\u20B1"}
+                                {Number(row[field] || 0).toLocaleString("en-PH", {
+                                  minimumFractionDigits: 2,
+                                  maximumFractionDigits: 2,
+                                })}
+                              </span>
 
                               {(Number(row.adjustments?.[field]?.under || 0) > 0 ||
                                 Number(row.adjustments?.[field]?.over || 0) > 0) && (
-                                <Box
-                                  sx={{
-                                    display: "flex",
-                                    flexDirection: "column",
-                                    alignItems: "center",
-                                    gap: 0.5,
-                                  }}
-                                >
-                                  {Number(row.adjustments?.[field]?.under || 0) > 0 && (
-                                    <Chip
-                                      size="small"
-                                      label={`Under: \u20B1${Number(
-                                        row.adjustments?.[field]?.under || 0
-                                      ).toLocaleString("en-PH", {
-                                        minimumFractionDigits: 2,
-                                        maximumFractionDigits: 2,
-                                      })}`}
-                                      sx={{
-                                        height: 24,
-                                        fontWeight: 700,
-                                        color: theme.palette.warning.dark,
-                                        backgroundColor: alpha(
-                                          theme.palette.warning.main,
-                                          0.14
-                                        ),
-                                        border: `1px solid ${alpha(
-                                          theme.palette.warning.main,
-                                          0.35
-                                        )}`,
-                                        "& .MuiChip-label": {
-                                          px: 1.1,
-                                        },
-                                      }}
-                                    />
-                                  )}
-                                  {Number(row.adjustments?.[field]?.over || 0) > 0 && (
-                                    <Chip
-                                      size="small"
-                                      label={`Over: \u20B1${Number(
-                                        row.adjustments?.[field]?.over || 0
-                                      ).toLocaleString("en-PH", {
-                                        minimumFractionDigits: 2,
-                                        maximumFractionDigits: 2,
-                                      })}`}
-                                      sx={{
-                                        height: 24,
-                                        fontWeight: 700,
-                                        color: theme.palette.success.dark,
-                                        backgroundColor: alpha(
-                                          theme.palette.success.main,
-                                          0.14
-                                        ),
-                                        border: `1px solid ${alpha(
-                                          theme.palette.success.main,
-                                          0.35
-                                        )}`,
-                                        "& .MuiChip-label": {
-                                          px: 1.1,
-                                        },
-                                      }}
-                                    />
-                                  )}
-                                </Box>
+                                <Tooltip title="This amount has manual under/over adjustments">
+                                  <ErrorIcon
+                                    sx={{
+                                      fontSize: 16,
+                                      color: theme.palette.warning.main,
+                                    }}
+                                  />
+                                </Tooltip>
                               )}
                             </Box>
-                          )}
 
-                          <Collapse in={editableRow === index && showButtons} timeout={200}>
+                            {(Number(row.adjustments?.[field]?.under || 0) > 0 ||
+                              Number(row.adjustments?.[field]?.over || 0) > 0) && (
+                              <Box
+                                sx={{
+                                  display: "flex",
+                                  flexDirection: "column",
+                                  alignItems: "center",
+                                  gap: 0.5,
+                                }}
+                              >
+                                {Number(row.adjustments?.[field]?.under || 0) > 0 && (
+                                  <Chip
+                                    size="small"
+                                    label={`Under: \u20B1${Number(
+                                      row.adjustments?.[field]?.under || 0
+                                    ).toLocaleString("en-PH", {
+                                      minimumFractionDigits: 2,
+                                      maximumFractionDigits: 2,
+                                    })}`}
+                                    sx={{
+                                      height: 24,
+                                      fontWeight: 700,
+                                      color: theme.palette.warning.dark,
+                                      backgroundColor: alpha(
+                                        theme.palette.warning.main,
+                                        0.14
+                                      ),
+                                      border: `1px solid ${alpha(
+                                        theme.palette.warning.main,
+                                        0.35
+                                      )}`,
+                                      "& .MuiChip-label": {
+                                        px: 1.1,
+                                      },
+                                    }}
+                                  />
+                                )}
+                                {Number(row.adjustments?.[field]?.over || 0) > 0 && (
+                                  <Chip
+                                    size="small"
+                                    label={`Over: \u20B1${Number(
+                                      row.adjustments?.[field]?.over || 0
+                                    ).toLocaleString("en-PH", {
+                                      minimumFractionDigits: 2,
+                                      maximumFractionDigits: 2,
+                                    })}`}
+                                    sx={{
+                                      height: 24,
+                                      fontWeight: 700,
+                                      color: theme.palette.success.dark,
+                                      backgroundColor: alpha(
+                                        theme.palette.success.main,
+                                        0.14
+                                      ),
+                                      border: `1px solid ${alpha(
+                                        theme.palette.success.main,
+                                        0.35
+                                      )}`,
+                                      "& .MuiChip-label": {
+                                        px: 1.1,
+                                      },
+                                    }}
+                                  />
+                                )}
+                              </Box>
+                            )}
+                          </Box>
+
+                          <Collapse in={editableRow === index && canExportReports} timeout={200}>
                             <Box
                               sx={{
                                 display: "flex",
@@ -1238,6 +1219,7 @@ function FullReport() {
                           onChange={(e) =>
                             handleCommentChange(row.date, e.target.value)
                           }
+                          disabled={!canExportReports}
                           size="small"
                           placeholder="Add comment..."
                           sx={{
@@ -1261,7 +1243,7 @@ function FullReport() {
                               aria-label="save"
                               color="success"
                               onClick={() => handleSaveClick(index)}
-                              disabled={savingRow === row.date}
+                              disabled={savingRow === row.date || !canExportReports}
                               sx={{
                                 "&:hover": {
                                   backgroundColor: "rgba(46, 125, 50, 0.08)",
@@ -1303,6 +1285,7 @@ function FullReport() {
                               aria-label="edit"
                               color="primary"
                               onClick={() => handleEditClick(index)}
+                              disabled={!canExportReports}
                               sx={{
                                 "&:hover": {
                                   backgroundColor: "rgba(25, 118, 210, 0.08)",

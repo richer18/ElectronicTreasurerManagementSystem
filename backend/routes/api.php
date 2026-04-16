@@ -115,6 +115,9 @@ use App\Http\Controllers\WaterWorksRegisterJSONDataController;
 use App\Http\Controllers\WaterWorksAccountsJSONDataController;
 use App\Http\Controllers\WaterWorksAccountNumberJSONDataController;
 use App\Http\Controllers\WaterWorksAccountNumberPaymentJSONDataController;
+use App\Http\Controllers\WaterWorksPaymentsJSONDataController;
+use App\Http\Controllers\WaterWorksPaymentEditController;
+use App\Http\Controllers\WaterWorksTicketController;
 
 use App\Http\Controllers\BploRecordController;
 use App\Http\Controllers\BplsDashboardController;
@@ -295,6 +298,18 @@ Route::post('/register', [WaterWorksRegisterJSONDataController::class, 'register
 Route::get('/accounts', [WaterWorksAccountsJSONDataController::class, 'index']);
 Route::get('/account/{accountNumber}', [WaterWorksAccountNumberJSONDataController::class, 'show']);
 Route::post('/account/{accountNumber}/pay', [WaterWorksAccountNumberPaymentJSONDataController::class, 'pay']);
+Route::get('/waterworks/payments', [WaterWorksPaymentsJSONDataController::class, 'index']);
+Route::get('/waterworks/taxpayers', [WaterWorksPaymentsJSONDataController::class, 'taxpayers']);
+Route::get('/waterworks/taxpayer-payments', [WaterWorksPaymentsJSONDataController::class, 'taxpayerPayments']);
+Route::get('/waterworks/reports/daily', [WaterWorksPaymentsJSONDataController::class, 'dailyReport']);
+Route::get('/waterworks/reports/billing', [WaterWorksPaymentsJSONDataController::class, 'billingReport']);
+Route::get('/waterworks/payments/export', [WaterWorksPaymentsJSONDataController::class, 'export']);
+Route::get('/waterworks/payment-edit/{paymentId}', [WaterWorksPaymentEditController::class, 'show']);
+Route::put('/waterworks/payment-edit/{paymentId}', [WaterWorksPaymentEditController::class, 'update']);
+Route::get('/waterworks/tickets', [WaterWorksTicketController::class, 'index']);
+Route::post('/waterworks/tickets', [WaterWorksTicketController::class, 'store']);
+Route::put('/waterworks/tickets/{ticket}', [WaterWorksTicketController::class, 'update']);
+Route::get('/waterworks/tickets/summary', [WaterWorksTicketController::class, 'summary']);
 
 
 Route::get('/test-json', function () {
@@ -329,10 +344,13 @@ Route::get("/test-save", [WaterWorksRegisterJSONDataController::class, "testSave
 
 
 //MCH
+Route::get('bplo/makes', [BploRecordController::class, 'makes']);
 Route::get('bplo/registered-mch', [BploRecordController::class, 'registeredMch']);
 Route::get('/bpls/applications', [BplsDashboardController::class, 'index']);
+Route::get('/bpls/business/{bin}', [BplsDashboardController::class, 'show']);
 Route::get('/bpls/summary', [BplsDashboardController::class, 'summary']);
 Route::post('/bpls/import/master-list', [BplsImportController::class, 'importApplications']);
+Route::post('/bpls/import/type-applications', [BplsImportController::class, 'importTypeApplications']);
 Route::post('/bpls/import/collections', [BplsImportController::class, 'importCollections']);
 Route::get('/total-renew/list', [TotalRenewController::class, 'list']);
 Route::apiResource('bplo', BploRecordController::class);

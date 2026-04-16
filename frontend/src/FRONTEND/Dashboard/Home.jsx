@@ -202,12 +202,12 @@ const NAVIGATION = [
     title: "Business and Utilities",
   },
   {
-    title: "Business",
+    title: "Business Permits and Licensing",
     icon: <BusinessRoundedIcon sx={navIconAccent} />,
     children: [
       {
         segment: "business-registration",
-        title: "Business Registration",
+        title: "Business Permits",
         icon: <AppRegistrationRoundedIcon sx={navIconPrimary} />,
       },
       {
@@ -418,6 +418,10 @@ const filterNavigationByRole = (items, user) => {
       );
 
       if (!passesPermissionCheck) {
+        return null;
+      }
+
+      if (!item.segment && !filteredChildren) {
         return null;
       }
 
@@ -841,7 +845,6 @@ function DashboardLayoutBranding(props) {
       searchParams: new URLSearchParams(location.search),
       navigate: (path) => {
         const fullPath = path.startsWith("/my-app") ? path : `/my-app${path}`;
-        console.log(`Navigating to: ${fullPath}`);
         navigate(fullPath);
       },
     }),
@@ -851,27 +854,30 @@ function DashboardLayoutBranding(props) {
     () => resolveNavigationTitle(router.pathname, navigationItems),
     [navigationItems, router.pathname]
   );
+  const hideCenteredPageTitle = router.pathname === "/my-app/procurement-portal/disbursement-vouchers";
   const brandingTitle = (
     <Box sx={{ display: "flex", alignItems: "center" }}>
       <Box sx={{ fontWeight: 700, whiteSpace: "nowrap" }}>Electronic Treasurer Management System</Box>
-      <Box
-        sx={{
-          position: "fixed",
-          left: "50%",
-          transform: "translateX(-50%)",
-          top: 0,
-          height: { xs: 56, sm: 64 },
-          display: "flex",
-          alignItems: "center",
-          fontWeight: 700,
-          pointerEvents: "none",
-          whiteSpace: "nowrap",
-          textTransform: "uppercase",
-          color: "#000000",
-        }}
-      >
-        {resolvePageTitle}
-      </Box>
+      {!hideCenteredPageTitle ? (
+        <Box
+          sx={{
+            position: "fixed",
+            left: "50%",
+            transform: "translateX(-50%)",
+            top: 0,
+            height: { xs: 56, sm: 64 },
+            display: "flex",
+            alignItems: "center",
+            fontWeight: 700,
+            pointerEvents: "none",
+            whiteSpace: "nowrap",
+            textTransform: "uppercase",
+            color: "#000000",
+          }}
+        >
+          {resolvePageTitle}
+        </Box>
+      ) : null}
     </Box>
   );
 
@@ -1404,7 +1410,7 @@ function DashboardHome() {
         </Stack>
 
         <Grid container spacing={2} alignItems="stretch">
-          <Grid item xs={12} lg={7}>
+          <Grid size={{ xs: 12, lg: 7 }}>
             <Box>
               <Typography
                 variant="h4"
@@ -1487,7 +1493,7 @@ function DashboardHome() {
             </Box>
           </Grid>
 
-          <Grid item xs={12} lg={5}>
+          <Grid size={{ xs: 12, lg: 5 }}>
             <Paper
               sx={{
                 p: 2,
@@ -1627,7 +1633,7 @@ function DashboardHome() {
 
       <Grid container spacing={2}>
         {overviewCards.map((card) => (
-          <Grid item xs={12} sm={6} xl={3} key={card.title}>
+          <Grid size={{ xs: 12, sm: 6, xl: 3 }} key={card.title}>
             <Paper
               sx={{
                 p: 2,
@@ -1700,7 +1706,7 @@ function DashboardHome() {
           </Grid>
         ))}
 
-        <Grid item xs={12} md={6}>
+        <Grid size={{ xs: 12, md: 6 }}>
           <Paper
             sx={{
               p: 1.5,
@@ -1719,7 +1725,7 @@ function DashboardHome() {
             <TaxCollected year={year} />
           </Paper>
         </Grid>
-        <Grid item xs={12} md={6}>
+        <Grid size={{ xs: 12, md: 6 }}>
           <Paper
             sx={{
               p: 1.5,
@@ -1738,7 +1744,7 @@ function DashboardHome() {
             <CedulaCollected year={year} />
           </Paper>
         </Grid>
-        <Grid item xs={12}>
+        <Grid size={{ xs: 12 }}>
           <Paper
             sx={{
               p: 1.5,
@@ -1757,7 +1763,7 @@ function DashboardHome() {
             <DivingTicketTopChart year={year} />
           </Paper>
         </Grid>
-        <Grid item xs={12}>
+        <Grid size={{ xs: 12 }}>
           <Paper
             sx={{
               p: 1.5,
@@ -1777,7 +1783,7 @@ function DashboardHome() {
           </Paper>
         </Grid>
 
-        <Grid item xs={12} md={4}>
+        <Grid size={{ xs: 12, md: 4 }}>
           <Paper
             sx={{
               p: 2.5,
@@ -1826,7 +1832,7 @@ function DashboardHome() {
           </Paper>
         </Grid>
 
-        <Grid item xs={12} md={4}>
+        <Grid size={{ xs: 12, md: 4 }}>
           <Paper
             sx={{
               p: 2.5,
@@ -1875,7 +1881,7 @@ function DashboardHome() {
           </Paper>
         </Grid>
 
-        <Grid item xs={12} md={4}>
+        <Grid size={{ xs: 12, md: 4 }}>
           <Paper
             sx={{
               p: 2.5,
@@ -1919,7 +1925,7 @@ function DashboardHome() {
           </Paper>
         </Grid>
 
-        <Grid item xs={12} lg={7}>
+        <Grid size={{ xs: 12, lg: 7 }}>
           <Paper
             sx={{
               p: 2.5,
@@ -1981,7 +1987,7 @@ function DashboardHome() {
           </Paper>
         </Grid>
 
-        <Grid item xs={12} lg={5}>
+        <Grid size={{ xs: 12, lg: 5 }}>
           <Paper
             sx={{
               p: 2.5,
@@ -2108,7 +2114,7 @@ function DashboardHome() {
           </Paper>
         </Grid>
 
-        <Grid item xs={12} md={6}>
+        <Grid size={{ xs: 12, md: 6 }}>
           <Paper
             sx={{
               p: 2.5,
@@ -2154,7 +2160,7 @@ function DashboardHome() {
           </Paper>
         </Grid>
 
-        <Grid item xs={12} md={6}>
+        <Grid size={{ xs: 12, md: 6 }}>
           <Paper
             sx={{
               p: 2.5,
@@ -2173,7 +2179,7 @@ function DashboardHome() {
 
             <Grid container spacing={1.5}>
               {moduleHealth.map((item) => (
-                <Grid item xs={12} sm={6} key={item.label}>
+                <Grid size={{ xs: 12, sm: 6 }} key={item.label}>
                   <Paper
                     sx={{
                       p: 1.5,

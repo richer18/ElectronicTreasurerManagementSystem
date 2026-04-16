@@ -4,20 +4,17 @@ import Dialog from "@mui/material/Dialog";
 import DialogActions from "@mui/material/DialogActions";
 import DialogContent from "@mui/material/DialogContent";
 import DialogTitle from "@mui/material/DialogTitle";
-import RegisterIndex from "../../tickets"; // make sure the path is correct
+import TicketIndex from "../../tickets";
 
 function TicketPopupDialog({ open, handleClose }) {
   return (
-    <Dialog open={open} onClose={handleClose} fullWidth maxWidth="sm">
-      <DialogTitle>Create New Ticket</DialogTitle>
+    <Dialog open={open} onClose={handleClose} fullWidth maxWidth="lg">
+      <DialogTitle>Ticketing</DialogTitle>
       <DialogContent>
-        <RegisterIndex />
+        <TicketIndex />
       </DialogContent>
       <DialogActions>
-        <Button onClick={handleClose}>Cancel</Button>
-        <Button variant="contained" onClick={handleClose}>
-          Save
-        </Button>
+        <Button onClick={handleClose}>Close</Button>
       </DialogActions>
     </Dialog>
   );
