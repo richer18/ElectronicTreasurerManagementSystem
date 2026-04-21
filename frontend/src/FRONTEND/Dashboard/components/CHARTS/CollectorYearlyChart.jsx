@@ -178,10 +178,52 @@ function CollectorYearlyChart({ year }) {
                   ]}
                   height={320}
                   borderRadius={8}
-                  margin={{ top: 24, right: 24, bottom: 40, left: 72 }}
+                  margin={{ top: 24, right: 24, bottom: 24, left: 72 }}
                   grid={{ horizontal: true }}
+                  sx={{
+                    "& .MuiChartsAxis-directionX .MuiChartsAxis-tickLabel": {
+                      opacity: 0,
+                    },
+                  }}
                   slotProps={{ legend: { hidden: true } }}
                 />
+                <Box
+                  sx={{
+                    ml: "72px",
+                    mr: "24px",
+                    mt: 0.5,
+                    display: "grid",
+                    gridTemplateColumns: `repeat(${chartRows.length}, minmax(0, 1fr))`,
+                    alignItems: "start",
+                    minHeight: 72,
+                  }}
+                >
+                  {chartRows.map((row) => (
+                    <Box
+                      key={row.collector}
+                      sx={{
+                        display: "flex",
+                        justifyContent: "center",
+                        alignItems: "flex-start",
+                        overflow: "visible",
+                      }}
+                    >
+                      <Typography
+                        variant="caption"
+                        sx={{
+                          fontSize: 11,
+                          color: "#334e68",
+                          lineHeight: 1,
+                          whiteSpace: "nowrap",
+                          transform: "rotate(-35deg)",
+                          transformOrigin: "top center",
+                        }}
+                      >
+                        {row.shortCollector}
+                      </Typography>
+                    </Box>
+                  ))}
+                </Box>
               </Box>
             </Fade>
           )}

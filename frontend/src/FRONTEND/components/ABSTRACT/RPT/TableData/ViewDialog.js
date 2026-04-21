@@ -1,4 +1,5 @@
 import DownloadIcon from '@mui/icons-material/Download';
+import MoreVertIcon from '@mui/icons-material/MoreVert';
 import PersonIcon from "@mui/icons-material/Person";
 import PrintIcon from '@mui/icons-material/Print';
 import {
@@ -9,6 +10,7 @@ import {
   DialogActions,
   DialogContent,
   DialogTitle,
+  IconButton,
   Menu,
   MenuItem,
   Paper,
@@ -29,26 +31,42 @@ import axios from "../../../../../api/axiosInstance";
 import AbstractRPT from '../../../../../components/MD-Components/FillupForm/AbstractRPT'; // Adjust the path as needed
 import PopupDialog from '../../../../../components/MD-Components/Popup/PopupDialog'; // Adjust the path as needed
 
-const StyledTableCell = styled(TableCell)(({ theme }) => ({
-  backgroundColor: theme.palette.primary.dark,
-  color: theme.palette.common.white,
+const StyledTableCell = styled(TableCell)(() => ({
+  whiteSpace: "nowrap",
+  fontWeight: 700,
   textAlign: 'center',
-  fontWeight: 'bold',
+  textTransform: "uppercase",
+  letterSpacing: "1px",
+  fontSize: "0.82rem",
+  background: "#f7f9fc",
+  color: "#0f2747",
+  borderBottom: "2px solid #d6a12b",
 }));
 
 const StyledTableRow = styled(TableRow)(({ theme }) => ({
+  backgroundColor: "rgba(0, 0, 0, 0.02)",
+  transition: "background-color 0.2s ease",
   '&:nth-of-type(odd)': {
     backgroundColor: theme.palette.action.hover,
   },
+  '&:hover': {
+    backgroundColor: theme.palette.action.selected,
+  },
 }));
 
-const CenteredTableCell = styled(TableCell)({
+const CenteredTableCell = styled(TableCell)(({ theme }) => ({
   textAlign: 'center',
-});
+  whiteSpace: "nowrap",
+  fontSize: "0.875rem",
+  color: theme.palette.text.primary,
+}));
 
-const RightAlignedTableCell = styled(TableCell)({
+const RightAlignedTableCell = styled(TableCell)(({ theme }) => ({
   textAlign: 'right',
-});
+  whiteSpace: "nowrap",
+  fontSize: "0.875rem",
+  color: theme.palette.text.primary,
+}));
 
 const formatDate = (dateInput) => {
   if (!dateInput) return 'Invalid Date';
@@ -66,21 +84,21 @@ const formatDate = (dateInput) => {
 
 const cashierData = [
   {
-    key: "RICARDO ENOPIA",
+    key: "ricardo",
     label: "Ricardo Enopia",
-    gradient: "linear-gradient(135deg, #3f51b5, #5c6bc0)",
+    aliases: ["ricardo"],
     icon: <PersonIcon />,
   },
   {
-    key: "FLORA MY FERRER",
+    key: "flora",
     label: "Flora My Ferrer",
-    gradient: "linear-gradient(135deg, #4caf50, #66bb6a)",
+    aliases: ["flora"],
     icon: <PersonIcon />,
   },
   {
-    key: "IRIS RAFALES",
+    key: "iris",
     label: "Iris Rafales",
-    gradient: "linear-gradient(135deg, #e91e63, #ec407a)",
+    aliases: ["iris", "angelique"],
     icon: <PersonIcon />,
   },
 ];
@@ -120,6 +138,21 @@ const normalizeRptClassification = (value) => {
     default:
       return null;
   }
+};
+
+const formatCurrency = (value) =>
+  new Intl.NumberFormat("en-PH", {
+    style: "currency",
+    currency: "PHP",
+    minimumFractionDigits: 2,
+  }).format(Number(value || 0));
+
+const buildTimestampedFilename = (prefix) => {
+  const now = new Date();
+  const pad = (value) => String(value).padStart(2, "0");
+  const datePart = `${now.getFullYear()}-${pad(now.getMonth() + 1)}-${pad(now.getDate())}`;
+  const timePart = `${pad(now.getHours())}-${pad(now.getMinutes())}-${pad(now.getSeconds())}`;
+  return `${prefix}-${datePart}-${timePart}.csv`;
 };
 
 
@@ -237,20 +270,21 @@ function ViewDialog({ open, onClose, data,selectedDate, onDataUpdate }) {
 
   const totalCollectionByCashier = useMemo(() => {
     const totals = {
-      "RICARDO ENOPIA": 0,
-      "FLORA MY FERRER": 0,
-      "IRIS RAFALES": 0,
-      "SEF": 0, // SEF total (modify as needed)
+      ricardo: 0,
+      flora: 0,
+      iris: 0,
     };
   
     filteredData.forEach((row) => {
-      if (totals.hasOwnProperty(row.cashier)) {
-        totals[row.cashier] += row.total;
+      const cashier = String(row.cashier || "").trim().toLowerCase();
+      const matchedCard = cashierData.find(({ aliases }) => aliases.includes(cashier));
+      if (matchedCard) {
+        totals[matchedCard.key] += row.total;
       }
     });
   
     return totals;
-  }, [filteredData]); // Recalculates when filteredData changes
+  }, [filteredData]);
 
 
   const handleCommentClick = () => {
@@ -306,13 +340,7 @@ function ViewDialog({ open, onClose, data,selectedDate, onDataUpdate }) {
   };
 
 const handleDownload = () => {
-
-  const options = { timeZone: "Asia/Manila", year: "numeric", month: "2-digit", day: "2-digit", hour: "2-digit", minute: "2-digit", second: "2-digit" };
-  const formatter = new Intl.DateTimeFormat("en-GB", options);
-  const parts = formatter.formatToParts(new Date());
-  
-  const formattedDateTime = `${parts[4].value}-${parts[2].value}-${parts[0].value}_${parts[6].value}-${parts[8].value}-${parts[10].value}`;
-  const fileName = `real_property_tax_abstract_${formattedDateTime}.csv`;
+  const fileName = buildTimestampedFilename("real-property-tax-daily");
 
   const headers = [
     "Date", "Name", "Receipt No", "LAND-COMML", "LAND-AGRI", "LAND-RES",
@@ -363,7 +391,82 @@ const handleDownload = () => {
 
 
 const handlePrint = () => {
-  window.print();
+  const printWindow = window.open("", "_blank", "width=1500,height=900");
+  if (!printWindow) return;
+
+  const summaryHtml = cashierData
+    .map(
+      ({ key, label }) => `
+        <div class="summary-card">
+          <div class="summary-label">${label}</div>
+          <div class="summary-value">${formatCurrency(totalCollectionByCashier[key])}</div>
+        </div>
+      `
+    )
+    .join("");
+
+  const rowsHtml = filteredData
+    .map(
+      (row) => `
+        <tr>
+          <td>${row.formattedDate}</td>
+          <td>${row.name || ""}</td>
+          <td>${row.receipt_no || ""}</td>
+          <td>${row.landComm.toFixed(2)}</td>
+          <td>${row.landAgri.toFixed(2)}</td>
+          <td>${row.landRes.toFixed(2)}</td>
+          <td>${row.bldgRes.toFixed(2)}</td>
+          <td>${row.bldgComm.toFixed(2)}</td>
+          <td>${row.bldgAgri.toFixed(2)}</td>
+          <td>${row.machinery.toFixed(2)}</td>
+          <td>${row.bldgIndus.toFixed(2)}</td>
+          <td>${row.special.toFixed(2)}</td>
+          <td>${row.total.toFixed(2)}</td>
+          <td>${(row.gfTotal || row.total).toFixed(2)}</td>
+          <td>${row.cashier || ""}</td>
+          <td>${row.comments || ""}</td>
+        </tr>
+      `
+    )
+    .join("");
+
+  printWindow.document.write(`
+    <html>
+      <head>
+        <title>Real Property Tax Daily Details</title>
+        <style>
+          body { font-family: Arial, sans-serif; padding: 24px; color: #0f2747; }
+          h1 { margin-bottom: 8px; }
+          .summary-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 12px; margin: 20px 0; }
+          .summary-card { border: 1px solid #d8e2ee; border-radius: 10px; padding: 12px; }
+          .summary-label { font-size: 12px; color: #5b7088; margin-bottom: 6px; }
+          .summary-value { font-size: 18px; font-weight: 700; }
+          table { width: 100%; border-collapse: collapse; font-size: 11px; }
+          th, td { border: 1px solid #d8e2ee; padding: 6px; text-align: center; }
+          th { background: #f7f9fc; }
+          .total { margin-top: 14px; font-weight: 700; }
+        </style>
+      </head>
+      <body>
+        <h1>Real Property Tax Daily Details</h1>
+        <div>Selected date: ${selectedDate ? formatDate(selectedDate) : "Unknown Date"}</div>
+        <div>Filtered rows: ${filteredData.length}</div>
+        <div class="summary-grid">${summaryHtml}</div>
+        <table>
+          <thead>
+            <tr>
+              <th>Date</th><th>Name</th><th>Receipt No</th><th>LAND-COMML</th><th>LAND-AGRI</th><th>LAND-RES</th><th>BLDG-RES</th><th>BLDG-COMML</th><th>BLDG-AGRI</th><th>MACHINERIES</th><th>BLDG-INDUS</th><th>SPECIAL</th><th>TOTAL</th><th>GF &amp; SEF</th><th>CASHIER</th><th>REMARKS</th>
+            </tr>
+          </thead>
+          <tbody>${rowsHtml}</tbody>
+        </table>
+        <div class="total">Total Sum: ${formatCurrency(totalAmount)}</div>
+        <div class="total">Overall Total: ${formatCurrency(totalAmount * 2)}</div>
+        <script>window.onload = () => window.print();</script>
+      </body>
+    </html>
+  `);
+  printWindow.document.close();
 };
 
 
@@ -387,40 +490,36 @@ const handlePrint = () => {
               display: "flex",
               justifyContent: "space-between",
               alignItems: "center",
+              gap: 2,
             }}
           >
-            <Typography variant="h6">
-              Details for{" "}
-              {selectedDate ? formatDate(selectedDate) : "Unknown Date"}
-            </Typography>
+            <Box>
+              <Typography variant="h6" sx={{ fontWeight: 700, color: "#0f2747" }}>
+                RPT Daily Details
+              </Typography>
+              <Typography variant="body2" sx={{ color: "#5b7088", mt: 0.5 }}>
+                {selectedDate ? formatDate(selectedDate) : "Unknown Date"}
+              </Typography>
+            </Box>
             <Button
               onClick={handleClose}
-              variant="contained"
+              variant="outlined"
               sx={{
-                minWidth: "40px",
+                minWidth: "96px",
                 height: "40px",
-                px: 0,
-                fontWeight: "bold",
-                fontSize: "1rem",
-                borderRadius: "50%",
-                background: "linear-gradient(135deg, #d32f2f, #f44336)",
-                color: "#fff",
-                boxShadow: "0 4px 16px rgba(244,67,54,0.3)",
-                transition: "all 0.3s ease",
-                "&:hover": {
-                  background: "linear-gradient(135deg, #f44336, #ef5350)",
-                  boxShadow: "0 6px 20px rgba(244,67,54,0.4)",
-                },
+                fontWeight: 700,
+                borderRadius: "10px",
+                borderColor: "#d6a12b",
+                color: "#0f2747",
               }}
             >
-              X
+              Close
             </Button>
           </Box>
         </DialogTitle>
 
-        <DialogContent sx={{ overflowX: "auto" }}>
-          <Box sx={{ p: 3 }}>
-            {/* Search Fields */}
+        <DialogContent sx={{ overflowX: "auto", px: 3, pb: 3 }}>
+          <Box sx={{ pt: 1 }}>
 
             <Box
               sx={{
@@ -428,6 +527,7 @@ const handlePrint = () => {
                 flexWrap: "wrap",
                 gap: 2,
                 alignItems: "center",
+                mt: 1,
               }}
             >
               <TextField
@@ -435,29 +535,15 @@ const handlePrint = () => {
                 variant="outlined"
                 value={searchFrom}
                 onChange={(e) => setSearchFrom(e.target.value)}
-                sx={{ minWidth: 200, flex: 1 }}
+                sx={{ minWidth: 200, flex: 1, bgcolor: "#fff" }}
               />
               <TextField
                 label="OR Number To"
                 variant="outlined"
                 value={searchTo}
                 onChange={(e) => setSearchTo(e.target.value)}
-                sx={{ minWidth: 200, flex: 1 }}
+                sx={{ minWidth: 200, flex: 1, bgcolor: "#fff" }}
               />
-            </Box>
-
-            {/* Download & Print Buttons */}
-
-            <Box
-              sx={{
-                display: "flex",
-                justifyContent: { xs: "center", sm: "flex-end" },
-                flexWrap: "wrap",
-                gap: 2,
-                mt: 4,
-                px: 1,
-              }}
-            >
               <Button
                 variant="contained"
                 startIcon={<DownloadIcon />}
@@ -465,38 +551,28 @@ const handlePrint = () => {
                 sx={{
                   px: 3,
                   py: 1.25,
-                  fontWeight: 500,
-                  fontSize: "0.95rem",
-                  borderRadius: "12px",
-                  background: "linear-gradient(135deg, #3f51b5, #5c6bc0)",
-                  boxShadow: "0 4px 20px rgba(63, 81, 181, 0.2)",
-                  transition: "all 0.3s ease",
-                  "&:hover": {
-                    background: "linear-gradient(135deg, #5c6bc0, #7986cb)",
-                    boxShadow: "0 6px 30px rgba(63, 81, 181, 0.3)",
-                  },
+                  fontWeight: 700,
+                  fontSize: "0.9rem",
+                  borderRadius: "10px",
+                  backgroundColor: "#0f2747",
+                  color: "#fff",
                 }}
               >
                 Download CSV
               </Button>
 
               <Button
-                variant="contained"
+                variant="outlined"
                 startIcon={<PrintIcon />}
                 onClick={handlePrint}
                 sx={{
                   px: 3,
                   py: 1.25,
-                  fontWeight: 500,
-                  fontSize: "0.95rem",
-                  borderRadius: "12px",
-                  background: "linear-gradient(135deg, #e91e63, #f06292)",
-                  boxShadow: "0 4px 20px rgba(233, 30, 99, 0.2)",
-                  transition: "all 0.3s ease",
-                  "&:hover": {
-                    background: "linear-gradient(135deg, #f06292, #f48fb1)",
-                    boxShadow: "0 6px 30px rgba(233, 30, 99, 0.3)",
-                  },
+                  fontWeight: 700,
+                  fontSize: "0.9rem",
+                  borderRadius: "10px",
+                  borderColor: "#0f2747",
+                  color: "#0f2747",
                 }}
               >
                 Print
@@ -504,143 +580,57 @@ const handlePrint = () => {
             </Box>
 
             <Box
-              display="flex"
-              justifyContent="space-between"
-              gap={3}
-              sx={{
-                mt: 4,
-                flexDirection: { xs: "column", sm: "row" },
-              }}
+              sx={{ display: "flex", flexWrap: "wrap", gap: 3, mt: 4, justifyContent: "center" }}
             >
-              {cashierData.map(({ key, label, gradient, icon }) => {
-                const value = totalCollectionByCashier[key];
-                const formattedValue =
-                  typeof value === "number"
-                    ? new Intl.NumberFormat("en-PH", {
-                        style: "currency",
-                        currency: "PHP",
-                        minimumFractionDigits: 2,
-                      }).format(value)
-                    : value;
-
-                return (
-                  <Card
-                    key={label}
+              {cashierData.map(({ key, label, icon }, index) => (
+                <Card
+                  key={label}
+                  sx={{
+                    flex: "1 1 240px",
+                    maxWidth: "260px",
+                    p: 2.5,
+                    borderRadius: "16px",
+                    background:
+                      [
+                        "linear-gradient(135deg, #0f2747, #2f4f7f)",
+                        "linear-gradient(135deg, #0f6b62, #2a8a7f)",
+                        "linear-gradient(135deg, #4b5d73, #6a7f99)",
+                        "linear-gradient(135deg, #a66700, #c98a2a)",
+                      ][index % 4],
+                    color: "#ffffff",
+                    position: "relative",
+                    overflow: "hidden",
+                  }}
+                >
+                  <Box sx={{ position: "relative", zIndex: 2 }}>
+                    <Typography variant="h6" sx={{ fontSize: "1.1rem", fontWeight: 600, mb: 1.2 }}>
+                      {label}
+                    </Typography>
+                    <Typography variant="h5" sx={{ fontWeight: "bold", fontSize: "1.5rem", mt: 1 }}>
+                      {formatCurrency(totalCollectionByCashier[key])}
+                    </Typography>
+                  </Box>
+                  <Box
                     sx={{
-                      flex: 1,
-                      p: 3,
-                      borderRadius: "16px",
-                      background: gradient,
-                      color: "white",
-                      boxShadow: "0 8px 32px rgba(0,0,0,0.12)",
-                      transition: "all 0.4s cubic-bezier(0.25, 0.8, 0.25, 1)",
-                      cursor: "pointer",
-                      minWidth: 0,
-                      position: "relative",
-                      overflow: "hidden",
-                      "&:hover": {
-                        transform: "translateY(-8px)",
-                        boxShadow: "0 12px 40px rgba(0,0,0,0.2)",
-                      },
-                      "&::before": {
-                        content: '""',
-                        position: "absolute",
-                        top: "-50%",
-                        right: "-50%",
-                        width: "100%",
-                        height: "100%",
-                        background: "rgba(255,255,255,0.08)",
-                        transform: "rotate(30deg)",
-                        transition: "all 0.4s ease",
-                      },
-                      "&:hover::before": {
-                        transform: "rotate(30deg) translate(20%, 20%)",
-                      },
+                      position: "absolute",
+                      top: 16,
+                      right: 16,
+                      zIndex: 1,
+                      opacity: 0.08,
+                      "& svg": { fontSize: "3.8rem" },
                     }}
                   >
-                    <Box
-                      display="flex"
-                      justifyContent="space-between"
-                      alignItems="flex-start"
-                    >
-                      <Box>
-                        <Typography
-                          variant="subtitle2"
-                          sx={{
-                            opacity: 0.9,
-                            mb: 0.5,
-                            fontSize: "0.875rem",
-                            fontWeight: 500,
-                            letterSpacing: "0.5px",
-                          }}
-                        >
-                          {label}
-                        </Typography>
-                        <Typography
-                          variant="h5"
-                          sx={{
-                            fontWeight: 700,
-                            fontSize: "1.5rem",
-                            lineHeight: 1.2,
-                            mb: 1,
-                          }}
-                        >
-                          {formattedValue}
-                        </Typography>
-                      </Box>
-
-                      <Box
-                        sx={{
-                          opacity: 0.1,
-                          position: "absolute",
-                          right: 20,
-                          top: 20,
-                          "& svg": {
-                            fontSize: "3.5rem",
-                          },
-                        }}
-                      >
-                        {icon}
-                      </Box>
-                    </Box>
-
-                    <Box
-                      sx={{
-                        display: "flex",
-                        alignItems: "center",
-                        mt: 1.5,
-                      }}
-                    >
-                      <Box
-                        sx={{
-                          width: "100%",
-                          height: "4px",
-                          backgroundColor: "rgba(255,255,255,0.3)",
-                          borderRadius: "2px",
-                          overflow: "hidden",
-                        }}
-                      >
-                        <Box
-                          sx={{
-                            width: "70%", // Could be dynamic based on value %
-                            height: "100%",
-                            backgroundColor: "white",
-                            borderRadius: "2px",
-                          }}
-                        />
-                      </Box>
-                    </Box>
-                  </Card>
-                );
-              })}
+                    {icon}
+                  </Box>
+                </Card>
+              ))}
             </Box>
           </Box>
 
           <Box id="printableTable">
-            {/* Table */}
             <TableContainer
               component={Paper}
-              sx={{ width: "100%", overflowX: "auto" }}
+              sx={{ mt: 2, width: "100%", overflowX: "auto", maxHeight: "520px", minWidth: "1100px" }}
             >
               <Table>
                 <TableHead>
@@ -700,17 +690,12 @@ const handlePrint = () => {
                       <CenteredTableCell>{row.cashier}</CenteredTableCell>
                       <CenteredTableCell>{row.comments}</CenteredTableCell>
                       <CenteredTableCell>
-                        <Button
-                          variant="contained"
-                          color="primary"
-                          onClick={(event) => handleMenuClick(event, row)}
-                          sx={{ textTransform: "none" }}
-                        >
-                          Action
-                        </Button>
+                        <IconButton onClick={(event) => handleMenuClick(event, row)}>
+                          <MoreVertIcon />
+                        </IconButton>
                         <Menu
                           anchorEl={anchorEl}
-                          open={Boolean(anchorEl) && currentRow === row}
+                          open={Boolean(anchorEl) && currentRow?.id === row.id}
                           onClose={handleMenuClose}
                           anchorOrigin={{
                             vertical: "bottom",

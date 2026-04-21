@@ -16,7 +16,7 @@ import ElectricRickshawRoundedIcon from "@mui/icons-material/ElectricRickshawRou
 import LogoutRoundedIcon from "@mui/icons-material/LogoutRounded";
 import MailRoundedIcon from "@mui/icons-material/MailRounded";
 import NotificationsRoundedIcon from "@mui/icons-material/NotificationsRounded";
-import PrintRoundedIcon from "@mui/icons-material/PrintRounded";
+import SearchRoundedIcon from "@mui/icons-material/SearchRounded";
 import HomeWorkRoundedIcon from "@mui/icons-material/HomeWorkRounded";
 import ImportExportRoundedIcon from "@mui/icons-material/ImportExportRounded";
 import InboxRoundedIcon from "@mui/icons-material/InboxRounded";
@@ -32,9 +32,9 @@ import WaterDropRoundedIcon from "@mui/icons-material/WaterDropRounded";
 import Box from "@mui/material/Box";
 import Breadcrumbs from "@mui/material/Breadcrumbs";
 import Grid from "@mui/material/Grid";
+import InputAdornment from "@mui/material/InputAdornment";
 import Link from "@mui/material/Link";
 import Paper from "@mui/material/Paper";
-import Button from "@mui/material/Button";
 import ReceiptLongRoundedIcon from "@mui/icons-material/ReceiptLongRounded";
 import ScubaDivingRoundedIcon from "@mui/icons-material/ScubaDivingRounded";
 import Avatar from "@mui/material/Avatar";
@@ -43,13 +43,9 @@ import IconButton from "@mui/material/IconButton";
 import ListItemIcon from "@mui/material/ListItemIcon";
 import ListItemText from "@mui/material/ListItemText";
 import Menu from "@mui/material/Menu";
-
-import Select from "@mui/material/Select";
 import MenuItem from "@mui/material/MenuItem";
-import FormControl from "@mui/material/FormControl";
-import InputLabel from "@mui/material/InputLabel";
 import Stack from "@mui/material/Stack";
-
+import TextField from "@mui/material/TextField";
 import LinearProgress from "@mui/material/LinearProgress";
 import Chip from "@mui/material/Chip";
 import Tooltip from "@mui/material/Tooltip";
@@ -378,13 +374,146 @@ const NAVIGATION = [
 const demoTheme = createTheme({
   colorSchemes: { light: true },
   components: {
+    MuiCssBaseline: {
+      styleOverrides: {
+        body: {
+          background:
+            "linear-gradient(180deg, #f6fbf8 0%, #f7f9fc 42%, #ffffff 100%)",
+        },
+      },
+    },
+    MuiDrawer: {
+      styleOverrides: {
+        paper: {
+          width: 280,
+          borderRight: "1px solid #e6edf5",
+          background:
+            "linear-gradient(180deg, #ffffff 0%, #f8fbff 52%, #f3f7fb 100%)",
+          boxShadow: "12px 0 30px rgba(15,39,71,0.04)",
+        },
+      },
+    },
+    MuiAppBar: {
+      styleOverrides: {
+        root: {
+          background: "rgba(255,255,255,0.92)",
+          backdropFilter: "blur(12px)",
+          borderBottom: "1px solid #e6edf5",
+          boxShadow: "0 4px 18px rgba(15,39,71,0.05)",
+        },
+      },
+    },
+    MuiToolbar: {
+      styleOverrides: {
+        root: {
+          minHeight: "72px !important",
+          paddingLeft: "20px !important",
+          paddingRight: "20px !important",
+        },
+      },
+    },
+    MuiList: {
+      styleOverrides: {
+        root: {
+          paddingLeft: 12,
+          paddingRight: 12,
+          gap: 4,
+        },
+      },
+    },
     MuiListItemButton: {
       styleOverrides: {
         root: {
-          borderRadius: 10,
+          borderRadius: 16,
+          minHeight: 46,
+          paddingLeft: 14,
+          paddingRight: 14,
+          marginBottom: 6,
           border: "1px solid transparent",
+          color: "#52667a",
+          transition: "all 0.2s ease",
           "&:hover": {
-            borderColor: "#d6a12b",
+            backgroundColor: "#eef4ff",
+            borderColor: "#dce7fb",
+            color: "#102a43",
+            transform: "translateX(2px)",
+          },
+          "&.Mui-selected": {
+            background: "linear-gradient(135deg, #5b5ce2 0%, #6a7bff 100%)",
+            borderColor: "#5b5ce2",
+            color: "#ffffff",
+            boxShadow: "0 10px 24px rgba(91,92,226,0.24)",
+            "& .MuiTypography-root": {
+              color: "#ffffff",
+            },
+            "& .MuiListItemIcon-root": {
+              color: "#ffffff",
+            },
+            "& .MuiListItemIcon-root svg": {
+              color: "#ffffff !important",
+            },
+          },
+          "&.Mui-selected:hover": {
+            background: "linear-gradient(135deg, #5556da 0%, #6475fb 100%)",
+            color: "#ffffff",
+            "& .MuiTypography-root": {
+              color: "#ffffff",
+            },
+            "& .MuiListItemIcon-root": {
+              color: "#ffffff",
+            },
+            "& .MuiListItemIcon-root svg": {
+              color: "#ffffff !important",
+            },
+          },
+          "& .MuiListItemIcon-root": {
+            minWidth: 36,
+            color: "inherit",
+          },
+        },
+      },
+    },
+    MuiListSubheader: {
+      styleOverrides: {
+        root: {
+          background: "transparent",
+          color: "#8a9ab0",
+          fontSize: 11,
+          fontWeight: 800,
+          letterSpacing: "0.12em",
+          textTransform: "uppercase",
+          lineHeight: 1.2,
+          paddingLeft: 20,
+          paddingRight: 20,
+          paddingTop: 12,
+          paddingBottom: 8,
+        },
+      },
+    },
+    MuiListItemIcon: {
+      styleOverrides: {
+        root: {
+          minWidth: 36,
+        },
+      },
+    },
+    MuiDivider: {
+      styleOverrides: {
+        root: {
+          marginTop: 10,
+          marginBottom: 10,
+          borderColor: "#edf2f7",
+          marginLeft: 16,
+          marginRight: 16,
+        },
+      },
+    },
+    MuiPaper: {
+      styleOverrides: {
+        root: {
+          "& .MuiListItemButton-root .MuiTypography-root": {
+            fontSize: 14,
+            fontWeight: 700,
           },
         },
       },
@@ -559,21 +688,6 @@ const buildDashboardNotifications = ({
   });
 
   return items.slice(0, 8);
-};
-
-const resolveNavigationTitle = (pathname, items = NAVIGATION) => {
-  const segment = pathname.replace(/^\/my-app\/?/, "");
-  const findTitle = (items) => {
-    for (const item of items) {
-      if (item.segment === segment) return item.title;
-      if (item.children) {
-        const childTitle = findTitle(item.children);
-        if (childTitle) return childTitle;
-      }
-    }
-    return null;
-  };
-  return findTitle(NAVIGATION) || "Dashboard";
 };
 
 function DemoPageContent({ pathname }) {
@@ -850,34 +964,51 @@ function DashboardLayoutBranding(props) {
     }),
     [pathname, navigate, location.search]
   );
-  const resolvePageTitle = React.useMemo(
-    () => resolveNavigationTitle(router.pathname, navigationItems),
-    [navigationItems, router.pathname]
-  );
-  const hideCenteredPageTitle = router.pathname === "/my-app/procurement-portal/disbursement-vouchers";
   const brandingTitle = (
-    <Box sx={{ display: "flex", alignItems: "center" }}>
-      <Box sx={{ fontWeight: 700, whiteSpace: "nowrap" }}>Electronic Treasurer Management System</Box>
-      {!hideCenteredPageTitle ? (
+    <Box sx={{ display: "flex", alignItems: "center", gap: 1.5, minWidth: 0 }}>
+      <Box
+        sx={{
+          width: 44,
+          height: 44,
+          borderRadius: 3,
+          display: "grid",
+          placeItems: "center",
+          background: "linear-gradient(135deg, #5b5ce2 0%, #6a7bff 100%)",
+          boxShadow: "0 10px 22px rgba(91,92,226,0.22)",
+          overflow: "hidden",
+          flexShrink: 0,
+        }}
+      >
+        <img
+          src="/assets/images/ZAMBO_LOGO_P.png"
+          alt="LGU logo"
+          style={{ width: "76%", height: "76%", objectFit: "contain" }}
+        />
+      </Box>
+      <Box sx={{ lineHeight: 1.02, minWidth: 0 }}>
         <Box
           sx={{
-            position: "fixed",
-            left: "50%",
-            transform: "translateX(-50%)",
-            top: 0,
-            height: { xs: 56, sm: 64 },
-            display: "flex",
-            alignItems: "center",
-            fontWeight: 700,
-            pointerEvents: "none",
+            fontWeight: 800,
+            color: "#102a43",
             whiteSpace: "nowrap",
-            textTransform: "uppercase",
-            color: "#000000",
+            fontSize: { xs: 22, md: 18 },
           }}
         >
-          {resolvePageTitle}
+          Electronic Treasurer
         </Box>
-      ) : null}
+        <Box
+          sx={{
+            fontSize: 11,
+            fontWeight: 700,
+            color: "#7b8794",
+            letterSpacing: "0.08em",
+            textTransform: "uppercase",
+            whiteSpace: "nowrap",
+          }}
+        >
+          Management System
+        </Box>
+      </Box>
     </Box>
   );
 
@@ -890,7 +1021,7 @@ function DashboardLayoutBranding(props) {
       <AppProvider
         navigation={navigationItems}
         branding={{
-          logo: <img src="/assets/images/ZAMBO_LOGO_P.png" alt="LGU logo" />,
+          logo: <Box sx={{ display: "none" }} />,
           title: brandingTitle,
           // homeUrl: "/toolpad/core/introduction",
         }}
@@ -917,9 +1048,27 @@ DashboardLayoutBranding.propTypes = {
 
 
 function DashboardHome() {
-  const navigate = useNavigate();
-  const [month, setMonth] = React.useState(new Date().getMonth() + 1);
-  const [year, setYear] = React.useState(new Date().getFullYear());
+  const currentDate = React.useMemo(() => new Date(), []);
+  const currentMonth = currentDate.getMonth() + 1;
+  const currentYear = currentDate.getFullYear();
+  const [searchQuery, setSearchQuery] = React.useState("");
+  const months = React.useMemo(
+    () => [
+      "January",
+      "February",
+      "March",
+      "April",
+      "May",
+      "June",
+      "July",
+      "August",
+      "September",
+      "October",
+      "November",
+      "December",
+    ],
+    []
+  );
   const [data, setData] = React.useState([]);
   const [rptRows, setRptRows] = React.useState([]);
   const [gfRows, setGfRows] = React.useState([]);
@@ -928,24 +1077,8 @@ function DashboardHome() {
   const [calendarEvents, setCalendarEvents] = React.useState([]);
   const [loading, setLoading] = React.useState(false);
   const [fetchError, setFetchError] = React.useState("");
-
   const { user: authUser } = useAuth();
   const lastLoginAt = localStorage.getItem("lastLoginAt");
-
-  const months = [
-    "January",
-    "February",
-    "March",
-    "April",
-    "May",
-    "June",
-    "July",
-    "August",
-    "September",
-    "October",
-    "November",
-    "December",
-  ];
 
   const formatCurrency = React.useCallback(
     (value) =>
@@ -1054,35 +1187,11 @@ function DashboardHome() {
     fetchData();
   }, [fetchData]);
 
-  const filteredRows = React.useMemo(() => {
-    const monthIndex = Number(month) - 1;
-    const selectedYear = Number(year);
-
-    return data.filter((row) => {
-      const rawDate = getRowDate(row);
-      if (!rawDate) return false;
-      return (
-        rawDate.getMonth() === monthIndex &&
-        rawDate.getFullYear() === selectedYear
-      );
-    });
-  }, [data, getRowDate, month, year]);
+  const filteredRows = React.useMemo(() => data.filter((row) => !!getRowDate(row)), [data, getRowDate]);
 
   const filterModuleRows = React.useCallback(
-    (rows) => {
-      const monthIndex = Number(month) - 1;
-      const selectedYear = Number(year);
-
-      return rows.filter((row) => {
-        const rawDate = getRowDate(row);
-        if (!rawDate) return false;
-        return (
-          rawDate.getMonth() === monthIndex &&
-          rawDate.getFullYear() === selectedYear
-        );
-      });
-    },
-    [getRowDate, month, year]
+    (rows) => rows.filter((row) => !!getRowDate(row)),
+    [getRowDate]
   );
 
   const filteredRptRows = React.useMemo(
@@ -1298,21 +1407,86 @@ function DashboardHome() {
     return Math.min((overview.rcdTotal / monthlyTarget) * 100, 100);
   }, [monthlyTarget, overview.rcdTotal]);
 
-  const exportCsv = () => {
-    const rows = filteredRows;
-    const headers = Object.keys(rows[0] || {}).filter(Boolean);
-    const escape = (val) => `"${String(val ?? "").replace(/"/g, '""')}"`;
-    const csv = [headers.join(",")]
-      .concat(rows.map((r) => headers.map((h) => escape(r[h])).join(",")))
-      .join("\n");
-    const blob = new Blob([csv], { type: "text/csv;charset=utf-8;" });
-    const url = URL.createObjectURL(blob);
-    const a = document.createElement("a");
-    a.href = url;
-    a.download = `dashboard_export_${year}_${month}.csv`;
-    a.click();
-    URL.revokeObjectURL(url);
-  };
+  const searchNeedle = React.useMemo(
+    () => searchQuery.trim().toLowerCase(),
+    [searchQuery]
+  );
+
+  const filteredRecentTransactions = React.useMemo(() => {
+    if (!searchNeedle) return recentTransactions;
+    return recentTransactions.filter((row) =>
+      [
+        row.reference,
+        row.detail,
+        row.module,
+        row.collector,
+        row.amount,
+        row.dueFrom,
+      ]
+        .join(" ")
+        .toLowerCase()
+        .includes(searchNeedle)
+    );
+  }, [recentTransactions, searchNeedle]);
+
+  const filteredAttentionItems = React.useMemo(() => {
+    if (!searchNeedle) return attentionItems;
+    return attentionItems.filter((row) =>
+      [row.date, row.comment, row.dueFrom]
+        .join(" ")
+        .toLowerCase()
+        .includes(searchNeedle)
+    );
+  }, [attentionItems, searchNeedle]);
+
+  const filteredUpcomingEvents = React.useMemo(() => {
+    if (!searchNeedle) return upcomingEvents;
+    return upcomingEvents.filter((event) =>
+      [event.title, event.category, event.start]
+        .join(" ")
+        .toLowerCase()
+        .includes(searchNeedle)
+    );
+  }, [upcomingEvents, searchNeedle]);
+
+  const topCollector = collectorSnapshot[0] || null;
+  const topBarangay = topBarangays[0] || null;
+  const profileName =
+    authUser?.username || authUser?.name || authUser?.full_name || "Treasury User";
+  const profileRole =
+    authUser?.role || authUser?.user_type || authUser?.designation || "Treasury";
+
+  const insightCards = [
+    {
+      label: "Best Collection Day",
+      value: overview.bestCollectionDay
+        ? formatDate(overview.bestCollectionDay.date)
+        : "No data",
+      helper: overview.bestCollectionDay
+        ? `PHP ${formatCurrency(overview.bestCollectionDay.rcdTotal)} collected`
+        : "No recorded collections for this period",
+      accent: "#5b5ce2",
+      tone: "linear-gradient(135deg, #eff0ff 0%, #ffffff 100%)",
+    },
+    {
+      label: "Top Collector",
+      value: topCollector ? topCollector.collector : "No data",
+      helper: topCollector
+        ? `PHP ${formatCurrency(topCollector.total)} today`
+        : "No collector activity recorded today",
+      accent: "#0f9d8a",
+      tone: "linear-gradient(135deg, #ecfffb 0%, #ffffff 100%)",
+    },
+    {
+      label: "Top Barangay",
+      value: topBarangay ? topBarangay.label : "No data",
+      helper: topBarangay
+        ? `PHP ${formatCurrency(topBarangay.amount)} from RPT`
+        : "No RPT barangay data for this period",
+      accent: "#f59f00",
+      tone: "linear-gradient(135deg, #fff7e8 0%, #ffffff 100%)",
+    },
+  ];
 
   const overviewCards = [
     {
@@ -1355,304 +1529,130 @@ function DashboardHome() {
     <Box
       sx={{
         px: { xs: 0.5, md: 1 },
-        pb: 2,
+        pb: 3,
         background:
-          "linear-gradient(180deg, #f7f9fc 0%, #f7f9fc 58%, #ffffff 100%)",
+          "linear-gradient(180deg, #f6fbf8 0%, #f7f9fc 42%, #ffffff 100%)",
       }}
     >
-      <Paper
-        sx={{
-          mb: 2,
-          p: { xs: 2, md: 2.5 },
-          borderRadius: 3,
-          border: "1px solid #d9e2ec",
-          backgroundColor: "#ffffff",
-          boxShadow: "0 8px 22px rgba(15,39,71,0.06)",
-        }}
-      >
-        <Stack
-          direction={{ xs: "column", md: "row" }}
-          justifyContent="space-between"
-          alignItems={{ xs: "flex-start", md: "center" }}
-          spacing={1.5}
-          sx={{ mb: 2 }}
-        >
-          <Stack direction="row" spacing={1} flexWrap="wrap">
-            <Chip
-              label={`Logged in as: ${authUser?.username || "Treasury Staff"}`}
-              sx={{
-                bgcolor: "#eef4fb",
-                border: "1px solid #d9e2ec",
-                color: "#102a43",
-                fontWeight: 700,
-              }}
-            />
-            <Chip
-              label={`Role: ${authUser?.effective_role || authUser?.role || "Staff"}`}
-              sx={{
-                bgcolor: "#f8fbff",
-                border: "1px solid #d9e2ec",
-                color: "#486581",
-                fontWeight: 700,
-              }}
-            />
-            <Chip
-              label={`Last login: ${lastLoginAt ? formatDate(lastLoginAt) : "Not recorded"}`}
-              sx={{
-                bgcolor: "#f8fbff",
-                border: "1px solid #d9e2ec",
-                color: "#486581",
-                fontWeight: 700,
-              }}
-            />
-          </Stack>
-
-        </Stack>
-
-        <Grid container spacing={2} alignItems="stretch">
-          <Grid size={{ xs: 12, lg: 7 }}>
-            <Box>
-              <Typography
-                variant="h4"
-                sx={{ fontWeight: 800, letterSpacing: 0.1, color: "#102a43" }}
-              >
-                Treasury Dashboard
-              </Typography>
-              <Typography variant="body1" sx={{ color: "#486581", mt: 0.8 }}>
-                Operational snapshot for {months[month - 1]} {year}
-              </Typography>
-              <Typography
-                variant="body2"
-                sx={{ color: "#627d98", mt: 1.2, maxWidth: 680 }}
-              >
-                Review filtered totals, collection activity, exceptions,
-                notifications, and treasury follow-up items from the live
-                reporting feeds.
-              </Typography>
-
-              <Box sx={{ mt: 1.8, display: "flex", gap: 1, flexWrap: "wrap" }}>
-                <Chip
-                  icon={<CalendarMonthRoundedIcon />}
-                  label={`${months[month - 1]} ${year}`}
-                  size="small"
-                  sx={{
-                    bgcolor: "#eef4fb",
-                    color: "#102a43",
-                    border: "1px solid #d9e2ec",
-                  }}
-                />
-                <Chip
-                  label={loading ? "Refreshing" : "Ready"}
-                  size="small"
-                  sx={{
-                    bgcolor: loading ? "#fff3cd" : "#e8f7ee",
-                    color: loading ? "#8a6d1f" : "#186a3b",
-                    border: "1px solid",
-                    borderColor: loading ? "#f3d98b" : "#b7e3c4",
-                  }}
-                />
-                <Chip
-                  label={`Remarks: ${overview.remarksCount}`}
-                  size="small"
-                  sx={{
-                    bgcolor: "#f7f9fc",
-                    color: "#486581",
-                    border: "1px solid #d9e2ec",
-                  }}
-                />
-              </Box>
-
-              <Box sx={{ mt: 1.8, display: "flex", gap: 1, flexWrap: "wrap" }}>
-                {[
-                  { label: "Open RPT", path: "/my-app/real-property-tax" },
-                  { label: "Open GF", path: "/my-app/general-fund" },
-                  { label: "Open TF", path: "/my-app/trust-fund" },
-                  { label: "Open Cedula", path: "/my-app/community-tax-certificate" },
-                  { label: "Open Full Report", path: "/my-app/full-report" },
-                  { label: "Open Calendar", path: "/my-app/calendar" },
-                ].map((action) => (
-                  <Button
-                    key={action.path}
-                    variant="outlined"
-                    size="small"
-                    onClick={() => navigate(action.path)}
-                    sx={{
-                      color: "#334e68",
-                      borderColor: "#bcccdc",
-                      fontWeight: 700,
-                      "&:hover": {
-                        borderColor: "#829ab1",
-                        bgcolor: "#ffffff",
-                      },
-                    }}
-                  >
-                    {action.label}
-                  </Button>
-                ))}
-              </Box>
-            </Box>
-          </Grid>
-
-          <Grid size={{ xs: 12, lg: 5 }}>
-            <Paper
-              sx={{
-                p: 2,
-                borderRadius: 3,
-                bgcolor: "#f8fbff",
-                border: "1px solid #d9e2ec",
-                color: "#102a43",
-              }}
-            >
-              <Typography variant="subtitle2" sx={{ fontWeight: 700, mb: 1.5 }}>
-                Reporting Filter
-              </Typography>
-              <Box
-                sx={{
-                  display: "flex",
-                  gap: 1.5,
-                  flexWrap: "wrap",
-                  alignItems: "center",
-                }}
-              >
-                <FormControl size="small" sx={{ minWidth: 170 }}>
-                  <InputLabel id="month-label">
-                    Month
-                  </InputLabel>
-                  <Select
-                    labelId="month-label"
-                    value={month}
-                    label="Month"
-                    onChange={(e) => setMonth(e.target.value)}
-                    sx={{
-                      borderRadius: 2,
-                      backgroundColor: "#ffffff",
-                    }}
-                  >
-                    {months.map((m, i) => (
-                      <MenuItem key={m} value={i + 1}>
-                        {m}
-                      </MenuItem>
-                    ))}
-                  </Select>
-                </FormControl>
-
-                <FormControl size="small" sx={{ minWidth: 120 }}>
-                  <InputLabel id="year-label">
-                    Year
-                  </InputLabel>
-                  <Select
-                    labelId="year-label"
-                    value={year}
-                    label="Year"
-                    onChange={(e) => setYear(e.target.value)}
-                    sx={{
-                      borderRadius: 2,
-                      backgroundColor: "#ffffff",
-                    }}
-                  >
-                    {Array.from({ length: 8 }).map((_, idx) => {
-                      const y = new Date().getFullYear() - idx;
-                      return (
-                        <MenuItem key={y} value={y}>
-                          {y}
-                        </MenuItem>
-                      );
-                    })}
-                  </Select>
-                </FormControl>
-
-                <Button
-                  variant="contained"
-                  onClick={fetchData}
-                  sx={{
-                    bgcolor: "#102a43",
-                    color: "#ffffff",
-                    fontWeight: 700,
-                    "&:hover": { bgcolor: "#0b1f33" },
-                  }}
-                >
-                  Refresh
-                </Button>
-
-                <Button
-                  variant="outlined"
-                  onClick={exportCsv}
-                  sx={{
-                    color: "#334e68",
-                    borderColor: "#bcccdc",
-                    "&:hover": {
-                      borderColor: "#829ab1",
-                      bgcolor: "#ffffff",
-                    },
-                  }}
-                >
-                  Export CSV
-                </Button>
-
-                <Button
-                  variant="outlined"
-                  startIcon={<PrintRoundedIcon />}
-                  onClick={() => window.print()}
-                  sx={{
-                    color: "#334e68",
-                    borderColor: "#bcccdc",
-                    "&:hover": {
-                      borderColor: "#829ab1",
-                      bgcolor: "#ffffff",
-                    },
-                  }}
-                >
-                  Print
-                </Button>
-              </Box>
-
-              <Box sx={{ mt: 2 }}>
-                <Typography variant="body2" sx={{ color: "#627d98" }}>
-                  Best collection day
-                </Typography>
-                <Typography
-                  variant="h6"
-                  sx={{ fontWeight: 800, mt: 0.4, color: "#102a43" }}
-                >
-                  {overview.bestCollectionDay?.date || "No data"}
-                </Typography>
-                <Typography variant="body2" sx={{ color: "#627d98" }}>
-                  {overview.bestCollectionDay
-                    ? `PHP ${formatCurrency(
-                        overview.bestCollectionDay?.rcdTotal
-                      )} total collected`
-                    : "No recorded collections for this period"}
-                </Typography>
-              </Box>
-            </Paper>
-          </Grid>
-        </Grid>
-      </Paper>
-
       {loading && <LinearProgress sx={{ mb: 2, borderRadius: 10 }} />}
 
       <Grid container spacing={2}>
+        <Grid size={{ xs: 12 }}>
+          <Paper
+            sx={{
+              p: { xs: 2, lg: 2.5 },
+              borderRadius: 4,
+              border: "1px solid #dce8e2",
+              boxShadow: "0 10px 30px rgba(15,39,71,0.05)",
+              background:
+                "linear-gradient(135deg, rgba(255,255,255,0.98) 0%, rgba(247,251,248,0.98) 100%)",
+            }}
+          >
+            <Grid container spacing={2} alignItems="center">
+              <Grid size={{ xs: 12, lg: 4 }}>
+                <Typography
+                  variant="h4"
+                  sx={{ fontWeight: 800, color: "#102a43", lineHeight: 1.1 }}
+                >
+                  Treasury Dashboard
+                </Typography>
+                <Typography variant="body1" sx={{ mt: 1, color: "#627d98" }}>
+                  Operational snapshot for {months[currentMonth - 1]} {currentYear}
+                </Typography>
+                <Stack direction="row" spacing={1} sx={{ mt: 2, flexWrap: "wrap" }}>
+                  <Chip
+                    label={`${filteredRows.length} summary rows`}
+                    sx={{ bgcolor: "#eef4ff", color: "#355070", fontWeight: 700 }}
+                  />
+                  <Chip
+                    label={`${notifications.length} notices`}
+                    sx={{ bgcolor: "#eefbf5", color: "#0f766e", fontWeight: 700 }}
+                  />
+                  <Chip
+                    label={`${upcomingEvents.length} upcoming events`}
+                    sx={{ bgcolor: "#fff7e8", color: "#b26a00", fontWeight: 700 }}
+                  />
+                </Stack>
+              </Grid>
+
+              <Grid size={{ xs: 12, lg: 5 }}>
+                <TextField
+                  fullWidth
+                  placeholder="Search transactions, alerts, collector, or calendar..."
+                  value={searchQuery}
+                  onChange={(event) => setSearchQuery(event.target.value)}
+                  sx={{
+                    "& .MuiOutlinedInput-root": {
+                      borderRadius: 3,
+                      bgcolor: "#f8fbff",
+                    },
+                  }}
+                  InputProps={{
+                    startAdornment: (
+                      <InputAdornment position="start">
+                        <SearchRoundedIcon sx={{ color: "#5b5ce2" }} />
+                      </InputAdornment>
+                    ),
+                  }}
+                />
+              </Grid>
+
+              <Grid size={{ xs: 12, lg: 3 }}>
+                <Box
+                  sx={{
+                    p: 1.5,
+                    borderRadius: 3,
+                    border: "1px solid #e2e8f0",
+                    bgcolor: "#ffffff",
+                    display: "flex",
+                    alignItems: "center",
+                    justifyContent: "space-between",
+                    gap: 1.5,
+                  }}
+                >
+                  <Box sx={{ minWidth: 0 }}>
+                    <Typography variant="subtitle2" sx={{ fontWeight: 800, color: "#102a43" }}>
+                      {profileName}
+                    </Typography>
+                    <Typography variant="body2" color="text.secondary">
+                      {profileRole}
+                    </Typography>
+                    <Typography variant="caption" sx={{ color: "#829ab1", display: "block", mt: 0.5 }}>
+                      Last login: {formatDate(lastLoginAt)}
+                    </Typography>
+                  </Box>
+                  <Avatar sx={{ bgcolor: "#5b5ce2", width: 44, height: 44 }}>
+                    {String(profileName || "T").charAt(0).toUpperCase()}
+                  </Avatar>
+                </Box>
+              </Grid>
+            </Grid>
+          </Paper>
+        </Grid>
+
         {overviewCards.map((card) => (
           <Grid size={{ xs: 12, sm: 6, xl: 3 }} key={card.title}>
             <Paper
               sx={{
                 p: 2,
-                borderRadius: 3,
-                border: "1px solid #d9e2ec",
-                boxShadow: "0 6px 18px rgba(15,39,71,0.05)",
+                borderRadius: 4,
+                border: "1px solid #e6edf5",
+                boxShadow: "0 8px 24px rgba(15,39,71,0.05)",
                 height: "100%",
                 position: "relative",
                 overflow: "hidden",
+                background: card.bg,
               }}
             >
               <Box
                 sx={{
                   position: "absolute",
-                  top: 0,
-                  left: 0,
-                  width: 6,
-                  height: "100%",
-                  backgroundColor: card.accent,
+                  top: -30,
+                  right: -30,
+                  width: 110,
+                  height: 110,
+                  borderRadius: "50%",
+                  bgcolor: `${card.accent}12`,
                 }}
               />
               <Box
@@ -1661,7 +1661,6 @@ function DashboardHome() {
                   justifyContent: "space-between",
                   alignItems: "flex-start",
                   gap: 1.5,
-                  pl: 1,
                 }}
               >
                 <Box>
@@ -1670,7 +1669,7 @@ function DashboardHome() {
                     sx={{
                       fontWeight: 700,
                       color: card.accent,
-                      letterSpacing: 0.3,
+                      letterSpacing: 0.2,
                     }}
                   >
                     {card.title}
@@ -1695,8 +1694,8 @@ function DashboardHome() {
                     borderRadius: 2,
                     display: "grid",
                     placeItems: "center",
-                    bgcolor: "#f7f9fc",
-                    border: "1px solid #d9e2ec",
+                    bgcolor: "#ffffff",
+                    border: "1px solid #e6edf5",
                   }}
                 >
                   {card.icon}
@@ -1706,80 +1705,304 @@ function DashboardHome() {
           </Grid>
         ))}
 
-        <Grid size={{ xs: 12, md: 6 }}>
+        <Grid size={{ xs: 12, lg: 8 }}>
           <Paper
             sx={{
-              p: 1.5,
-              borderRadius: 3,
-              border: "1px solid #d9e2ec",
-              boxShadow: "0 6px 18px rgba(15,39,71,0.05)",
+              p: 2,
+              borderRadius: 4,
+              border: "1px solid #e6edf5",
+              boxShadow: "0 8px 24px rgba(15,39,71,0.05)",
               height: "100%",
             }}
           >
-            <Typography
-              variant="subtitle1"
-              sx={{ fontWeight: 800, color: "#102a43", px: 1, pt: 0.5, mb: 1 }}
+            <Stack
+              direction="row"
+              alignItems="center"
+              justifyContent="space-between"
+              sx={{ px: 1, pt: 0.5, mb: 1 }}
             >
-              Tax Collection Trend
-            </Typography>
-            <TaxCollected year={year} />
+              <Box>
+                <Typography variant="subtitle1" sx={{ fontWeight: 800, color: "#102a43" }}>
+                  Tax Collection Trend
+                </Typography>
+                <Typography variant="body2" color="text.secondary">
+                  Whole-year collection mix across treasury modules
+                </Typography>
+              </Box>
+              <Chip
+                label={`Year ${currentYear}`}
+                sx={{ bgcolor: "#eef4ff", color: "#355070", fontWeight: 700 }}
+              />
+            </Stack>
+            <TaxCollected year={currentYear} />
           </Paper>
         </Grid>
-        <Grid size={{ xs: 12, md: 6 }}>
+
+        <Grid size={{ xs: 12, lg: 4 }}>
           <Paper
             sx={{
-              p: 1.5,
-              borderRadius: 3,
-              border: "1px solid #d9e2ec",
-              boxShadow: "0 6px 18px rgba(15,39,71,0.05)",
+              p: 2.2,
+              borderRadius: 4,
+              border: "1px solid #e6edf5",
+              boxShadow: "0 8px 24px rgba(15,39,71,0.05)",
               height: "100%",
             }}
           >
-            <Typography
-              variant="subtitle1"
-              sx={{ fontWeight: 800, color: "#102a43", px: 1, pt: 0.5, mb: 1 }}
-            >
-              Cedula Collection Trend
+            <Typography variant="subtitle1" sx={{ fontWeight: 800, color: "#102a43" }}>
+              Treasury Signals
             </Typography>
-            <CedulaCollected year={year} />
+            <Typography variant="body2" color="text.secondary" sx={{ mt: 0.5, mb: 2 }}>
+              Fast operational signals for the current treasury reporting cycle.
+            </Typography>
+
+            <Box sx={{ display: "grid", gap: 1.25 }}>
+              {insightCards.map((item) => (
+                <Box
+                  key={item.label}
+                  sx={{
+                    p: 1.5,
+                    borderRadius: 3,
+                    border: "1px solid #e6edf5",
+                    background: item.tone,
+                  }}
+                >
+                  <Typography variant="body2" sx={{ color: item.accent, fontWeight: 700 }}>
+                    {item.label}
+                  </Typography>
+                  <Typography variant="h6" sx={{ color: "#102a43", fontWeight: 800, mt: 0.6 }}>
+                    {item.value}
+                  </Typography>
+                  <Typography variant="body2" color="text.secondary" sx={{ mt: 0.4 }}>
+                    {item.helper}
+                  </Typography>
+                </Box>
+              ))}
+
+              <Box
+                sx={{
+                  p: 1.5,
+                  borderRadius: 3,
+                  border: "1px solid #e6edf5",
+                  bgcolor: "#ffffff",
+                }}
+              >
+                <Typography variant="body2" sx={{ color: "#486581", fontWeight: 700 }}>
+                  Monthly Progress vs Target
+                </Typography>
+                <Typography variant="h6" sx={{ fontWeight: 800, color: "#102a43", mt: 0.5 }}>
+                  {monthlyTarget
+                    ? `${formatCurrency(targetProgress)}% reached`
+                    : "No target configured"}
+                </Typography>
+                <LinearProgress
+                  variant={monthlyTarget ? "determinate" : "indeterminate"}
+                  value={targetProgress}
+                  sx={{ mt: 1.4, height: 10, borderRadius: 10, bgcolor: "#eef4fb" }}
+                />
+              </Box>
+            </Box>
           </Paper>
         </Grid>
-        <Grid size={{ xs: 12 }}>
+
+        <Grid size={{ xs: 12, lg: 7 }}>
           <Paper
             sx={{
-              p: 1.5,
-              borderRadius: 3,
-              border: "1px solid #d9e2ec",
-              boxShadow: "0 6px 18px rgba(15,39,71,0.05)",
+              p: 2,
+              borderRadius: 4,
+              border: "1px solid #e6edf5",
+              boxShadow: "0 8px 24px rgba(15,39,71,0.05)",
               height: "100%",
             }}
           >
-            <Typography
-              variant="subtitle1"
-              sx={{ fontWeight: 800, color: "#102a43", px: 1, pt: 0.5, mb: 1 }}
+            <Stack
+              direction="row"
+              justifyContent="space-between"
+              alignItems="center"
+              sx={{ px: 1, pt: 0.5, mb: 1 }}
             >
-              Diving Ticket Best Sales
-            </Typography>
-            <DivingTicketTopChart year={year} />
+              <Box>
+                <Typography variant="subtitle1" sx={{ fontWeight: 800, color: "#102a43" }}>
+                  Cedula Taxpayer Ranking
+                </Typography>
+                <Typography variant="body2" color="text.secondary">
+                  Top LGU taxpayers ranked from current yearly collections
+                </Typography>
+              </Box>
+              <Chip
+                label={`Search ${searchNeedle ? "active" : "idle"}`}
+                sx={{
+                  bgcolor: searchNeedle ? "#eefbf5" : "#f4f6f8",
+                  color: searchNeedle ? "#0f766e" : "#627d98",
+                  fontWeight: 700,
+                }}
+              />
+            </Stack>
+            <CedulaCollected year={currentYear} />
           </Paper>
         </Grid>
-        <Grid size={{ xs: 12 }}>
+
+        <Grid size={{ xs: 12, lg: 5 }}>
           <Paper
             sx={{
-              p: 1.5,
-              borderRadius: 3,
-              border: "1px solid #d9e2ec",
-              boxShadow: "0 6px 18px rgba(15,39,71,0.05)",
+              p: 2,
+              borderRadius: 4,
+              border: "1px solid #e6edf5",
+              boxShadow: "0 8px 24px rgba(15,39,71,0.05)",
               height: "100%",
             }}
           >
-            <Typography
-              variant="subtitle1"
-              sx={{ fontWeight: 800, color: "#102a43", px: 1, pt: 0.5, mb: 1 }}
-            >
+            <Typography variant="subtitle1" sx={{ fontWeight: 800, color: "#102a43", px: 1, pt: 0.5, mb: 1 }}>
               Collector Total Collection
             </Typography>
-            <CollectorYearlyChart year={year} />
+            <CollectorYearlyChart year={currentYear} />
+          </Paper>
+        </Grid>
+
+        <Grid size={{ xs: 12, lg: 7 }}>
+          <Paper
+            sx={{
+              p: 2.5,
+              borderRadius: 4,
+              border: "1px solid #e6edf5",
+              boxShadow: "0 8px 24px rgba(15,39,71,0.05)",
+              height: "100%",
+            }}
+          >
+            <Typography variant="h6" sx={{ fontWeight: 800, mb: 0.5 }}>
+              Recent Transactions Feed
+            </Typography>
+            <Typography variant="body2" color="text.secondary" sx={{ mb: 2 }}>
+              Latest treasury summary rows. Search narrows this feed in real time.
+            </Typography>
+
+            {filteredRecentTransactions.length === 0 ? (
+              <Typography variant="body2" color="text.secondary">
+                No recent transactions found for the current filter.
+              </Typography>
+            ) : (
+              <Box sx={{ display: "grid", gap: 1.2 }}>
+                {filteredRecentTransactions.map((row) => (
+                  <Box
+                    key={row.id}
+                    sx={{
+                      p: 1.5,
+                      borderRadius: 2,
+                      border: "1px solid #e6edf3",
+                      bgcolor: "#ffffff",
+                      display: "flex",
+                      justifyContent: "space-between",
+                      gap: 2,
+                      flexWrap: "wrap",
+                    }}
+                  >
+                    <Box>
+                      <Typography variant="subtitle2" sx={{ fontWeight: 800 }}>
+                        {formatDate(row.date)}
+                      </Typography>
+                      <Typography variant="body2" color="text.secondary">
+                        RPT: PHP {formatCurrency(row.rpt)} • CTC: PHP{" "}
+                        {formatCurrency(row.ctc)} • GF+TF: PHP{" "}
+                        {formatCurrency(row.gfAndTf)}
+                      </Typography>
+                    </Box>
+                    <Box sx={{ textAlign: { xs: "left", sm: "right" } }}>
+                      <Typography variant="subtitle2" sx={{ fontWeight: 800 }}>
+                        PHP {formatCurrency(row.rcdTotal)}
+                      </Typography>
+                      <Typography variant="body2" color="text.secondary">
+                        Due from: PHP {formatCurrency(row.dueFrom)}
+                      </Typography>
+                    </Box>
+                  </Box>
+                ))}
+              </Box>
+            )}
+          </Paper>
+        </Grid>
+
+        <Grid size={{ xs: 12, lg: 5 }}>
+          <Paper
+            sx={{
+              p: 2.5,
+              borderRadius: 4,
+              border: "1px solid #e6edf5",
+              boxShadow: "0 8px 24px rgba(15,39,71,0.05)",
+              height: "100%",
+            }}
+          >
+            <Typography variant="h6" sx={{ fontWeight: 800, mb: 0.5 }}>
+              Alerts and Follow-up
+            </Typography>
+            <Typography variant="body2" color="text.secondary" sx={{ mb: 2 }}>
+              Due-from balances, system notices, and nearby calendar deadlines.
+            </Typography>
+
+            {filteredAttentionItems.length === 0 &&
+            filteredUpcomingEvents.length === 0 &&
+            !fetchError ? (
+              <Typography variant="body2" color="text.secondary">
+                No remarks, due-from alerts, or upcoming schedule items for this reporting period.
+              </Typography>
+            ) : (
+              <Box sx={{ display: "grid", gap: 1.2 }}>
+                {filteredAttentionItems.map((row) => (
+                  <Box
+                    key={`${row.date}-${row.comment}`}
+                    sx={{
+                      p: 1.4,
+                      borderRadius: 2,
+                      bgcolor: "#fffaf0",
+                      border: "1px solid #f2ddaa",
+                    }}
+                  >
+                    <Typography variant="subtitle2" sx={{ fontWeight: 800 }}>
+                      {row.date}
+                    </Typography>
+                    <Typography variant="body2" color="text.secondary" sx={{ mt: 0.5 }}>
+                      Due from: PHP {formatCurrency(row.dueFrom)}
+                    </Typography>
+                    <Typography variant="body2" sx={{ mt: 0.8 }}>
+                      {(row.comment || "No remark text provided").trim()}
+                    </Typography>
+                  </Box>
+                ))}
+                {filteredUpcomingEvents.slice(0, 2).map((event) => (
+                  <Box
+                    key={`upcoming-${event.id}`}
+                    sx={{
+                      p: 1.4,
+                      borderRadius: 2,
+                      bgcolor: "#eef7ff",
+                      border: "1px solid #cfe0f3",
+                    }}
+                  >
+                    <Typography variant="subtitle2" sx={{ fontWeight: 800 }}>
+                      {event.title}
+                    </Typography>
+                    <Typography variant="body2" color="text.secondary" sx={{ mt: 0.5 }}>
+                      {formatDate(event.start)} • {event.category || "Calendar"}
+                    </Typography>
+                  </Box>
+                ))}
+                {fetchError ? (
+                  <Box
+                    sx={{
+                      p: 1.4,
+                      borderRadius: 2,
+                      bgcolor: "#fff1f0",
+                      border: "1px solid #f0c3bf",
+                    }}
+                  >
+                    <Typography variant="subtitle2" sx={{ fontWeight: 800, color: "#b42318" }}>
+                      System Alert
+                    </Typography>
+                    <Typography variant="body2" sx={{ mt: 0.6, color: "#7a271a" }}>
+                      {fetchError}
+                    </Typography>
+                  </Box>
+                ) : null}
+              </Box>
+            )}
           </Paper>
         </Grid>
 
@@ -1787,9 +2010,9 @@ function DashboardHome() {
           <Paper
             sx={{
               p: 2.5,
-              borderRadius: 3,
-              border: "1px solid #d9e2ec",
-              boxShadow: "0 6px 18px rgba(15,39,71,0.05)",
+              borderRadius: 4,
+              border: "1px solid #e6edf5",
+              boxShadow: "0 8px 24px rgba(15,39,71,0.05)",
               height: "100%",
             }}
           >
@@ -1836,9 +2059,9 @@ function DashboardHome() {
           <Paper
             sx={{
               p: 2.5,
-              borderRadius: 3,
-              border: "1px solid #d9e2ec",
-              boxShadow: "0 6px 18px rgba(15,39,71,0.05)",
+              borderRadius: 4,
+              border: "1px solid #e6edf5",
+              boxShadow: "0 8px 24px rgba(15,39,71,0.05)",
               height: "100%",
             }}
           >
@@ -1885,9 +2108,9 @@ function DashboardHome() {
           <Paper
             sx={{
               p: 2.5,
-              borderRadius: 3,
-              border: "1px solid #d9e2ec",
-              boxShadow: "0 6px 18px rgba(15,39,71,0.05)",
+              borderRadius: 4,
+              border: "1px solid #e6edf5",
+              boxShadow: "0 8px 24px rgba(15,39,71,0.05)",
               height: "100%",
             }}
           >
@@ -1925,202 +2148,13 @@ function DashboardHome() {
           </Paper>
         </Grid>
 
-        <Grid size={{ xs: 12, lg: 7 }}>
-          <Paper
-            sx={{
-              p: 2.5,
-              borderRadius: 3,
-              border: "1px solid #d9e2ec",
-              boxShadow: "0 6px 18px rgba(15,39,71,0.05)",
-              height: "100%",
-            }}
-          >
-            <Typography variant="h6" sx={{ fontWeight: 800, mb: 0.5 }}>
-              Recent Transactions Feed
-            </Typography>
-            <Typography variant="body2" color="text.secondary" sx={{ mb: 2 }}>
-              Latest RPT, Cedula, GF, and TF entries from the selected reporting period.
-            </Typography>
-
-            {recentTransactions.length === 0 ? (
-              <Typography variant="body2" color="text.secondary">
-                No recent transactions found for this reporting period.
-              </Typography>
-            ) : (
-              <Box sx={{ display: "grid", gap: 1.2 }}>
-                {recentTransactions.map((row) => (
-                  <Box
-                    key={row.id}
-                    sx={{
-                      p: 1.5,
-                      borderRadius: 2,
-                      border: "1px solid #e6edf3",
-                      bgcolor: "#ffffff",
-                      display: "flex",
-                      justifyContent: "space-between",
-                      gap: 2,
-                      flexWrap: "wrap",
-                    }}
-                  >
-                    <Box>
-                      <Typography variant="subtitle2" sx={{ fontWeight: 800 }}>
-                        {formatDate(row.date)}
-                      </Typography>
-                      <Typography variant="body2" color="text.secondary">
-                        RPT: PHP {formatCurrency(row.rpt)} • CTC: PHP{" "}
-                        {formatCurrency(row.ctc)} • GF+TF: PHP{" "}
-                        {formatCurrency(row.gfAndTf)}
-                      </Typography>
-                    </Box>
-                    <Box sx={{ textAlign: { xs: "left", sm: "right" } }}>
-                      <Typography variant="subtitle2" sx={{ fontWeight: 800 }}>
-                        PHP {formatCurrency(row.rcdTotal)}
-                      </Typography>
-                      <Typography variant="body2" color="text.secondary">
-                        Due from: PHP {formatCurrency(row.dueFrom)}
-                      </Typography>
-                    </Box>
-                  </Box>
-                ))}
-              </Box>
-            )}
-          </Paper>
-        </Grid>
-
-        <Grid size={{ xs: 12, lg: 5 }}>
-          <Paper
-            sx={{
-              p: 2.5,
-              borderRadius: 3,
-              border: "1px solid #d9e2ec",
-              boxShadow: "0 6px 18px rgba(15,39,71,0.05)",
-              height: "100%",
-            }}
-          >
-            <Typography variant="h6" sx={{ fontWeight: 800, mb: 0.5 }}>
-              Pending Exceptions and Alerts
-            </Typography>
-            <Typography variant="body2" color="text.secondary" sx={{ mb: 2 }}>
-              Due from balances, missing remarks, system notices, and upcoming deadlines.
-            </Typography>
-
-            <Box
-              sx={{
-                mb: 2,
-                p: 1.5,
-                borderRadius: 2,
-                bgcolor: "#f8fbff",
-                border: "1px solid #d9e2ec",
-              }}
-            >
-              <Typography
-                variant="body2"
-                sx={{ fontWeight: 700, color: "#102a43" }}
-              >
-                Filter Snapshot
-              </Typography>
-              <Typography variant="body2" color="text.secondary" sx={{ mt: 0.6 }}>
-                {filteredRows.length} row{filteredRows.length === 1 ? "" : "s"}{" "}
-                loaded for {months[month - 1]} {year}.
-              </Typography>
-            </Box>
-
-            <Box
-              sx={{
-                mb: 2,
-                p: 1.5,
-                borderRadius: 2,
-                bgcolor: "#f8fbff",
-                border: "1px solid #d9e2ec",
-              }}
-            >
-              <Typography
-                variant="body2"
-                sx={{ fontWeight: 700, color: "#102a43" }}
-              >
-                Notifications
-              </Typography>
-              <Typography variant="body2" color="text.secondary" sx={{ mt: 0.6 }}>
-                {notifications.length
-                  ? `${notifications.length} active notice(s) for follow-up`
-                  : "No active notifications"}
-              </Typography>
-            </Box>
-
-            {attentionItems.length === 0 && upcomingEvents.length === 0 && !fetchError ? (
-              <Typography variant="body2" color="text.secondary">
-                No remarks, due-from alerts, or upcoming schedule items for this reporting period.
-              </Typography>
-            ) : (
-              <Box sx={{ display: "grid", gap: 1.2 }}>
-                {attentionItems.map((row) => (
-                  <Box
-                    key={`${row.date}-${row.comment}`}
-                    sx={{
-                      p: 1.4,
-                      borderRadius: 2,
-                      bgcolor: "#fffaf0",
-                      border: "1px solid #f2ddaa",
-                    }}
-                  >
-                    <Typography variant="subtitle2" sx={{ fontWeight: 800 }}>
-                      {row.date}
-                    </Typography>
-                    <Typography variant="body2" color="text.secondary" sx={{ mt: 0.5 }}>
-                      Due from: PHP {formatCurrency(row.dueFrom)}
-                    </Typography>
-                    <Typography variant="body2" sx={{ mt: 0.8 }}>
-                      {(row.comment || "No remark text provided").trim()}
-                    </Typography>
-                  </Box>
-                ))}
-                {upcomingEvents.slice(0, 2).map((event) => (
-                  <Box
-                    key={`upcoming-${event.id}`}
-                    sx={{
-                      p: 1.4,
-                      borderRadius: 2,
-                      bgcolor: "#eef7ff",
-                      border: "1px solid #cfe0f3",
-                    }}
-                  >
-                    <Typography variant="subtitle2" sx={{ fontWeight: 800 }}>
-                      {event.title}
-                    </Typography>
-                    <Typography variant="body2" color="text.secondary" sx={{ mt: 0.5 }}>
-                      {formatDate(event.start)} • {event.category || "Calendar"}
-                    </Typography>
-                  </Box>
-                ))}
-                {fetchError ? (
-                  <Box
-                    sx={{
-                      p: 1.4,
-                      borderRadius: 2,
-                      bgcolor: "#fff1f0",
-                      border: "1px solid #f0c3bf",
-                    }}
-                  >
-                    <Typography variant="subtitle2" sx={{ fontWeight: 800, color: "#b42318" }}>
-                      System Alert
-                    </Typography>
-                    <Typography variant="body2" sx={{ mt: 0.6, color: "#7a271a" }}>
-                      {fetchError}
-                    </Typography>
-                  </Box>
-                ) : null}
-              </Box>
-            )}
-          </Paper>
-        </Grid>
-
         <Grid size={{ xs: 12, md: 6 }}>
           <Paper
             sx={{
               p: 2.5,
-              borderRadius: 3,
-              border: "1px solid #d9e2ec",
-              boxShadow: "0 6px 18px rgba(15,39,71,0.05)",
+              borderRadius: 4,
+              border: "1px solid #e6edf5",
+              boxShadow: "0 8px 24px rgba(15,39,71,0.05)",
               height: "100%",
             }}
           >
@@ -2131,13 +2165,13 @@ function DashboardHome() {
               Upcoming holidays, office reminders, and calendar-based treasury notices.
             </Typography>
 
-            {upcomingEvents.length === 0 ? (
+            {filteredUpcomingEvents.length === 0 ? (
               <Typography variant="body2" color="text.secondary">
                 No upcoming calendar events in the next 14 days.
               </Typography>
             ) : (
               <Box sx={{ display: "grid", gap: 1.2 }}>
-                {upcomingEvents.map((event) => (
+                {filteredUpcomingEvents.map((event) => (
                   <Box
                     key={event.id}
                     sx={{
@@ -2164,9 +2198,9 @@ function DashboardHome() {
           <Paper
             sx={{
               p: 2.5,
-              borderRadius: 3,
-              border: "1px solid #d9e2ec",
-              boxShadow: "0 6px 18px rgba(15,39,71,0.05)",
+              borderRadius: 4,
+              border: "1px solid #e6edf5",
+              boxShadow: "0 8px 24px rgba(15,39,71,0.05)",
               height: "100%",
             }}
           >
@@ -2202,6 +2236,38 @@ function DashboardHome() {
                 </Grid>
               ))}
             </Grid>
+          </Paper>
+        </Grid>
+
+        <Grid size={{ xs: 12 }}>
+          <Paper
+            sx={{
+              p: 2,
+              borderRadius: 4,
+              border: "1px solid #e6edf5",
+              boxShadow: "0 8px 24px rgba(15,39,71,0.05)",
+            }}
+          >
+            <Stack
+              direction="row"
+              justifyContent="space-between"
+              alignItems="center"
+              sx={{ px: 1, pt: 0.5, mb: 1 }}
+            >
+              <Box>
+                <Typography variant="subtitle1" sx={{ fontWeight: 800, color: "#102a43" }}>
+                  Diving Ticket Best Sales
+                </Typography>
+                <Typography variant="body2" color="text.secondary">
+                  Monthly diving ticket performance for the selected year
+                </Typography>
+              </Box>
+              <Chip
+                label={`Year ${currentYear}`}
+                sx={{ bgcolor: "#eefbf5", color: "#0f766e", fontWeight: 700 }}
+              />
+            </Stack>
+            <DivingTicketTopChart year={currentYear} />
           </Paper>
         </Grid>
       </Grid>

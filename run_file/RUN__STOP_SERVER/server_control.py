@@ -29,12 +29,14 @@ def load_state():
 
 
 def start_process(command, cwd):
-    if os.name == "nt" and command and command[0].lower() == "npm":
-        command = ["npm.cmd", *command[1:]]
-
     creationflags = 0
     if os.name == "nt":
         creationflags = subprocess.CREATE_NEW_CONSOLE
+
+    if os.name == "nt" and command and command[0].lower() == "npm":
+        # On Windows, `npm start` is more reliable when launched through cmd.
+        # This preserves the process tree so `taskkill /T` can stop it later.
+        command = ["cmd", "/c", *command]
 
     process = subprocess.Popen(
         command,

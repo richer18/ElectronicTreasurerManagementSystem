@@ -318,11 +318,15 @@ class WaterWorksPaymentsJSONDataController extends Controller
                 continue;
             }
 
-            $fullName = trim(
-                ($content['lastName'] ?? '') . ', ' .
-                ($content['firstName'] ?? '') . ' ' .
-                ($content['middleName'] ?? '')
-            );
+            $fullName = trim((string) ($content['fullName'] ?? ''));
+
+            if ($fullName === '') {
+                $fullName = trim(
+                    ($content['lastName'] ?? '') . ', ' .
+                    ($content['firstName'] ?? '') . ' ' .
+                    ($content['middleName'] ?? '')
+                );
+            }
 
             $normalizedAccountName = $this->normalizeWaterName($fullName);
 
@@ -336,7 +340,7 @@ class WaterWorksPaymentsJSONDataController extends Controller
                     'fullName' => preg_replace('/\s+/', ' ', $fullName),
                     'waterMeter' => $content['waterMeter'] ?? null,
                     'waterConnectionType' => $content['waterConnectionType'] ?? null,
-                    'address' => collect([
+                    'address' => $content['address'] ?? collect([
                         $content['purok'] ?? null,
                         $content['street'] ?? null,
                         $content['barangay'] ?? null,

@@ -37,11 +37,15 @@ class WaterWorksAccountsJSONDataController extends Controller
                 continue;
             }
 
-            $fullName = trim(
-                ($content['lastName'] ?? '') . ', ' .
-                ($content['firstName'] ?? '') . ' ' .
-                ($content['middleName'] ?? '')
-            );
+            $fullName = trim((string) ($content['fullName'] ?? ''));
+
+            if ($fullName === '') {
+                $fullName = trim(
+                    ($content['lastName'] ?? '') . ', ' .
+                    ($content['firstName'] ?? '') . ' ' .
+                    ($content['middleName'] ?? '')
+                );
+            }
 
             $accounts[] = [
                 'accountNumber' => $content['accountNumber'] ?? null,
@@ -56,7 +60,7 @@ class WaterWorksAccountsJSONDataController extends Controller
                 'purok' => $content['purok'] ?? null,
                 'municipality' => $content['municipality'] ?? null,
                 'province' => $content['province'] ?? null,
-                'address' => collect([
+                'address' => $content['address'] ?? collect([
                     $content['purok'] ?? null,
                     $content['street'] ?? null,
                     $content['barangay'] ?? null,

@@ -98,6 +98,7 @@ use App\Http\Controllers\CommunityTaxCertificateUpdateCedulaDataController;
 
 use App\Http\Controllers\TotalTaxCollectedDataController;
 use App\Http\Controllers\TaxOnBusinessBreakdownDataController;
+use App\Http\Controllers\TaxpayerLookupController;
 use App\Http\Controllers\ServiceUserChargesBreakdownDataController;
 use App\Http\Controllers\RegulatoryFeesAndChargesBreakdownDataController;
 use App\Http\Controllers\ReceiptsFromEconomicEntBreakdownDataController;
@@ -275,6 +276,7 @@ Route::get('/commentCedulaCounts', [CommunityTaxCertificateCommentCedulaCountsCo
 Route::get('/cedulaSummaryCollectionDataReport', [CommunityTaxCertificateSummaryCollectionDataReportController::class, 'index']);
 Route::get('/cedula/monthly', [CommunityTaxCertificateSummaryCollectionDataReportController::class, 'monthlyTrend']);
 Route::get('/cedula/top-taxpayers', [CommunityTaxCertificateSummaryCollectionDataReportController::class, 'topTaxpayers']);
+Route::get('/taxpayers', [TaxpayerLookupController::class, 'index']);
 Route::post('/saveCedulaData', [CommunityTaxCertificateSaveCedulaDataController::class, 'store']);
 Route::put('/updateCedulaData/{ctcno}', [CommunityTaxCertificateUpdateCedulaDataController::class, 'update']);
 
@@ -297,6 +299,7 @@ Route::delete('/deleteCedula/{id}', [CommunityTaxCertificateDeleteCedulaDataCont
 Route::post('/register', [WaterWorksRegisterJSONDataController::class, 'register']);
 Route::get('/accounts', [WaterWorksAccountsJSONDataController::class, 'index']);
 Route::get('/account/{accountNumber}', [WaterWorksAccountNumberJSONDataController::class, 'show']);
+Route::put('/account/{accountNumber}', [WaterWorksAccountNumberJSONDataController::class, 'update']);
 Route::post('/account/{accountNumber}/pay', [WaterWorksAccountNumberPaymentJSONDataController::class, 'pay']);
 Route::get('/waterworks/payments', [WaterWorksPaymentsJSONDataController::class, 'index']);
 Route::get('/waterworks/taxpayers', [WaterWorksPaymentsJSONDataController::class, 'taxpayers']);
@@ -306,6 +309,7 @@ Route::get('/waterworks/reports/billing', [WaterWorksPaymentsJSONDataController:
 Route::get('/waterworks/payments/export', [WaterWorksPaymentsJSONDataController::class, 'export']);
 Route::get('/waterworks/payment-edit/{paymentId}', [WaterWorksPaymentEditController::class, 'show']);
 Route::put('/waterworks/payment-edit/{paymentId}', [WaterWorksPaymentEditController::class, 'update']);
+Route::delete('/waterworks/payment-edit/{paymentId}', [WaterWorksPaymentEditController::class, 'destroy']);
 Route::get('/waterworks/tickets', [WaterWorksTicketController::class, 'index']);
 Route::post('/waterworks/tickets', [WaterWorksTicketController::class, 'store']);
 Route::put('/waterworks/tickets/{ticket}', [WaterWorksTicketController::class, 'update']);

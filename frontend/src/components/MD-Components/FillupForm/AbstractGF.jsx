@@ -1,6 +1,7 @@
 import "bootstrap/dist/css/bootstrap.min.css";
 import dayjs from "dayjs";
 import { useCallback, useEffect, useMemo, useState } from "react";
+import { Autocomplete, CircularProgress, TextField } from "@mui/material";
 import {
   Alert,
   Button,
@@ -70,6 +71,8 @@ function AbstractGF() {
   const [rateOptions, setRateOptions] = useState([]);
   const [rateLoading, setRateLoading] = useState(false);
   const [receiptTypeOptions, setReceiptTypeOptions] = useState([]);
+  const [taxpayerOptions, setTaxpayerOptions] = useState([]);
+  const [taxpayerLoading, setTaxpayerLoading] = useState(false);
 
   const rateById = useMemo(() => {
     const map = new Map();
@@ -133,6 +136,43 @@ function AbstractGF() {
     fetchReceiptTypes();
   }, []);
 
+  useEffect(() => {
+    let active = true;
+    const search = taxpayerName.trim();
+
+    if (search.length < 2) {
+      setTaxpayerOptions([]);
+      setTaxpayerLoading(false);
+      return undefined;
+    }
+
+    setTaxpayerLoading(true);
+    const timer = setTimeout(async () => {
+      try {
+        const response = await axiosInstance.get("taxpayers", {
+          params: { search },
+        });
+
+        if (!active) return;
+        setTaxpayerOptions(Array.isArray(response.data) ? response.data : []);
+      } catch (error) {
+        if (active) {
+          console.error("Failed to load taxpayer options:", error);
+          setTaxpayerOptions([]);
+        }
+      } finally {
+        if (active) {
+          setTaxpayerLoading(false);
+        }
+      }
+    }, 300);
+
+    return () => {
+      active = false;
+      clearTimeout(timer);
+    };
+  }, [taxpayerName]);
+
   const getFieldLabel = useCallback(
     (fieldId) => {
       const key = String(fieldId);
@@ -149,6 +189,17 @@ function AbstractGF() {
       ),
     [fields, getFieldLabel]
   );
+
+  const selectedTaxpayer = useMemo(() => {
+    if (!taxpayerName) return null;
+
+    return (
+      taxpayerOptions.find((option) => option?.ownerName === taxpayerName) || {
+        ownerName: taxpayerName,
+        localTin: "",
+      }
+    );
+  }, [taxpayerName, taxpayerOptions]);
 
   useEffect(() => {
     const totalSum = Object.values(fieldValues).reduce(
@@ -372,12 +423,81 @@ function AbstractGF() {
                 <FaUser style={{ marginRight: 8 }} />
                 Name of Taxpayer
               </Form.Label>
-              <Form.Control
-                type="text"
-                value={taxpayerName}
-                onChange={(e) => setTaxpayerName(e.target.value)}
-                required
-                style={inputStyle}
+              <Autocomplete
+                fullWidth
+                freeSolo
+                options={taxpayerOptions}
+                loading={taxpayerLoading}
+                value={selectedTaxpayer}
+                onChange={(_, value) => {
+                  setTaxpayerName(value?.ownerName || "");
+                }}
+                onInputChange={(_, value, reason) => {
+                  if (reason === "input") {
+                    setTaxpayerName(value);
+                  }
+                }}
+                getOptionLabel={(option) =>
+                  typeof option === "string"
+                    ? option
+                    : option?.ownerName || ""
+                }
+                isOptionEqualToValue={(option, value) =>
+                  option?.ownerName === value?.ownerName
+                }
+                renderOption={(props, option) => (
+                  <li {...props}>
+                    <div>
+                      <div style={{ fontWeight: 700, color: uiColors.navy }}>
+                        {option.ownerName}
+                      </div>
+                      <div
+                        style={{
+                          fontSize: "0.8rem",
+                          color: uiColors.textMuted,
+                        }}
+                      >
+                        Local TIN: {option.localTin || "-"}
+                      </div>
+                    </div>
+                  </li>
+                )}
+                renderInput={(params) => (
+                  <TextField
+                    {...params}
+                    required
+                    label="Full Name"
+                    helperText="Search taxpayer records by name or Local TIN"
+                    InputProps={{
+                      ...params.InputProps,
+                      endAdornment: (
+                        <>
+                          {taxpayerLoading ? (
+                            <CircularProgress color="inherit" size={18} />
+                          ) : null}
+                          {params.InputProps.endAdornment}
+                        </>
+                      ),
+                    }}
+                    sx={{
+                      "& .MuiOutlinedInput-root": {
+                        borderRadius: "10px",
+                        backgroundColor: "#fff",
+                      },
+                      "& .MuiOutlinedInput-notchedOutline": {
+                        borderColor: uiColors.border,
+                      },
+                      "& .MuiOutlinedInput-root:hover .MuiOutlinedInput-notchedOutline":
+                        {
+                          borderColor: uiColors.border,
+                        },
+                      "& .MuiOutlinedInput-root.Mui-focused .MuiOutlinedInput-notchedOutline":
+                        {
+                          borderColor: uiColors.navy,
+                        },
+                    }}
+                  />
+                )}
               />
             </Form.Group>
           </Col>

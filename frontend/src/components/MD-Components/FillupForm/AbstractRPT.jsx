@@ -1,4 +1,11 @@
-import { Box, Button, LinearProgress, Typography } from "@mui/material";
+import {
+  Autocomplete,
+  Box,
+  Button,
+  CircularProgress,
+  LinearProgress,
+  Typography,
+} from "@mui/material";
 import RestartAltIcon from "@mui/icons-material/RestartAlt";
 import SaveIcon from "@mui/icons-material/Save";
 import FormControl from "@mui/material/FormControl";
@@ -11,7 +18,7 @@ import { styled } from "@mui/system";
 import "bootstrap/dist/css/bootstrap.min.css";
 import { format, isValid, parseISO } from "date-fns";
 import PropTypes from "prop-types";
-import React, { useEffect, useState } from "react";
+import React, { useEffect, useMemo, useState } from "react";
 import axiosInstance from "../../../../src/api/axiosInstance";
 import "./style.css";
 
@@ -226,6 +233,8 @@ function LinearProgressWithLabel({ value }) {
 
 function AbstractRPT({ data, onSave }) {
   const [formData, setFormData] = useState(data || initialFormData);
+  const [taxpayerOptions, setTaxpayerOptions] = useState([]);
+  const [taxpayerLoading, setTaxpayerLoading] = useState(false);
 
   const [showProgress, setShowProgress] = useState(false); // Progress visibility
   const [progress, setProgress] = useState(0); // Progress value for simulation
@@ -266,6 +275,55 @@ function AbstractRPT({ data, onSave }) {
       setFormData(initialFormData);
     }
   }, [data]);
+
+  useEffect(() => {
+    let active = true;
+    const search = normalizeValue(formData.name);
+
+    if (search.length < 2) {
+      setTaxpayerOptions([]);
+      setTaxpayerLoading(false);
+      return undefined;
+    }
+
+    setTaxpayerLoading(true);
+    const timer = setTimeout(async () => {
+      try {
+        const response = await axiosInstance.get("taxpayers", {
+          params: { search },
+        });
+
+        if (!active) return;
+        setTaxpayerOptions(Array.isArray(response.data) ? response.data : []);
+      } catch (error) {
+        if (active) {
+          console.error("Failed to load taxpayer options:", error);
+          setTaxpayerOptions([]);
+        }
+      } finally {
+        if (active) {
+          setTaxpayerLoading(false);
+        }
+      }
+    }, 300);
+
+    return () => {
+      active = false;
+      clearTimeout(timer);
+    };
+  }, [formData.name]);
+
+  const selectedTaxpayer = useMemo(() => {
+    const name = normalizeValue(formData.name);
+    if (!name) return null;
+
+    return (
+      taxpayerOptions.find((option) => option?.ownerName === name) || {
+        ownerName: name,
+        localTin: "",
+      }
+    );
+  }, [formData.name, taxpayerOptions]);
 
   React.useEffect(() => {
     console.log("Received data in AbstractRPT:", data);
@@ -534,24 +592,75 @@ function AbstractRPT({ data, onSave }) {
             helperText={errors.date}
             sx={{ mb: 2 }}
           />
-          <InputField
-            autoFocus
-            margin="dense"
-            label="Name of Taxpayer"
+          <Autocomplete
             fullWidth
-            name="name"
-            value={formData.name}
-            onChange={(e) =>
+            freeSolo
+            options={taxpayerOptions}
+            loading={taxpayerLoading}
+            value={selectedTaxpayer}
+            onChange={(_, value) => {
               handleFormDataChange({
                 target: {
-                  name: e.target.name,
-                  value: e.target.value.toUpperCase(),
+                  name: "name",
+                  value: (value?.ownerName || "").toUpperCase(),
                 },
-              })
+              });
+            }}
+            onInputChange={(_, value, reason) => {
+              if (reason === "input") {
+                handleFormDataChange({
+                  target: {
+                    name: "name",
+                    value: value.toUpperCase(),
+                  },
+                });
+              }
+            }}
+            getOptionLabel={(option) =>
+              typeof option === "string"
+                ? option
+                : option?.ownerName || ""
             }
-            required
-            error={!!errors.name}
-            helperText={errors.name}
+            isOptionEqualToValue={(option, value) =>
+              option?.ownerName === value?.ownerName
+            }
+            renderOption={(props, option) => (
+              <Box component="li" {...props}>
+                <Box>
+                  <Typography sx={{ fontWeight: 700, color: uiColors.navy }}>
+                    {option.ownerName}
+                  </Typography>
+                  <Typography variant="caption" color="text.secondary">
+                    Local TIN: {option.localTin || "-"}
+                  </Typography>
+                </Box>
+              </Box>
+            )}
+            renderInput={(params) => (
+              <InputField
+                {...params}
+                autoFocus
+                margin="dense"
+                label="Name of Taxpayer"
+                fullWidth
+                required
+                error={!!errors.name}
+                helperText={
+                  errors.name || "Search taxpayer records by name or Local TIN"
+                }
+                InputProps={{
+                  ...params.InputProps,
+                  endAdornment: (
+                    <>
+                      {taxpayerLoading ? (
+                        <CircularProgress color="inherit" size={18} />
+                      ) : null}
+                      {params.InputProps.endAdornment}
+                    </>
+                  ),
+                }}
+              />
+            )}
           />
           <InputField
             margin="dense"

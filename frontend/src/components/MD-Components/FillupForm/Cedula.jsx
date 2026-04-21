@@ -1,6 +1,8 @@
 import {
+  Autocomplete,
   Box,
   Button,
+  CircularProgress,
   Divider,
   FormControl,
   InputAdornment,
@@ -108,6 +110,8 @@ function Cedula({ data, mode, onSaved, onClose }) {
   const [selectedDate, setSelectedDate] = useState("");
   const [originalReceipt, setOriginalReceipt] = useState("");
   const [savingInProgress, setSavingInProgress] = useState(false);
+  const [taxpayerOptions, setTaxpayerOptions] = useState([]);
+  const [taxpayerLoading, setTaxpayerLoading] = useState(false);
 
   const [formData, setFormData] = useState({
     receipt: "",
@@ -144,6 +148,59 @@ function Cedula({ data, mode, onSaved, onClose }) {
       userid: String(data?.CASHIER ?? data?.USERID ?? ""),
     });
   }, [data]);
+
+  useEffect(() => {
+    let active = true;
+
+    const search = formData.fullName.trim();
+    if (search.length < 2) {
+      setTaxpayerOptions([]);
+      return undefined;
+    }
+
+    setTaxpayerLoading(true);
+    const timer = setTimeout(async () => {
+      try {
+        const response = await axiosInstance.get("taxpayers", {
+          params: { search },
+        });
+
+        if (!active) return;
+
+        const options = Array.isArray(response.data) ? response.data : [];
+        setTaxpayerOptions(options);
+      } catch (error) {
+        if (active) {
+          console.error("Failed to load taxpayer options:", error);
+          setTaxpayerOptions([]);
+        }
+      } finally {
+        if (active) {
+          setTaxpayerLoading(false);
+        }
+      }
+    }, 300);
+
+    return () => {
+      active = false;
+      clearTimeout(timer);
+    };
+  }, [formData.fullName]);
+
+  const selectedTaxpayer = useMemo(() => {
+    if (!formData.fullName && !formData.localTin) return null;
+
+    return (
+      taxpayerOptions.find(
+        (option) =>
+          option?.ownerName === formData.fullName &&
+          String(option?.localTin || "") === String(formData.localTin || "")
+      ) || {
+        ownerName: formData.fullName,
+        localTin: formData.localTin,
+      }
+    );
+  }, [formData.fullName, formData.localTin, taxpayerOptions]);
 
   const totals = useMemo(() => {
     const business = toNumber(formData.businessGrossReceipts);
@@ -308,14 +365,69 @@ function Cedula({ data, mode, onSaved, onClose }) {
                 </FormControl>
               </Col>
               <Col xs={12}>
-                <TextField
+                <Autocomplete
                   fullWidth
-                  label="Full Name"
-                  name="fullName"
-                  value={formData.fullName}
-                  onChange={handleChange}
-                  variant="outlined"
-                  sx={roundedFieldSx}
+                  options={taxpayerOptions}
+                  loading={taxpayerLoading}
+                  value={selectedTaxpayer}
+                  onChange={(_, value) => {
+                    setFormData((prev) => ({
+                      ...prev,
+                      fullName: value?.ownerName || "",
+                      localTin: value?.localTin || "",
+                    }));
+                  }}
+                  onInputChange={(_, value, reason) => {
+                    if (reason === "input") {
+                      setFormData((prev) => ({
+                        ...prev,
+                        fullName: value,
+                        localTin: "",
+                      }));
+                    }
+                  }}
+                  getOptionLabel={(option) =>
+                    typeof option === "string"
+                      ? option
+                      : option?.ownerName || ""
+                  }
+                  isOptionEqualToValue={(option, value) =>
+                    option?.ownerName === value?.ownerName &&
+                    String(option?.localTin || "") === String(value?.localTin || "")
+                  }
+                  renderOption={(props, option) => (
+                    <Box component="li" {...props}>
+                      <Box>
+                        <Typography sx={{ fontWeight: 700, color: formColors.navy }}>
+                          {option.ownerName}
+                        </Typography>
+                        <Typography variant="caption" sx={{ color: formColors.steel }}>
+                          Local TIN: {option.localTin || "-"}
+                        </Typography>
+                      </Box>
+                    </Box>
+                  )}
+                  renderInput={(params) => (
+                    <TextField
+                      {...params}
+                      fullWidth
+                      label="Full Name"
+                      variant="outlined"
+                      sx={roundedFieldSx}
+                      helperText="Search taxpayer records by name or Local TIN"
+                      InputProps={{
+                        ...params.InputProps,
+                        endAdornment: (
+                          <>
+                            {taxpayerLoading ? (
+                              <CircularProgress color="inherit" size={18} />
+                            ) : null}
+                            {params.InputProps.endAdornment}
+                          </>
+                        ),
+                      }}
+                    />
+                  )}
                 />
               </Col>
             </Row>

@@ -27,7 +27,10 @@ class Permissions
     public static function normalizeRole(?string $role): string
     {
         $normalized = strtolower(trim((string) $role));
-        $aliases = config('permissions.aliases', self::FALLBACK_ALIASES);
+        $aliases = array_merge(
+            self::FALLBACK_ALIASES,
+            (array) config('permissions.aliases', [])
+        );
 
         if ($normalized !== '' && isset($aliases[$normalized])) {
             return strtolower((string) $aliases[$normalized]);
@@ -38,7 +41,10 @@ class Permissions
 
     public static function roleDefinitions(): array
     {
-        return config('permissions.roles', self::FALLBACK_ROLES);
+        return array_replace_recursive(
+            self::FALLBACK_ROLES,
+            (array) config('permissions.roles', [])
+        );
     }
 
     public static function availableRoles(): array

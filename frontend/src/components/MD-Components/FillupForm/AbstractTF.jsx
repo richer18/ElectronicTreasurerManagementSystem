@@ -1,5 +1,6 @@
 import "bootstrap/dist/css/bootstrap.min.css";
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
+import { Autocomplete, CircularProgress, TextField } from "@mui/material";
 import {
   Alert,
   Button,
@@ -91,6 +92,7 @@ function AbstractTF({ data, mode, refreshData }) {
   const [selectedDate, setSelectedDate] = useState(null);
   const [selectedCashier, setSelectedCashier] = useState("");
   const [taxpayerName, setTaxpayerName] = useState("");
+  const [localTin, setLocalTin] = useState("");
   const [receiptNumber, setReceiptNumber] = useState("");
   const [typeReceipt, setTypeReceipt] = useState("");
   const [alertMessage, setAlertMessage] = useState("");
@@ -99,6 +101,8 @@ function AbstractTF({ data, mode, refreshData }) {
   const [total, setTotal] = useState(0);
   const [alertVariant, setAlertSeverity] = useState("info");
   const [receiptTypeOptions, setReceiptTypeOptions] = useState([]);
+  const [taxpayerOptions, setTaxpayerOptions] = useState([]);
+  const [taxpayerLoading, setTaxpayerLoading] = useState(false);
 
   const handleFieldChange = (field, value) => {
     setFieldValues((prevValues) => ({
@@ -129,9 +133,70 @@ function AbstractTF({ data, mode, refreshData }) {
     fetchReceiptTypes();
   }, []);
 
+  useEffect(() => {
+    let active = true;
+    const search = taxpayerName.trim();
+
+    if (search.length < 2) {
+      setTaxpayerOptions([]);
+      setTaxpayerLoading(false);
+      return undefined;
+    }
+
+    setTaxpayerLoading(true);
+    const timer = setTimeout(async () => {
+      try {
+        const response = await axiosInstance.get("taxpayers", {
+          params: { search },
+        });
+
+        if (!active) return;
+        setTaxpayerOptions(Array.isArray(response.data) ? response.data : []);
+      } catch (error) {
+        if (active) {
+          console.error("Failed to load taxpayer options:", error);
+          setTaxpayerOptions([]);
+        }
+      } finally {
+        if (active) {
+          setTaxpayerLoading(false);
+        }
+      }
+    }, 300);
+
+    return () => {
+      active = false;
+      clearTimeout(timer);
+    };
+  }, [taxpayerName]);
+
+  const selectedTaxpayer = useMemo(() => {
+    if (!taxpayerName) return null;
+
+    return (
+      taxpayerOptions.find((option) => option?.ownerName === taxpayerName) || {
+        ownerName: taxpayerName,
+        localTin: "",
+      }
+    );
+  }, [taxpayerName, taxpayerOptions]);
+
+  useEffect(() => {
+    const matchedTaxpayer = taxpayerOptions.find(
+      (option) => option?.ownerName === taxpayerName
+    );
+
+    if (matchedTaxpayer) {
+      setLocalTin(matchedTaxpayer.localTin || "");
+    } else if (!taxpayerName.trim()) {
+      setLocalTin("");
+    }
+  }, [taxpayerName, taxpayerOptions]);
+
   const handleClearFields = useCallback(() => {
     setSelectedDate(null);
     setTaxpayerName("");
+    setLocalTin("");
     setReceiptNumber("");
     setTypeReceipt("");
     setSelectedCashier("");
@@ -251,6 +316,7 @@ function AbstractTF({ data, mode, refreshData }) {
     if (mode === "edit" && data) {
       setSelectedDate(data.DATE || null);
       setTaxpayerName(data.NAME || "");
+      setLocalTin(data.LOCAL_TIN || "");
       setReceiptNumber(data.RECEIPT_NO || "");
       setTypeReceipt(data.TYPE_OF_RECEIPT || "");
       setSelectedCashier(data.CASHIER || "");
@@ -310,11 +376,110 @@ function AbstractTF({ data, mode, refreshData }) {
                 <FaUser style={{ marginRight: 8 }} />
                 Name of Taxpayer
               </Form.Label>
+              <Autocomplete
+                fullWidth
+                freeSolo
+                disablePortal
+                options={taxpayerOptions}
+                loading={taxpayerLoading}
+                value={selectedTaxpayer}
+                inputValue={taxpayerName}
+                noOptionsText={
+                  taxpayerName.trim().length < 2
+                    ? "Type at least 2 letters"
+                    : "No taxpayer found"
+                }
+                onChange={(_, value) => {
+                  if (typeof value === "string") {
+                    setTaxpayerName(value);
+                    setLocalTin("");
+                    return;
+                  }
+
+                  setTaxpayerName(value?.ownerName || "");
+                  setLocalTin(value?.localTin || "");
+                }}
+                onInputChange={(_, value, reason) => {
+                  if (reason === "input" || reason === "clear") {
+                    setTaxpayerName(value);
+                    setLocalTin("");
+                  }
+                }}
+                getOptionLabel={(option) =>
+                  typeof option === "string"
+                    ? option
+                    : option?.ownerName || ""
+                }
+                isOptionEqualToValue={(option, value) =>
+                  option?.ownerName === value?.ownerName
+                }
+                renderOption={(props, option) => (
+                  <li {...props}>
+                    <div>
+                      <div style={{ fontWeight: 700, color: uiColors.navy }}>
+                        {option.ownerName}
+                      </div>
+                      <div
+                        style={{
+                          fontSize: "0.8rem",
+                          color: uiColors.textMuted,
+                        }}
+                      >
+                        Local TIN: {option.localTin || "-"}
+                      </div>
+                    </div>
+                  </li>
+                )}
+                renderInput={(params) => (
+                  <TextField
+                    {...params}
+                    required
+                    label="Full Name"
+                    helperText="Search taxpayer records by name or Local TIN"
+                    InputProps={{
+                      ...params.InputProps,
+                      endAdornment: (
+                        <>
+                          {taxpayerLoading ? (
+                            <CircularProgress color="inherit" size={18} />
+                          ) : null}
+                          {params.InputProps.endAdornment}
+                        </>
+                      ),
+                    }}
+                    sx={{
+                      "& .MuiOutlinedInput-root": {
+                        borderRadius: "10px",
+                        backgroundColor: "#fff",
+                      },
+                      "& .MuiOutlinedInput-notchedOutline": {
+                        borderColor: uiColors.border,
+                      },
+                      "& .MuiOutlinedInput-root:hover .MuiOutlinedInput-notchedOutline":
+                        {
+                          borderColor: uiColors.border,
+                        },
+                      "& .MuiOutlinedInput-root.Mui-focused .MuiOutlinedInput-notchedOutline":
+                        {
+                          borderColor: uiColors.navy,
+                        },
+                    }}
+                  />
+                )}
+              />
+            </Form.Group>
+          </Col>
+
+          <Col md={12}>
+            <Form.Group controlId="formLocalTin">
+              <Form.Label style={labelStyle}>
+                <FaIdCard style={{ marginRight: 8 }} />
+                Local TIN
+              </Form.Label>
               <Form.Control
                 type="text"
-                value={taxpayerName}
-                onChange={(e) => setTaxpayerName(e.target.value)}
-                required
+                value={localTin}
+                readOnly
                 style={inputStyle}
               />
             </Form.Group>

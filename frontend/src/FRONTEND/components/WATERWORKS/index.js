@@ -15,6 +15,8 @@ import {
   DialogTitle,
   Divider,
   InputAdornment,
+  Menu,
+  MenuItem,
   Paper,
   Table,
   TableBody,
@@ -24,19 +26,25 @@ import {
   TablePagination,
   TableRow,
   TextField,
-  Tooltip,
   Typography,
   styled,
 } from "@mui/material";
 import React, { useCallback, useEffect, useMemo, useState } from "react";
-import { BiSolidReport } from "react-icons/bi";
-import { IoMdAdd, IoMdDownload } from "react-icons/io";
+import { IoMdDownload } from "react-icons/io";
 import { IoToday } from "react-icons/io5";
 import { MdSummarize } from "react-icons/md";
 import dayjs from "dayjs";
 import axiosInstance from "../../../api/axiosInstance";
 import { useMaterialUIController } from "../../../context";
 import GeneralFundPaymentEditForm from "../../../components/MD-Components/FillupForm/GeneralFundPaymentEditForm";
+import DailyReportButton from "./components/actions/daily-report";
+import DownloadButton from "./components/actions/download";
+import NewEntryButton from "./components/actions/new-entry";
+import RegisterButton from "./components/actions/register";
+import TicketButton from "./components/actions/ticket";
+import TicketStatusButton from "./components/actions/ticket-status";
+import WaterBillingButton from "./components/actions/water-billing";
+import WaterCardButton from "./components/actions/water-card";
 import EntryPopupDialog from "./components/entry/component/EntryPopupDialog";
 import RegisterPopupDialog from "./components/register/component/RegisterPopupDialog";
 import TicketPopupDialog from "./components/tickets/component/TicketPopupDialog";
@@ -135,6 +143,17 @@ function Index() {
   const [selectedAccount, setSelectedAccount] = useState(null);
   const [viewLoading, setViewLoading] = useState(false);
   const [editingPayment, setEditingPayment] = useState(null);
+  const [editingWaterAccount, setEditingWaterAccount] = useState(false);
+  const [waterAccountForm, setWaterAccountForm] = useState({
+    accountNumber: "",
+    waterMeter: "",
+    waterConnectionType: "",
+    address: "",
+    fullName: "",
+  });
+  const [savingWaterAccount, setSavingWaterAccount] = useState(false);
+  const [rowActionAnchorEl, setRowActionAnchorEl] = useState(null);
+  const [rowActionTarget, setRowActionTarget] = useState(null);
   const [openWaterCardDialog, setOpenWaterCardDialog] = useState(false);
   const [selectedWaterCardOption, setSelectedWaterCardOption] = useState(null);
   const [waterCardSearchInput, setWaterCardSearchInput] = useState("");
@@ -250,6 +269,7 @@ function Index() {
 
       if (!grouped.has(key)) {
         grouped.set(key, {
+          paymentId: payment.paymentId,
           receiptNo: payment.receiptNo || "-",
           paymentDate: payment.paymentDate,
           collector: payment.collector || payment.userId || "-",
@@ -266,6 +286,10 @@ function Index() {
 
       const current = grouped.get(key);
       const amount = Number(payment.amount || 0);
+
+      if (!current.paymentId && payment.paymentId) {
+        current.paymentId = payment.paymentId;
+      }
 
       if (String(payment.sourceId || "") === "827") {
         current.surcharge += amount;
@@ -491,6 +515,103 @@ function Index() {
     });
   };
 
+  const handleOpenWaterAccountEdit = () => {
+    setWaterAccountForm({
+      accountNumber: selectedAccount?.accountNumber || "",
+      waterMeter: selectedAccount?.waterMeter || "",
+      waterConnectionType: selectedAccount?.waterConnectionType || "",
+      address: selectedAccount?.address || "",
+      fullName: selectedAccount?.fullName || selectedPayment?.taxpayer || "",
+    });
+    setEditingWaterAccount(true);
+  };
+
+  const handleSaveWaterAccount = async () => {
+    if (!selectedAccount?.accountNumber) {
+      window.alert("No water account selected.");
+      return;
+    }
+
+    setSavingWaterAccount(true);
+    try {
+      const response = await axiosInstance.put(
+        `/account/${selectedAccount.accountNumber}`,
+        waterAccountForm
+      );
+
+      const updatedAccount = response.data?.account || {};
+
+      setSelectedAccount((prev) => ({
+        ...(prev || {}),
+        accountNumber: updatedAccount.accountNumber || waterAccountForm.accountNumber,
+        waterMeter: updatedAccount.waterMeter || "",
+        waterConnectionType: updatedAccount.waterConnectionType || "",
+        address: updatedAccount.address || "",
+        fullName: updatedAccount.fullName || waterAccountForm.fullName,
+      }));
+
+      setSelectedPayment((prev) =>
+        prev
+          ? {
+              ...prev,
+              taxpayer: updatedAccount.fullName || waterAccountForm.fullName,
+            }
+          : prev
+      );
+
+      setEditingWaterAccount(false);
+    } catch (error) {
+      console.error("Failed to update water account:", error);
+      window.alert(error.response?.data?.message || "Failed to update water account.");
+    } finally {
+      setSavingWaterAccount(false);
+    }
+  };
+
+  const handleEditWaterCardRow = (row) => {
+    if (!row?.paymentId) {
+      return;
+    }
+
+    setEditingPayment({ paymentId: row.paymentId });
+  };
+
+  const handleDeleteWaterCardRow = async (row) => {
+    if (!row?.paymentId) {
+      return;
+    }
+
+    const confirmed = window.confirm(
+      `Delete water payment receipt ${row.receiptNo || row.paymentId}?`
+    );
+
+    if (!confirmed) {
+      return;
+    }
+
+    try {
+      await axiosInstance.delete(`/waterworks/payment-edit/${row.paymentId}`);
+      await loadPayments();
+
+      if (selectedPayment) {
+        await openPaymentDetails(selectedPayment);
+      }
+    } catch (error) {
+      console.error("Failed to delete water payment:", error);
+      window.alert("Failed to delete water payment.");
+    }
+  };
+
+  const handleOpenRowActionMenu = (event, row) => {
+    setRowActionAnchorEl(event.currentTarget);
+    setRowActionTarget(row);
+  };
+
+  const handleCloseRowActionMenu = () => {
+    setRowActionAnchorEl(null);
+    setRowActionTarget(null);
+  };
+
   return (
     <Box
       sx={{
@@ -628,181 +749,36 @@ function Index() {
 
         <Box display="flex" alignItems="center" gap={2} sx={{ py: 1 }} flexWrap="wrap">
           <Box display="flex" gap={2} flexGrow={1} flexWrap="wrap">
-            <Tooltip title="Add New Entry" arrow>
-              <Button
-                variant="contained"
-                startIcon={<IoMdAdd size={18} />}
-                sx={{
-                  px: 3.5,
-                  backgroundColor: uiColors.navy,
-                  color: "white",
-                  "&:hover": {
-                    backgroundColor: uiColors.navyHover,
-                    transform: "translateY(-1px)",
-                  },
-                  textTransform: "none",
-                  fontSize: 15,
-                  fontWeight: 600,
-                  borderRadius: "10px",
-                  minWidth: "130px",
-                  height: "44px",
-                }}
-                onClick={() => setOpenEntryDialog(true)}
-              >
-                New Entry
-              </Button>
-            </Tooltip>
-
-            <Tooltip title="Register New Account" arrow>
-              <Button
-                variant="contained"
-                startIcon={<ReceiptIcon fontSize="small" />}
-                sx={{
-                  px: 3.5,
-                  backgroundColor: uiColors.steel,
-                  color: "white",
-                  "&:hover": {
-                    backgroundColor: uiColors.steelHover,
-                    transform: "translateY(-1px)",
-                  },
-                  textTransform: "none",
-                  fontSize: 15,
-                  fontWeight: 600,
-                  borderRadius: "10px",
-                  minWidth: "130px",
-                  height: "44px",
-                }}
-                onClick={() => setOpenRegisterDialog(true)}
-              >
-                Register
-              </Button>
-            </Tooltip>
-
-            <Tooltip title="Manage Tickets" arrow>
-              <Button
-                variant="contained"
-                startIcon={<ReceiptIcon fontSize="small" />}
-                sx={{
-                  px: 3.5,
-                  backgroundColor: uiColors.teal,
-                  color: "white",
-                  "&:hover": {
-                    backgroundColor: uiColors.tealHover,
-                    transform: "translateY(-1px)",
-                  },
-                  textTransform: "none",
-                  fontSize: 15,
-                  fontWeight: 600,
-                  borderRadius: "10px",
-                  minWidth: "130px",
-                  height: "44px",
-                }}
-                onClick={() => setOpenTicketDialog(true)}
-              >
-                Ticket
-              </Button>
-            </Tooltip>
-
-            <Tooltip title="Generate Daily Report" arrow>
-              <Button
-                variant="contained"
-                startIcon={<IoToday size={16} />}
-                sx={{
-                  px: 3.5,
-                  backgroundColor: uiColors.teal,
-                  color: "white",
-                  "&:hover": {
-                    backgroundColor: uiColors.tealHover,
-                    transform: "translateY(-1px)",
-                  },
-                  textTransform: "none",
-                  fontSize: 15,
-                  fontWeight: 600,
-                  borderRadius: "10px",
-                  minWidth: "130px",
-                  height: "44px",
-                }}
-                onClick={async () => {
-                  setOpenDailyReportDialog(true);
-                  await loadDailyReport(dailyReportDate);
-                }}
-              >
-                Daily Report
-              </Button>
-            </Tooltip>
+            <NewEntryButton uiColors={uiColors} onClick={() => setOpenEntryDialog(true)} />
+            <RegisterButton uiColors={uiColors} onClick={() => setOpenRegisterDialog(true)} />
+            <TicketButton uiColors={uiColors} onClick={() => setOpenTicketDialog(true)} />
+            <DailyReportButton
+              uiColors={uiColors}
+              onClick={async () => {
+                setOpenDailyReportDialog(true);
+                await loadDailyReport(dailyReportDate);
+              }}
+            />
           </Box>
 
           <Box display="flex" gap={2} flexWrap="wrap">
-            <Tooltip title="Water Billing Reports" arrow>
-              <Button
-                variant="contained"
-                startIcon={<MdSummarize size={18} />}
-                sx={{
-                  backgroundColor: uiColors.teal,
-                  color: "white",
-                  textTransform: "none",
-                  "&:hover": { backgroundColor: uiColors.tealHover },
-                }}
-                onClick={async () => {
-                  setOpenBillingDialog(true);
-                  await loadBillingReport();
-                }}
-              >
-                Water Billing
-              </Button>
-            </Tooltip>
-
-            <Tooltip title="Water Card Summary" arrow>
-              <Button
-                variant="contained"
-                startIcon={<AssessmentIcon fontSize="small" />}
-                sx={{
-                  backgroundColor: uiColors.amber,
-                  color: "white",
-                  textTransform: "none",
-                  "&:hover": { backgroundColor: uiColors.amberHover },
-                }}
-                onClick={handleOpenWaterCardPicker}
-              >
-                Water Card
-              </Button>
-            </Tooltip>
-
-            <Tooltip title="Ticket Status Reports" arrow>
-              <Button
-                variant="contained"
-                startIcon={<BiSolidReport size={18} />}
-                sx={{
-                  backgroundColor: uiColors.red,
-                  color: "white",
-                  textTransform: "none",
-                  "&:hover": { backgroundColor: uiColors.redHover },
-                }}
-                onClick={async () => {
-                  setTicketStatusFilter("");
-                  setOpenTicketStatusDialog(true);
-                  await loadTicketStatus("");
-                }}
-              >
-                Ticket Status
-              </Button>
-            </Tooltip>
-
-            <Tooltip title="Export Data" arrow>
-              <Button
-                variant="contained"
-                startIcon={<IoMdDownload size={18} />}
-                sx={{
-                  backgroundColor: uiColors.steel,
-                  color: "white",
-                  textTransform: "none",
-                  "&:hover": { backgroundColor: uiColors.steelHover },
-                }}
-                onClick={handleDownloadPayments}
-              >
-                Download
-              </Button>
-            </Tooltip>
+            <WaterBillingButton
+              uiColors={uiColors}
+              onClick={async () => {
+                setOpenBillingDialog(true);
+                await loadBillingReport();
+              }}
+            />
+            <WaterCardButton uiColors={uiColors} onClick={handleOpenWaterCardPicker} />
+            <TicketStatusButton
+              uiColors={uiColors}
+              onClick={async () => {
+                setTicketStatusFilter("");
+                setOpenTicketStatusDialog(true);
+                await loadTicketStatus("");
+              }}
+            />
+            <DownloadButton uiColors={uiColors} onClick={handleDownloadPayments} />
           </Box>
         </Box>
 
@@ -1297,14 +1273,25 @@ function Index() {
           {selectedPayment?.taxpayer
             ? `Water Payments - ${selectedPayment.taxpayer}`
             : "Water Payment Details"}
-          <Button
-            onClick={() => setSelectedPayment(null)}
-            size="small"
-            startIcon={<CloseIcon />}
-            sx={{ textTransform: "none" }}
-          >
-            Close
-          </Button>
+          <Box sx={{ display: "flex", alignItems: "center", gap: 1 }}>
+            <Button
+              onClick={handleOpenWaterAccountEdit}
+              size="small"
+              variant="contained"
+              disabled={!selectedAccount?.accountNumber}
+              sx={{ textTransform: "none" }}
+            >
+              Edit
+            </Button>
+            <Button
+              onClick={() => setSelectedPayment(null)}
+              size="small"
+              startIcon={<CloseIcon />}
+              sx={{ textTransform: "none" }}
+            >
+              Close
+            </Button>
+          </Box>
         </DialogTitle>
         <DialogContent dividers>
           {selectedPayment && (
@@ -1426,7 +1413,7 @@ function Index() {
                 <Box
                   sx={{
                     display: "grid",
-                    gridTemplateColumns: "1fr 0.9fr 1fr 0.9fr 0.9fr 1fr 1fr 1fr",
+                    gridTemplateColumns: "1fr 0.9fr 1fr 0.9fr 0.9fr 1fr 1fr 1fr 1.2fr",
                     borderBottom: "1px solid #7c6a45",
                     "& > div": {
                       px: 0.75,
@@ -1451,6 +1438,7 @@ function Index() {
                     "Total Due",
                     "Date Paid",
                     "O.R. Number",
+                    "Action",
                   ].map((label) => (
                     <Box key={label}>{label}</Box>
                   ))}
@@ -1462,7 +1450,7 @@ function Index() {
                       key={`${row.receiptNo}-${index}`}
                       sx={{
                         display: "grid",
-                        gridTemplateColumns: "1fr 0.9fr 1fr 0.9fr 0.9fr 1fr 1fr 1fr",
+                        gridTemplateColumns: "1fr 0.9fr 1fr 0.9fr 0.9fr 1fr 1fr 1fr 1.2fr",
                         borderBottom:
                           index === taxpayerReceiptRows.length - 1
                             ? "none"
@@ -1492,6 +1480,25 @@ function Index() {
                       <Box>{formatCurrency(row.totalDue)}</Box>
                       <Box>{dayjs(row.paymentDate).isValid() ? dayjs(row.paymentDate).format("MM/DD/YY") : "-"}</Box>
                       <Box>{row.receiptNo}</Box>
+                      <Box>
+                        <Button
+                          size="small"
+                          variant="outlined"
+                          onClick={(event) => handleOpenRowActionMenu(event, row)}
+                          sx={{
+                            minWidth: 0,
+                            px: 1.4,
+                            py: 0.45,
+                            fontSize: "0.7rem",
+                            fontWeight: 700,
+                            textTransform: "none",
+                            borderColor: uiColors.navy,
+                            color: uiColors.navy,
+                          }}
+                        >
+                          Action
+                        </Button>
+                      </Box>
                     </Box>
                   ))
                 ) : (
@@ -1554,6 +1561,34 @@ function Index() {
         </DialogActions>
       </Dialog>
 
+      <Menu
+        anchorEl={rowActionAnchorEl}
+        open={Boolean(rowActionAnchorEl)}
+        onClose={handleCloseRowActionMenu}
+      >
+        <MenuItem
+          onClick={() => {
+            if (rowActionTarget) {
+              handleEditWaterCardRow(rowActionTarget);
+            }
+            handleCloseRowActionMenu();
+          }}
+        >
+          Update
+        </MenuItem>
+        <MenuItem
+          onClick={() => {
+            if (rowActionTarget) {
+              handleDeleteWaterCardRow(rowActionTarget);
+            }
+            handleCloseRowActionMenu();
+          }}
+          sx={{ color: uiColors.red }}
+        >
+          Delete
+        </MenuItem>
+      </Menu>
+
       <Dialog
         open={Boolean(editingPayment)}
         onClose={() => setEditingPayment(null)}
@@ -1592,6 +1627,89 @@ function Index() {
             />
           )}
         </DialogContent>
+      </Dialog>
+
+      <Dialog
+        open={editingWaterAccount}
+        onClose={() => setEditingWaterAccount(false)}
+        fullWidth
+        maxWidth="sm"
+      >
+        <DialogTitle
+          sx={{
+            display: "flex",
+            alignItems: "center",
+            justifyContent: "space-between",
+            fontWeight: 800,
+          }}
+        >
+          Edit Statement Of Account
+          <Button
+            onClick={() => setEditingWaterAccount(false)}
+            size="small"
+            startIcon={<CloseIcon />}
+            sx={{ textTransform: "none" }}
+          >
+            Close
+          </Button>
+        </DialogTitle>
+        <DialogContent dividers>
+          <Box sx={{ display: "grid", gap: 2, pt: 1 }}>
+            <TextField
+              label="Account No."
+              value={waterAccountForm.accountNumber}
+              onChange={(event) =>
+                setWaterAccountForm((prev) => ({ ...prev, accountNumber: event.target.value }))
+              }
+              fullWidth
+            />
+            <TextField
+              label="Meter No."
+              value={waterAccountForm.waterMeter}
+              onChange={(event) =>
+                setWaterAccountForm((prev) => ({ ...prev, waterMeter: event.target.value }))
+              }
+              fullWidth
+            />
+            <TextField
+              label="Connection"
+              value={waterAccountForm.waterConnectionType}
+              onChange={(event) =>
+                setWaterAccountForm((prev) => ({ ...prev, waterConnectionType: event.target.value }))
+              }
+              fullWidth
+            />
+            <TextField
+              label="Address"
+              value={waterAccountForm.address}
+              onChange={(event) =>
+                setWaterAccountForm((prev) => ({ ...prev, address: event.target.value }))
+              }
+              fullWidth
+            />
+            <TextField
+              label="Permittee"
+              value={waterAccountForm.fullName}
+              onChange={(event) =>
+                setWaterAccountForm((prev) => ({ ...prev, fullName: event.target.value }))
+              }
+              fullWidth
+            />
+          </Box>
+        </DialogContent>
+        <DialogActions sx={{ px: 3, py: 2 }}>
+          <Button onClick={() => setEditingWaterAccount(false)} sx={{ textTransform: "none" }}>
+            Cancel
+          </Button>
+          <Button
+            onClick={handleSaveWaterAccount}
+            variant="contained"
+            disabled={savingWaterAccount}
+            sx={{ textTransform: "none" }}
+          >
+            {savingWaterAccount ? "Saving..." : "Save"}
+          </Button>
+        </DialogActions>
       </Dialog>
     </Box>
   );

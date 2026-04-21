@@ -125,4 +125,35 @@ class WaterWorksPaymentEditController extends Controller
             ], $e instanceof \RuntimeException ? 404 : 500);
         }
     }
+
+    public function destroy(string $paymentId)
+    {
+        try {
+            $deleted = DB::transaction(function () use ($paymentId) {
+                $query = DB::table('general_fund_payment')
+                    ->where('PAYMENT_ID', $paymentId)
+                    ->whereIn('SOURCEID', self::WATER_SOURCE_IDS);
+
+                $exists = (clone $query)->exists();
+
+                if (! $exists) {
+                    return 0;
+                }
+
+                return $query->delete();
+            });
+
+            if (! $deleted) {
+                return response()->json(['message' => 'Water payment not found'], 404);
+            }
+
+            GeneralFundQueryCache::invalidate();
+
+            return response()->json(['message' => 'Water payment deleted successfully']);
+        } catch (\Exception $e) {
+            \Log::error('Error deleting water payment: ' . $e->getMessage());
+
+            return response()->json(['message' => 'Failed to delete water payment'], 500);
+        }
+    }
 }

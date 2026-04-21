@@ -1,9 +1,13 @@
 import ArrowBackIcon from '@mui/icons-material/ArrowBack';
+import DownloadIcon from '@mui/icons-material/Download';
+import PersonIcon from '@mui/icons-material/Person';
+import PrintIcon from '@mui/icons-material/Print';
 import VisibilityIcon from '@mui/icons-material/Visibility';
 import {
   Autocomplete, Badge,
   Box,
   Button,
+  Card,
   Dialog,
   DialogActions,
   DialogContent,
@@ -18,6 +22,7 @@ import {
   TableCell,
   TableContainer,
   TableHead,
+  TablePagination,
   TableRow,
   TextField,
   Typography,
@@ -52,10 +57,6 @@ const StyledTableRow = styled(TableRow)(({ theme }) => ({
 
 const CenteredTableCell = styled(TableCell)({
   textAlign: 'center',
-});
-
-const RightAlignedTableCell = styled(TableCell)({
-  textAlign: 'right',
 });
 
 const months = [
@@ -123,6 +124,37 @@ const formatMoney = (value) =>
     minimumFractionDigits: 2,
     maximumFractionDigits: 2,
   }).format(Number(value || 0));
+
+const formatCurrency = (value) =>
+  new Intl.NumberFormat("en-PH", {
+    style: "currency",
+    currency: "PHP",
+    minimumFractionDigits: 2,
+  }).format(Number(value || 0));
+
+const escapeCsvValue = (value) => {
+  const stringValue = value == null ? "" : String(value);
+  return /[",\n]/.test(stringValue)
+    ? `"${stringValue.replace(/"/g, '""')}"`
+    : stringValue;
+};
+
+const downloadCsvFile = (filename, headers, rows) => {
+  const csv = [
+    headers.join(","),
+    ...rows.map((row) => row.map(escapeCsvValue).join(",")),
+  ].join("\n");
+
+  const blob = new Blob([csv], { type: "text/csv;charset=utf-8;" });
+  const url = URL.createObjectURL(blob);
+  const link = document.createElement("a");
+  link.href = url;
+  link.setAttribute("download", filename);
+  document.body.appendChild(link);
+  link.click();
+  document.body.removeChild(link);
+  URL.revokeObjectURL(url);
+};
 
 const shouldIncludeRptReportRow = (row) => {
   const includeInReport = row?.include_in_report ?? row?.INCLUDE_IN_REPORT;
@@ -202,6 +234,17 @@ function DailyTable({
   const [openCommentDialog, setOpenCommentDialog] = useState(false);
   const [commentCounts, setCommentCounts] = useState({});
   const [comments, setComments] = useState([]);
+  const [page, setPage] = useState(0);
+  const [rowsPerPage, setRowsPerPage] = useState(10);
+
+  const collectorCards = useMemo(
+    () => [
+      { key: "ricardo", label: "Ricardo Enopia", aliases: ["ricardo"], icon: <PersonIcon /> },
+      { key: "flora", label: "Flora My Ferrer", aliases: ["flora"], icon: <PersonIcon /> },
+      { key: "iris", label: "Iris Rafales", aliases: ["iris", "angelique"], icon: <PersonIcon /> },
+    ],
+    []
+  );
 
   useEffect(() => {
     axios
@@ -324,14 +367,16 @@ function DailyTable({
 
   const handleMonthChange = (event, value) => {
     onMonthChange(value ? value.value : null);
+    setPage(0);
   };
 
   const handleYearChange = (event, value) => {
     onYearChange(value ? value.value : null);
+    setPage(0);
   };
 
-  const filteredData = useMemo(() => {
-    const filtered = data.filter((row) => {
+  const filteredSourceData = useMemo(() => {
+    return data.filter((row) => {
       const dateObj = row.date ? new Date(row.date) : null;
       const isValidDate = dateObj && !isNaN(dateObj.getTime());
 
@@ -341,10 +386,12 @@ function DailyTable({
       const rowYear = format(dateObj, "yyyy");
       return (month ? rowMonth === month : true) && (year ? rowYear === year : true);
     });
+  }, [data, month, year]);
 
+  const filteredData = useMemo(() => {
     const dataByDate = {};
 
-    filtered.forEach((row) => {
+    filteredSourceData.forEach((row) => {
       const dateObj = row.date ? new Date(row.date) : null;
       const isValidDate = dateObj && !isNaN(dateObj.getTime());
       if (!isValidDate) return;
@@ -377,11 +424,37 @@ function DailyTable({
     return Object.values(dataByDate).sort(
       (a, b) => new Date(a.date) - new Date(b.date)
     );
-  }, [data, month, year]);
+  }, [filteredSourceData, month, year]);
+
+  const paginatedData = useMemo(() => {
+    const start = page * rowsPerPage;
+    return filteredData.slice(start, start + rowsPerPage);
+  }, [filteredData, page, rowsPerPage]);
 
   const totalAmount = useMemo(() => {
     return filteredData.reduce((total, row) => total + row.total, 0);
   }, [filteredData]);
+
+  const totalCollectionByCashier = useMemo(() => {
+    const totals = {
+      ricardo: 0,
+      flora: 0,
+      iris: 0,
+      agnes: 0,
+    };
+
+    filteredSourceData.forEach((row) => {
+      const cashier = String(row.cashier || "").trim().toUpperCase();
+      const amount = parseFloat(row.gfTotal ?? row.gf_total) || parseFloat(row.total) || 0;
+      const normalizedCashier = cashier.toLowerCase();
+      const matchedCard = collectorCards.find(({ aliases }) =>
+        aliases.includes(normalizedCashier)
+      );
+      if (matchedCard) totals[matchedCard.key] += amount;
+    });
+
+    return totals;
+  }, [collectorCards, filteredSourceData]);
 
   const formatDate = (dateInput) => {
     if (!dateInput) return 'Invalid Date';
@@ -418,6 +491,110 @@ function DailyTable({
   const handleCommentDialogClose = () => {
     setOpenCommentDialog(false);
     setComments([]); // Clear comments when closing
+  };
+
+  const handleDownload = () => {
+    const headers = [
+      "Date",
+      "LAND-COMML",
+      "LAND-AGRI",
+      "LAND-RES",
+      "BLDG-RES",
+      "BLDG-COMML",
+      "MACHINERIES",
+      "BLDG-INDUS",
+      "SPECIAL",
+      "TOTAL",
+      "REMARKS",
+    ];
+
+    const rows = filteredData.map((row) => [
+      formatDate(row.date),
+      formatMoney(row.landComm),
+      formatMoney(row.landAgri),
+      formatMoney(row.landRes),
+      formatMoney(row.bldgRes),
+      formatMoney(row.bldgComm),
+      formatMoney(row.machinery),
+      formatMoney(row.bldgIndus),
+      formatMoney(row.special),
+      formatMoney(row.total),
+      row.comments || "",
+    ]);
+
+    downloadCsvFile("rpt-daily-table.csv", headers, rows);
+  };
+
+  const handlePrint = () => {
+    const printWindow = window.open("", "_blank", "width=1400,height=900");
+    if (!printWindow) return;
+
+    const summaryHtml = collectorCards
+      .map(
+        ({ key, label }) => `
+          <div class="summary-card">
+            <div class="summary-label">${label}</div>
+            <div class="summary-value">${formatCurrency(totalCollectionByCashier[key])}</div>
+          </div>
+        `
+      )
+      .join("");
+
+    const rowsHtml = filteredData
+      .map(
+        (row) => `
+          <tr>
+            <td>${formatDate(row.date)}</td>
+            <td>${formatMoney(row.landComm)}</td>
+            <td>${formatMoney(row.landAgri)}</td>
+            <td>${formatMoney(row.landRes)}</td>
+            <td>${formatMoney(row.bldgRes)}</td>
+            <td>${formatMoney(row.bldgComm)}</td>
+            <td>${formatMoney(row.machinery)}</td>
+            <td>${formatMoney(row.bldgIndus)}</td>
+            <td>${formatMoney(row.special)}</td>
+            <td>${formatMoney(row.total)}</td>
+            <td>${row.comments || ""}</td>
+          </tr>
+        `
+      )
+      .join("");
+
+    printWindow.document.write(`
+      <html>
+        <head>
+          <title>RPT Daily Table</title>
+          <style>
+            body { font-family: Arial, sans-serif; padding: 24px; color: #0f2747; }
+            h1 { margin-bottom: 8px; }
+            .summary-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 12px; margin: 20px 0; }
+            .summary-card { border: 1px solid #d8e2ee; border-radius: 10px; padding: 12px; }
+            .summary-label { font-size: 12px; color: #5b7088; margin-bottom: 6px; }
+            .summary-value { font-size: 18px; font-weight: 700; }
+            table { width: 100%; border-collapse: collapse; font-size: 12px; }
+            th, td { border: 1px solid #d8e2ee; padding: 6px; text-align: center; }
+            th { background: #f7f9fc; }
+            .total { margin-top: 14px; font-weight: 700; }
+          </style>
+        </head>
+        <body>
+          <h1>Real Property Tax Daily Collections</h1>
+          <div>Filtered rows: ${filteredData.length}</div>
+          <div class="summary-grid">${summaryHtml}</div>
+          <table>
+            <thead>
+              <tr>
+                <th>Date</th><th>LAND-COMML</th><th>LAND-AGRI</th><th>LAND-RES</th><th>BLDG-RES</th><th>BLDG-COMML</th><th>MACHINERIES</th><th>BLDG-INDUS</th><th>SPECIAL</th><th>TOTAL</th><th>REMARKS</th>
+              </tr>
+            </thead>
+            <tbody>${rowsHtml}</tbody>
+          </table>
+          <div class="total">Total Sum: ${formatCurrency(totalAmount)}</div>
+          <script>window.onload = () => window.print();</script>
+        </body>
+      </html>
+    `);
+    printWindow.document.close();
   };
 
   return (
@@ -543,7 +720,77 @@ function DailyTable({
               />
             )}
           />
+          <Button
+            variant="contained"
+            startIcon={<DownloadIcon />}
+            onClick={handleDownload}
+            sx={{
+              borderRadius: "8px",
+              textTransform: "none",
+              fontWeight: 700,
+              backgroundColor: "#0f2747",
+            }}
+          >
+            Download CSV
+          </Button>
+          <Button
+            variant="outlined"
+            startIcon={<PrintIcon />}
+            onClick={handlePrint}
+            sx={{
+              borderRadius: "8px",
+              textTransform: "none",
+              fontWeight: 700,
+              borderColor: "#0f2747",
+              color: "#0f2747",
+            }}
+          >
+            Print
+          </Button>
       </Box>
+    </Box>
+
+    <Box sx={{ display: "flex", flexWrap: "wrap", gap: 2, mb: 3 }}>
+      {collectorCards.map(({ key, label, icon }, index) => (
+        <Card
+          key={label}
+          sx={{
+            flex: "1 1 220px",
+            p: 2.5,
+            borderRadius: "14px",
+            background:
+              [
+                "linear-gradient(135deg, #0f2747, #2f4f7f)",
+                "linear-gradient(135deg, #0f6b62, #2a8a7f)",
+                "linear-gradient(135deg, #4b5d73, #6a7f99)",
+                "linear-gradient(135deg, #a66700, #c98a2a)",
+              ][index % 4],
+            color: "#fff",
+            position: "relative",
+            overflow: "hidden",
+          }}
+        >
+          <Box sx={{ position: "relative", zIndex: 2 }}>
+            <Typography variant="subtitle2" sx={{ opacity: 0.9, mb: 0.5 }}>
+              {label}
+            </Typography>
+            <Typography variant="h5" sx={{ fontWeight: 700 }}>
+              {formatCurrency(totalCollectionByCashier[key])}
+            </Typography>
+          </Box>
+          <Box
+            sx={{
+              position: "absolute",
+              top: 16,
+              right: 16,
+              opacity: 0.08,
+              "& svg": { fontSize: "3.2rem" },
+            }}
+          >
+            {icon}
+          </Box>
+        </Card>
+      ))}
     </Box>
 
 
@@ -578,7 +825,7 @@ function DailyTable({
             </TableRow>
           </TableHead>
           <TableBody>
-            {filteredData.map((row, index) => (
+            {paginatedData.map((row, index) => (
               <StyledTableRow key={index}>
                 <CenteredTableCell>{formatDate(row.date)}</CenteredTableCell>
                 <CenteredTableCell>{formatMoney(row.landComm)}</CenteredTableCell>
@@ -640,17 +887,29 @@ function DailyTable({
                 </CenteredTableCell>
               </StyledTableRow>
             ))}
-            <StyledTableRow>
-              <RightAlignedTableCell colSpan={9}>
-                <Typography fontWeight="bold">TOTAL</Typography>
-              </RightAlignedTableCell>
-              <RightAlignedTableCell colSpan={3}>
-                <Typography fontWeight="bold">PHP {formatMoney(totalAmount)}</Typography>
-              </RightAlignedTableCell>
-            </StyledTableRow>
           </TableBody>
         </Table>
       </TableContainer>
+
+      <Box sx={{ display: "flex", alignItems: "center", p: 2 }}>
+        <Box sx={{ fontWeight: "bold" }}>
+          Total Sum: {formatCurrency(totalAmount)}
+        </Box>
+        <Box sx={{ flexGrow: 1 }}>
+          <TablePagination
+            rowsPerPageOptions={[5, 10, 25]}
+            component="div"
+            count={filteredData.length}
+            rowsPerPage={rowsPerPage}
+            page={page}
+            onPageChange={(_, newPage) => setPage(newPage)}
+            onRowsPerPageChange={(event) => {
+              setRowsPerPage(parseInt(event.target.value, 10));
+              setPage(0);
+            }}
+          />
+        </Box>
+      </Box>
 
       {/* Comment Dialog */}
       <Dialog open={openCommentDialogs} onClose={handleCommentClose}>
